@@ -37,6 +37,9 @@ const api = {
     getAll: () => ipcRenderer.invoke('sales:getAll'),
     create: (data: CreateSaleInput) => ipcRenderer.invoke('sales:create', data),
     delete: (id: number) => ipcRenderer.invoke('sales:delete', id)
+  },
+  dashboard: {
+    getStats: (fromDate: string | null) => ipcRenderer.invoke('dashboard:getStats', fromDate)
   }
 }
 

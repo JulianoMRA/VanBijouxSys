@@ -99,3 +99,37 @@ export interface CreateSaleInput {
   soldAt: string
   items: CreateSaleItemInput[]
 }
+
+export interface DashboardStats {
+  overview: {
+    totalRevenue: number
+    totalCost: number
+    totalProfit: number
+    totalSales: number
+    avgTicket: number
+  }
+  revenueByMonth: Array<{ month: string; revenue: number; profit: number }>
+  salesByChannel: Array<{ channel: string; revenue: number; profit: number; count: number }>
+  salesByFair: Array<{
+    fairName: string
+    date: string
+    revenue: number
+    profit: number
+    enrollmentCost: number
+    netProfit: number
+  }>
+  topVariations: Array<{
+    productName: string
+    identifier: string
+    quantity: number
+    revenue: number
+  }>
+  lowStock: Array<{
+    id: number
+    productName: string
+    categoryName: string
+    identifier: string
+    stockQuantity: number
+    minimumStock: number
+  }>
+}

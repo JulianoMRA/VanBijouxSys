@@ -10,7 +10,8 @@ import type {
   CreateFairInput,
   UpdateFairInput,
   Sale,
-  CreateSaleInput
+  CreateSaleInput,
+  DashboardStats
 } from '.'
 
 declare global {
@@ -41,6 +42,9 @@ declare global {
         getAll: () => Promise<Sale[]>
         create: (data: CreateSaleInput) => Promise<{ id: number }>
         delete: (id: number) => Promise<{ success: boolean }>
+      }
+      dashboard: {
+        getStats: (fromDate: string | null) => Promise<DashboardStats>
       }
     }
   }

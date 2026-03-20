@@ -2,6 +2,7 @@ import { app, shell, BrowserWindow } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import { initDatabase } from './database'
+import { registerAllHandlers } from './ipc'
 
 function createWindow(): void {
   const mainWindow = new BrowserWindow({
@@ -41,6 +42,7 @@ app.whenReady().then(() => {
   })
 
   initDatabase()
+  registerAllHandlers()
   createWindow()
 
   app.on('activate', function () {

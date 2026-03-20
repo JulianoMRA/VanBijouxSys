@@ -35,11 +35,23 @@ export default {
           300: '#edddd2',
           400: '#e2c9b8',
           500: '#d4b09a'
+        },
+        mauve: {
+          50: '#f7f0f4',
+          100: '#efe0e8',
+          200: '#dfc1d2',
+          300: '#c99ab8',
+          400: '#b0739c',
+          500: '#8b4d6b',
+          600: '#733d57',
+          700: '#5c2e42',
+          800: '#3d1e2c',
+          900: '#220f19'
         }
       },
       fontFamily: {
         display: ['"Playfair Display"', 'Georgia', 'serif'],
-        sans: ['Inter', 'system-ui', 'sans-serif']
+        sans: ['"DM Sans"', 'system-ui', 'sans-serif']
       },
       borderRadius: {
         xl: '0.75rem',
@@ -48,7 +60,9 @@ export default {
       },
       boxShadow: {
         soft: '0 2px 15px -3px rgba(0,0,0,0.07), 0 10px 20px -2px rgba(0,0,0,0.04)',
-        card: '0 1px 3px rgba(0,0,0,0.05), 0 4px 12px rgba(0,0,0,0.06)'
+        card: '0 1px 3px rgba(160,80,100,0.06), 0 4px 20px rgba(160,80,100,0.07)',
+        'card-hover': '0 4px 24px rgba(160,80,100,0.14), 0 8px 32px rgba(160,80,100,0.08)',
+        warm: '0 2px 10px rgba(228,77,138,0.2), 0 4px 20px rgba(228,77,138,0.12)'
       }
     }
   },

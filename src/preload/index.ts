@@ -4,7 +4,9 @@ import type {
   CreateProductInput,
   UpdateProductInput,
   CreateVariationInput,
-  UpdateVariationInput
+  UpdateVariationInput,
+  CreateFairInput,
+  UpdateFairInput
 } from '../renderer/src/types'
 
 const api = {
@@ -23,6 +25,12 @@ const api = {
     delete: (id: number) => ipcRenderer.invoke('variations:delete', id),
     addStock: (id: number, quantity: number) =>
       ipcRenderer.invoke('variations:addStock', id, quantity)
+  },
+  fairs: {
+    getAll: () => ipcRenderer.invoke('fairs:getAll'),
+    create: (data: CreateFairInput) => ipcRenderer.invoke('fairs:create', data),
+    update: (data: UpdateFairInput) => ipcRenderer.invoke('fairs:update', data),
+    delete: (id: number) => ipcRenderer.invoke('fairs:delete', id)
   }
 }
 

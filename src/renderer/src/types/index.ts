@@ -42,3 +42,23 @@ export type CreateVariationInput = {
 }
 
 export type UpdateVariationInput = CreateVariationInput & { id: number }
+
+export interface Fair {
+  id: number
+  name: string
+  location: string
+  organizer: string | null
+  date: string
+  enrollmentCost: number
+  createdAt: string
+}
+
+export type CreateFairInput = {
+  name: string
+  location: string
+  organizer?: string
+  date: string
+  enrollmentCost: number
+}
+
+export type UpdateFairInput = CreateFairInput & { id: number }

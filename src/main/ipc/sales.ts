@@ -1,7 +1,7 @@
 import { ipcMain } from 'electron'
 import { eq } from 'drizzle-orm'
 import { getDb, getSqlite } from '../database'
-import { sales, saleItems, productVariations, fairs } from '../database/schema'
+import { sales, saleItems, productVariations, products, fairs } from '../database/schema'
 import type { CreateSaleInput } from '../../renderer/src/types'
 
 export function registerSaleHandlers(): void {
@@ -30,12 +30,14 @@ export function registerSaleHandlers(): void {
           id: saleItems.id,
           variationId: saleItems.variationId,
           variationIdentifier: productVariations.identifier,
+          productName: products.name,
           quantity: saleItems.quantity,
           unitPrice: saleItems.unitPrice,
           unitCost: saleItems.unitCost
         })
         .from(saleItems)
         .innerJoin(productVariations, eq(saleItems.variationId, productVariations.id))
+        .innerJoin(products, eq(productVariations.productId, products.id))
         .where(eq(saleItems.saleId, sale.id))
         .all()
 

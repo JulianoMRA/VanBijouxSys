@@ -24,7 +24,10 @@ function formatCurrency(value: number): string {
 export default function SaleForm({ onSave, onClose }: SaleFormProps): JSX.Element {
   const [channel, setChannel] = useState<SaleChannel>('Feira')
   const [fairId, setFairId] = useState<number | ''>('')
-  const [soldAt, setSoldAt] = useState(new Date().toISOString().slice(0, 10))
+  const [soldAt, setSoldAt] = useState(() => {
+    const d = new Date()
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+  })
   const [items, setItems] = useState<ItemRow[]>([{ key: 0, productId: '', variationId: '', quantity: '1', unitPrice: '' }])
   const [products, setProducts] = useState<Product[]>([])
   const [fairs, setFairs] = useState<Fair[]>([])

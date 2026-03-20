@@ -1,12 +1,14 @@
 import { NavLink } from 'react-router-dom'
+import { LayoutDashboard, Gem, Package, ShoppingBag, Store, Tag } from 'lucide-react'
+import type { LucideIcon } from 'lucide-react'
 
-const navItems = [
-  { to: '/', label: 'Dashboard', icon: '◈' },
-  { to: '/products', label: 'Produtos', icon: '✦' },
-  { to: '/stock', label: 'Estoque', icon: '◻' },
-  { to: '/sales', label: 'Vendas', icon: '◈' },
-  { to: '/fairs', label: 'Feiras', icon: '◇' },
-  { to: '/price-calculator', label: 'Precificação', icon: '◎' }
+const navItems: { to: string; label: string; Icon: LucideIcon }[] = [
+  { to: '/', label: 'Dashboard', Icon: LayoutDashboard },
+  { to: '/products', label: 'Produtos', Icon: Gem },
+  { to: '/stock', label: 'Estoque', Icon: Package },
+  { to: '/sales', label: 'Vendas', Icon: ShoppingBag },
+  { to: '/fairs', label: 'Feiras', Icon: Store },
+  { to: '/price-calculator', label: 'Precificação', Icon: Tag }
 ]
 
 export default function Sidebar(): JSX.Element {
@@ -20,11 +22,11 @@ export default function Sidebar(): JSX.Element {
       </div>
 
       <nav className="flex-1 px-3 py-4 space-y-1">
-        {navItems.map((item) => (
+        {navItems.map(({ to, label, Icon }) => (
           <NavLink
-            key={item.to}
-            to={item.to}
-            end={item.to === '/'}
+            key={to}
+            to={to}
+            end={to === '/'}
             className={({ isActive }) =>
               `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 ${
                 isActive
@@ -33,8 +35,8 @@ export default function Sidebar(): JSX.Element {
               }`
             }
           >
-            <span className="text-base">{item.icon}</span>
-            {item.label}
+            <Icon size={17} />
+            {label}
           </NavLink>
         ))}
       </nav>

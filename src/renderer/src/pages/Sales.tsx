@@ -194,7 +194,10 @@ export default function Sales(): JSX.Element {
                       <tbody className="divide-y divide-cream-200">
                         {sale.items.map((item) => (
                           <tr key={item.id}>
-                            <td className="py-2 text-gray-700">{item.variationIdentifier}</td>
+                            <td className="py-2 text-gray-700">
+                              <span className="font-medium">{item.productName}</span>
+                              <span className="text-gray-400 ml-1">— {item.variationIdentifier}</span>
+                            </td>
                             <td className="py-2 text-center text-gray-500">{item.quantity}</td>
                             <td className="py-2 text-right text-gray-500">{formatCurrency(item.unitPrice)}</td>
                             <td className="py-2 text-right font-medium text-gray-800">

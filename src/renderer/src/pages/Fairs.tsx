@@ -34,6 +34,7 @@ export default function Fairs(): JSX.Element {
   const [fairs, setFairs] = useState<Fair[]>([])
   const [modal, setModal] = useState<Modal | null>(null)
   const [loading, setLoading] = useState(true)
+  const [errorMessage, setErrorMessage] = useState('')
 
   async function loadFairs(): Promise<void> {
     const data = await window.api.fairs.getAll()
@@ -46,8 +47,12 @@ export default function Fairs(): JSX.Element {
   }, [])
 
   async function handleDelete(fair: Fair): Promise<void> {
-    await window.api.fairs.delete(fair.id)
-    await loadFairs()
+    try {
+      await window.api.fairs.delete(fair.id)
+      await loadFairs()
+    } catch {
+      setErrorMessage(`"${fair.name}" não pode ser excluída pois possui vendas registradas.`)
+    }
   }
 
   const upcoming = fairs.filter((f) => isFuture(f))
@@ -68,6 +73,13 @@ export default function Fairs(): JSX.Element {
           + Nova feira
         </button>
       </div>
+
+      {errorMessage && (
+        <div className="bg-rose-50 border border-rose-200 rounded-2xl px-5 py-3 mb-4 flex items-start justify-between gap-3">
+          <p className="text-sm text-rose-700">{errorMessage}</p>
+          <button onClick={() => setErrorMessage('')} className="text-rose-400 hover:text-rose-600 shrink-0 text-lg leading-none">×</button>
+        </div>
+      )}
 
       {loading ? (
         <div className="card flex items-center justify-center h-40">

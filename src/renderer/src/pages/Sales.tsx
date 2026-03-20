@@ -38,6 +38,7 @@ export default function Sales(): JSX.Element {
   const [expandedSale, setExpandedSale] = useState<number | null>(null)
   const [channelFilter, setChannelFilter] = useState<SaleChannel | 'Todos'>('Todos')
   const [loading, setLoading] = useState(true)
+  const [errorMessage, setErrorMessage] = useState('')
 
   async function loadSales(): Promise<void> {
     const data = await window.api.sales.getAll()
@@ -50,9 +51,13 @@ export default function Sales(): JSX.Element {
   }, [])
 
   async function handleDelete(sale: Sale): Promise<void> {
-    await window.api.sales.delete(sale.id)
-    if (expandedSale === sale.id) setExpandedSale(null)
-    await loadSales()
+    try {
+      await window.api.sales.delete(sale.id)
+      if (expandedSale === sale.id) setExpandedSale(null)
+      await loadSales()
+    } catch {
+      setErrorMessage('Não foi possível excluir esta venda. Tente novamente.')
+    }
   }
 
   const filtered = channelFilter === 'Todos'
@@ -71,6 +76,13 @@ export default function Sales(): JSX.Element {
           + Registrar venda
         </button>
       </div>
+
+      {errorMessage && (
+        <div className="bg-rose-50 border border-rose-200 rounded-2xl px-5 py-3 mb-4 flex items-start justify-between gap-3">
+          <p className="text-sm text-rose-700">{errorMessage}</p>
+          <button onClick={() => setErrorMessage('')} className="text-rose-400 hover:text-rose-600 shrink-0 text-lg leading-none">×</button>
+        </div>
+      )}
 
       {/* Filtro de canal */}
       <div className="flex gap-2 mb-4 flex-wrap">

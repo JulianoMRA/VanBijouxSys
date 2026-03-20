@@ -80,15 +80,6 @@ export function registerSaleHandlers(): void {
              WHERE id = ?`
           )
           .run(item.quantity, item.variationId)
-
-        const recipe = sqlite
-          .prepare(`SELECT insumo_id, quantity FROM variation_insumos WHERE variation_id = ?`)
-          .all(item.variationId) as { insumo_id: number; quantity: number }[]
-        for (const r of recipe) {
-          sqlite
-            .prepare(`UPDATE insumos SET stock_quantity = stock_quantity - ? WHERE id = ?`)
-            .run(r.quantity * item.quantity, r.insumo_id)
-        }
       }
 
       return { id: saleId }
@@ -113,15 +104,6 @@ export function registerSaleHandlers(): void {
              WHERE id = ?`
           )
           .run(item.quantity, item.variation_id)
-
-        const recipe = sqlite
-          .prepare(`SELECT insumo_id, quantity FROM variation_insumos WHERE variation_id = ?`)
-          .all(item.variation_id) as { insumo_id: number; quantity: number }[]
-        for (const r of recipe) {
-          sqlite
-            .prepare(`UPDATE insumos SET stock_quantity = stock_quantity + ? WHERE id = ?`)
-            .run(r.quantity * item.quantity, r.insumo_id)
-        }
       }
 
       sqlite.prepare(`DELETE FROM sales WHERE id = ?`).run(id)

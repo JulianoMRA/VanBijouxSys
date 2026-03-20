@@ -2,6 +2,7 @@ import { ipcMain } from 'electron'
 import { eq } from 'drizzle-orm'
 import { getDb } from '../database'
 import { products, productVariations, categories, variationInsumos, insumos } from '../database/schema'
+import { sql } from 'drizzle-orm'
 import type {
   CreateProductInput,
   UpdateProductInput,
@@ -138,16 +139,22 @@ export function registerProductHandlers(): void {
 
   ipcMain.handle('variations:addStock', async (_event, id: number, quantity: number) => {
     const db = getDb()
-    const variation = db
-      .select()
-      .from(productVariations)
-      .where(eq(productVariations.id, id))
-      .get()
+    const variation = db.select().from(productVariations).where(eq(productVariations.id, id)).get()
     if (!variation) return { success: false }
+
     db.update(productVariations)
       .set({ stockQuantity: variation.stockQuantity + quantity })
       .where(eq(productVariations.id, id))
       .run()
+
+    const recipe = db.select().from(variationInsumos).where(eq(variationInsumos.variationId, id)).all()
+    for (const item of recipe) {
+      db.update(insumos)
+        .set({ stockQuantity: sql`stock_quantity - ${item.quantity * quantity}` })
+        .where(eq(insumos.id, item.insumoId))
+        .run()
+    }
+
     return { success: true }
   })
 }

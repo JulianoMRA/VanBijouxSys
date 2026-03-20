@@ -24,10 +24,10 @@ export default function Modal({ title, onClose, children, size = 'md' }: ModalPr
       onClick={onClose}
     >
       <div
-        className={`bg-white rounded-2xl shadow-xl w-full ${widths[size]} mx-4 overflow-hidden`}
+        className={`bg-white rounded-2xl shadow-xl w-full ${widths[size]} mx-4 flex flex-col max-h-[90vh]`}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between px-6 py-4 border-b border-cream-200">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-cream-200 shrink-0">
           <h3 className="font-display text-lg font-semibold text-gray-800">{title}</h3>
           <button
             onClick={onClose}
@@ -36,7 +36,7 @@ export default function Modal({ title, onClose, children, size = 'md' }: ModalPr
             ×
           </button>
         </div>
-        <div className="px-6 py-5">{children}</div>
+        <div className="px-6 py-5 overflow-y-auto">{children}</div>
       </div>
     </div>
   )

@@ -120,14 +120,12 @@ export default function SaleForm({ onSave, onClose }: SaleFormProps): JSX.Elemen
       return
     }
 
-    const effectiveSoldAt = selectedFair ? selectedFair.date : soldAt
-
     setSaving(true)
     try {
       await window.api.sales.create({
         channel,
         fairId: channel === 'Feira' && fairId !== '' ? fairId : undefined,
-        soldAt: effectiveSoldAt,
+        soldAt,
         items: builtItems
       })
       onSave()
@@ -163,17 +161,17 @@ export default function SaleForm({ onSave, onClose }: SaleFormProps): JSX.Elemen
               ))}
             </div>
           </div>
-          {channel !== 'Feira' && (
             <div>
               <label className="label">Data da venda</label>
               <input
                 className="input"
                 type="date"
                 value={soldAt}
+                min={selectedFair ? selectedFair.date : undefined}
+                max={selectedFair ? (selectedFair.endDate ?? selectedFair.date) : undefined}
                 onChange={(e) => setSoldAt(e.target.value)}
               />
             </div>
-          )}
         </div>
 
         {/* Feira */}
@@ -183,7 +181,14 @@ export default function SaleForm({ onSave, onClose }: SaleFormProps): JSX.Elemen
             <select
               className="input"
               value={fairId}
-              onChange={(e) => setFairId(e.target.value === '' ? '' : Number(e.target.value))}
+              onChange={(e) => {
+                const id = e.target.value === '' ? '' : Number(e.target.value)
+                setFairId(id)
+                if (id !== '') {
+                  const fair = fairs.find((f) => f.id === id)
+                  if (fair) setSoldAt(fair.date)
+                }
+              }}
             >
               <option value="">Selecione a feira…</option>
               {fairs.map((f) => {
@@ -198,9 +203,9 @@ export default function SaleForm({ onSave, onClose }: SaleFormProps): JSX.Elemen
                 )
               })}
             </select>
-            {selectedFair && (
-              <p className="text-xs text-blush-600 mt-1">
-                A data da venda será registrada como o início desta feira.
+            {selectedFair?.endDate && selectedFair.endDate !== selectedFair.date && (
+              <p className="text-xs text-gray-400 mt-1">
+                Escolha o dia da venda dentro do período da feira ({selectedFair.date.slice(8, 10)} a {selectedFair.endDate.slice(8, 10)}/{selectedFair.date.slice(5, 7)}).
               </p>
             )}
           </div>

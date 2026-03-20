@@ -1,7 +1,7 @@
 import { ipcMain } from 'electron'
 import { eq } from 'drizzle-orm'
 import { getDb } from '../database'
-import { products, productVariations, categories } from '../database/schema'
+import { products, productVariations, categories, variationInsumos, insumos } from '../database/schema'
 import type {
   CreateProductInput,
   UpdateProductInput,
@@ -38,7 +38,24 @@ export function registerProductHandlers(): void {
         .from(productVariations)
         .where(eq(productVariations.productId, product.id))
         .all()
-      return { ...product, variations }
+      const variationsWithInsumos = variations.map((v) => {
+        const recipe = db
+          .select({
+            id: variationInsumos.id,
+            variationId: variationInsumos.variationId,
+            insumoId: variationInsumos.insumoId,
+            insumoName: insumos.name,
+            unit: insumos.unit,
+            costPerUnit: insumos.costPerUnit,
+            quantity: variationInsumos.quantity
+          })
+          .from(variationInsumos)
+          .innerJoin(insumos, eq(variationInsumos.insumoId, insumos.id))
+          .where(eq(variationInsumos.variationId, v.id))
+          .all()
+        return { ...v, insumos: recipe }
+      })
+      return { ...product, variations: variationsWithInsumos }
     })
   })
 
@@ -87,7 +104,11 @@ export function registerProductHandlers(): void {
         minimumStock: data.minimumStock
       })
       .run()
-    return { id: result.lastInsertRowid }
+    const variationId = Number(result.lastInsertRowid)
+    for (const item of data.insumos ?? []) {
+      db.insert(variationInsumos).values({ variationId, insumoId: item.insumoId, quantity: item.quantity }).run()
+    }
+    return { id: variationId }
   })
 
   ipcMain.handle('variations:update', async (_event, data: UpdateVariationInput) => {
@@ -102,6 +123,10 @@ export function registerProductHandlers(): void {
       })
       .where(eq(productVariations.id, data.id))
       .run()
+    db.delete(variationInsumos).where(eq(variationInsumos.variationId, data.id)).run()
+    for (const item of data.insumos ?? []) {
+      db.insert(variationInsumos).values({ variationId: data.id, insumoId: item.insumoId, quantity: item.quantity }).run()
+    }
     return { success: true }
   })
 

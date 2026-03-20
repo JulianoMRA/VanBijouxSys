@@ -48,6 +48,27 @@ export const fairAdditionalCosts = sqliteTable('fair_additional_costs', {
   amount: real('amount').notNull().default(0)
 })
 
+export const insumos = sqliteTable('insumos', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  name: text('name').notNull(),
+  unit: text('unit').notNull(),
+  costPerUnit: real('cost_per_unit').notNull().default(0),
+  stockQuantity: real('stock_quantity').notNull().default(0),
+  minimumStock: real('minimum_stock').notNull().default(0),
+  createdAt: text('created_at').notNull().default('CURRENT_TIMESTAMP')
+})
+
+export const variationInsumos = sqliteTable('variation_insumos', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  variationId: integer('variation_id')
+    .notNull()
+    .references(() => productVariations.id, { onDelete: 'cascade' }),
+  insumoId: integer('insumo_id')
+    .notNull()
+    .references(() => insumos.id),
+  quantity: real('quantity').notNull().default(0)
+})
+
 export const sales = sqliteTable('sales', {
   id: integer('id').primaryKey({ autoIncrement: true }),
   channel: text('channel').notNull(),

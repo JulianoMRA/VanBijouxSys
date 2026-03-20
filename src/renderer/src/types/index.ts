@@ -1,3 +1,35 @@
+export type InsumoUnit = 'cm' | 'g' | 'unidade'
+
+export interface Insumo {
+  id: number
+  name: string
+  unit: InsumoUnit
+  costPerUnit: number
+  stockQuantity: number
+  minimumStock: number
+  createdAt: string
+}
+
+export interface VariationInsumo {
+  id: number
+  variationId: number
+  insumoId: number
+  insumoName: string
+  unit: InsumoUnit
+  costPerUnit: number
+  quantity: number
+}
+
+export type CreateInsumoInput = {
+  name: string
+  unit: InsumoUnit
+  costPerUnit: number
+  stockQuantity: number
+  minimumStock: number
+}
+
+export type UpdateInsumoInput = CreateInsumoInput & { id: number }
+
 export interface Category {
   id: number
   name: string
@@ -12,6 +44,7 @@ export interface ProductVariation {
   stockQuantity: number
   minimumStock: number
   createdAt: string
+  insumos: VariationInsumo[]
 }
 
 export interface Product {
@@ -39,6 +72,7 @@ export type CreateVariationInput = {
   salePrice: number
   stockQuantity: number
   minimumStock: number
+  insumos?: { insumoId: number; quantity: number }[]
 }
 
 export type UpdateVariationInput = CreateVariationInput & { id: number }

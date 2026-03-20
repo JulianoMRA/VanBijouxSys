@@ -7,7 +7,9 @@ import type {
   UpdateVariationInput,
   CreateFairInput,
   UpdateFairInput,
-  CreateSaleInput
+  CreateSaleInput,
+  CreateInsumoInput,
+  UpdateInsumoInput
 } from '../renderer/src/types'
 
 const api = {
@@ -40,6 +42,13 @@ const api = {
   },
   dashboard: {
     getStats: (fromDate: string | null) => ipcRenderer.invoke('dashboard:getStats', fromDate)
+  },
+  insumos: {
+    getAll: () => ipcRenderer.invoke('insumos:getAll'),
+    create: (data: CreateInsumoInput) => ipcRenderer.invoke('insumos:create', data),
+    update: (data: UpdateInsumoInput) => ipcRenderer.invoke('insumos:update', data),
+    addStock: (id: number, quantity: number) => ipcRenderer.invoke('insumos:addStock', id, quantity),
+    delete: (id: number) => ipcRenderer.invoke('insumos:delete', id)
   }
 }
 

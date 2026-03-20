@@ -81,6 +81,23 @@ function runMigrations(sqlite: InstanceType<typeof Database>): void {
       ('Tiara'),
       ('Pingente');
 
+    CREATE TABLE IF NOT EXISTS insumos (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      unit TEXT NOT NULL,
+      cost_per_unit REAL NOT NULL DEFAULT 0,
+      stock_quantity REAL NOT NULL DEFAULT 0,
+      minimum_stock REAL NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS variation_insumos (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      variation_id INTEGER NOT NULL REFERENCES product_variations(id) ON DELETE CASCADE,
+      insumo_id INTEGER NOT NULL REFERENCES insumos(id),
+      quantity REAL NOT NULL DEFAULT 0
+    );
+
     CREATE TABLE IF NOT EXISTS fair_additional_costs (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       fair_id INTEGER NOT NULL REFERENCES fairs(id) ON DELETE CASCADE,

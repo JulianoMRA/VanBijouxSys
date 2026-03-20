@@ -39,6 +39,7 @@ export default function Products(): JSX.Element {
   const [expandedProduct, setExpandedProduct] = useState<number | null>(null)
   const [modal, setModal] = useState<Modal | null>(null)
   const [loading, setLoading] = useState(true)
+  const [errorMessage, setErrorMessage] = useState('')
 
   async function loadData(): Promise<void> {
     const [prods, cats] = await Promise.all([
@@ -69,14 +70,26 @@ export default function Products(): JSX.Element {
   }
 
   async function handleDeleteProduct(product: Product): Promise<void> {
-    await window.api.products.delete(product.id)
-    if (expandedProduct === product.id) setExpandedProduct(null)
-    await loadData()
+    try {
+      await window.api.products.delete(product.id)
+      if (expandedProduct === product.id) setExpandedProduct(null)
+      await loadData()
+    } catch {
+      setErrorMessage(
+        `"${product.name}" não pode ser excluído pois possui vendas registradas. O histórico de vendas seria perdido.`
+      )
+    }
   }
 
   async function handleDeleteVariation(variation: ProductVariation): Promise<void> {
-    await window.api.variations.delete(variation.id)
-    await loadData()
+    try {
+      await window.api.variations.delete(variation.id)
+      await loadData()
+    } catch {
+      setErrorMessage(
+        `A variação "${variation.identifier}" não pode ser excluída pois está vinculada a vendas registradas.`
+      )
+    }
   }
 
   return (
@@ -95,6 +108,19 @@ export default function Products(): JSX.Element {
           + Novo produto
         </button>
       </div>
+
+      {/* Erro de exclusão */}
+      {errorMessage && (
+        <div className="bg-rose-50 border border-rose-200 rounded-2xl px-5 py-3 mb-4 flex items-start justify-between gap-3">
+          <p className="text-sm text-rose-700">{errorMessage}</p>
+          <button
+            onClick={() => setErrorMessage('')}
+            className="text-rose-400 hover:text-rose-600 shrink-0 text-lg leading-none"
+          >
+            ×
+          </button>
+        </div>
+      )}
 
       {/* Filtros */}
       <div className="flex gap-3 mb-4 flex-wrap">

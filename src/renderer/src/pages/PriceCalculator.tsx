@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
+import { calcSuggestedPrice } from '../utils/pricing'
+import { formatCurrency } from '../utils/format'
 import type { Product } from '../types'
 
 const LABOR_COST_KEY = 'pricing_default_labor_cost'
@@ -7,10 +9,6 @@ interface MaterialRow {
   id: string
   name: string
   cost: string
-}
-
-function formatCurrency(value: number): string {
-  return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 }
 
 function ApplyToVariation({
@@ -164,7 +162,7 @@ export default function PriceCalculator(): JSX.Element {
   const step2 = step1 + laborValue
   const step3 = step2 * 1.1
   const step4 = step3 + 1
-  const finalPrice = Math.ceil(step4)
+  const finalPrice = calcSuggestedPrice(totalMaterials, laborValue)
   const hasResult = totalMaterials > 0 || laborValue > 0
 
   return (

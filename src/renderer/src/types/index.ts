@@ -43,13 +43,22 @@ export type CreateVariationInput = {
 
 export type UpdateVariationInput = CreateVariationInput & { id: number }
 
+export interface FairAdditionalCost {
+  id?: number
+  fairId?: number
+  description: string
+  amount: number
+}
+
 export interface Fair {
   id: number
   name: string
   location: string
   organizer: string | null
   date: string
+  endDate: string | null
   enrollmentCost: number
+  additionalCosts: FairAdditionalCost[]
   createdAt: string
 }
 
@@ -58,7 +67,9 @@ export type CreateFairInput = {
   location: string
   organizer?: string
   date: string
+  endDate?: string
   enrollmentCost: number
+  additionalCosts: { description: string; amount: number }[]
 }
 
 export type UpdateFairInput = CreateFairInput & { id: number }
@@ -113,9 +124,11 @@ export interface DashboardStats {
   salesByFair: Array<{
     fairName: string
     date: string
+    endDate: string | null
     revenue: number
     profit: number
     enrollmentCost: number
+    additionalCosts: number
     netProfit: number
   }>
   topVariations: Array<{

@@ -14,9 +14,11 @@ export interface DashboardStats {
   salesByFair: Array<{
     fairName: string
     date: string
+    endDate: string | null
     revenue: number
     profit: number
     enrollmentCost: number
+    additionalCosts: number
     netProfit: number
   }>
   topVariations: Array<{
@@ -86,10 +88,14 @@ export function registerDashboardHandlers(): void {
         `SELECT
           f.name                                               AS fairName,
           f.date,
+          f.end_date                                           AS endDate,
           f.enrollment_cost                                    AS enrollmentCost,
+          COALESCE((SELECT SUM(fac.amount) FROM fair_additional_costs fac WHERE fac.fair_id = f.id), 0) AS additionalCosts,
           COALESCE(SUM(s.total_amount), 0)                    AS revenue,
           COALESCE(SUM(s.total_amount - s.total_cost), 0)     AS profit,
-          COALESCE(SUM(s.total_amount - s.total_cost), 0) - f.enrollment_cost AS netProfit
+          COALESCE(SUM(s.total_amount - s.total_cost), 0)
+            - f.enrollment_cost
+            - COALESCE((SELECT SUM(fac.amount) FROM fair_additional_costs fac WHERE fac.fair_id = f.id), 0) AS netProfit
          FROM fairs f
          LEFT JOIN sales s ON s.fair_id = f.id ${dateFilter ? `AND s.sold_at >= '${fromDate}'` : ''}
          GROUP BY f.id

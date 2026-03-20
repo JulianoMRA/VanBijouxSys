@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import type { Product } from '../types'
 
+const LABOR_COST_KEY = 'pricing_default_labor_cost'
+
 interface MaterialRow {
   id: string
   name: string
@@ -117,13 +119,20 @@ export default function PriceCalculator(): JSX.Element {
   const [materials, setMaterials] = useState<MaterialRow[]>([
     { id: 'item-0', name: '', cost: '' }
   ])
-  const [laborCost, setLaborCost] = useState('')
+  const [laborCost, setLaborCost] = useState(() => localStorage.getItem(LABOR_COST_KEY) ?? '')
   const [products, setProducts] = useState<Product[]>([])
   const [showApply, setShowApply] = useState(false)
+  const [laborSaved, setLaborSaved] = useState(false)
 
   useEffect(() => {
     window.api.products.getAll().then(setProducts)
   }, [])
+
+  function saveDefaultLaborCost(): void {
+    localStorage.setItem(LABOR_COST_KEY, laborCost)
+    setLaborSaved(true)
+    setTimeout(() => setLaborSaved(false), 2000)
+  }
 
   function addMaterial(): void {
     counter.current += 1
@@ -154,6 +163,8 @@ export default function PriceCalculator(): JSX.Element {
   const step1 = totalMaterials * 3
   const step2 = step1 + laborValue
   const step3 = step2 * 1.1
+  const step4 = step3 + 1
+  const finalPrice = Math.ceil(step4)
   const hasResult = totalMaterials > 0 || laborValue > 0
 
   return (
@@ -226,7 +237,16 @@ export default function PriceCalculator(): JSX.Element {
 
           {/* Mão de obra */}
           <div>
-            <label className="label">Mão de obra (R$)</label>
+            <div className="flex items-center justify-between mb-1">
+              <label className="label mb-0">Mão de obra (R$)</label>
+              <button
+                type="button"
+                onClick={saveDefaultLaborCost}
+                className="text-xs text-blush-600 hover:text-blush-800 transition-colors"
+              >
+                {laborSaved ? '✓ Salvo!' : 'Salvar como padrão'}
+              </button>
+            </div>
             <div className="relative">
               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm pointer-events-none">
                 R$
@@ -278,11 +298,31 @@ export default function PriceCalculator(): JSX.Element {
 
               <div className="flex items-center justify-between py-2.5 border-b border-cream-100">
                 <div>
-                  <p className="text-sm font-medium text-gray-700">+ 10%</p>
+                  <p className="text-sm font-medium text-gray-700">× 1,10 (margem)</p>
                   <p className="text-xs text-gray-400">{formatCurrency(step2)} × 1,10</p>
                 </div>
                 <span className={`text-sm font-semibold ${hasResult ? 'text-gray-800' : 'text-gray-300'}`}>
                   {formatCurrency(step3)}
+                </span>
+              </div>
+
+              <div className="flex items-center justify-between py-2.5 border-b border-cream-100">
+                <div>
+                  <p className="text-sm font-medium text-gray-700">+ Embalagem</p>
+                  <p className="text-xs text-gray-400">{formatCurrency(step3)} + R$ 1,00</p>
+                </div>
+                <span className={`text-sm font-semibold ${hasResult ? 'text-gray-800' : 'text-gray-300'}`}>
+                  {formatCurrency(step4)}
+                </span>
+              </div>
+
+              <div className="flex items-center justify-between py-2.5">
+                <div>
+                  <p className="text-sm font-medium text-gray-700">Arredondamento</p>
+                  <p className="text-xs text-gray-400">Sempre para o R$ inteiro acima</p>
+                </div>
+                <span className={`text-sm font-semibold ${hasResult ? 'text-gray-800' : 'text-gray-300'}`}>
+                  {hasResult ? formatCurrency(finalPrice) : formatCurrency(0)}
                 </span>
               </div>
             </div>
@@ -291,13 +331,13 @@ export default function PriceCalculator(): JSX.Element {
             <div className={`mt-4 rounded-xl p-4 text-center transition-all ${hasResult ? 'bg-blush-50' : 'bg-cream-100'}`}>
               <p className="text-xs text-gray-400 uppercase tracking-widest mb-1">Preço sugerido</p>
               <p className={`font-display text-4xl font-bold transition-colors ${hasResult ? 'text-blush-600' : 'text-gray-300'}`}>
-                {formatCurrency(step3)}
+                {formatCurrency(finalPrice)}
               </p>
               {hasResult && (
                 <p className="text-xs text-gray-400 mt-1">
                   Margem sobre custo total:{' '}
                   {totalMaterials + laborValue > 0
-                    ? `${(((step3 - (totalMaterials + laborValue)) / (totalMaterials + laborValue)) * 100).toFixed(0)}%`
+                    ? `${(((finalPrice - (totalMaterials + laborValue)) / (totalMaterials + laborValue)) * 100).toFixed(0)}%`
                     : '—'}
                 </p>
               )}
@@ -315,7 +355,7 @@ export default function PriceCalculator(): JSX.Element {
                   </button>
                 ) : (
                   <ApplyToVariation
-                    suggestedPrice={parseFloat(step3.toFixed(2))}
+                    suggestedPrice={finalPrice}
                     products={products}
                     onApplied={() => setShowApply(false)}
                   />
@@ -328,7 +368,7 @@ export default function PriceCalculator(): JSX.Element {
           <div className="bg-white rounded-2xl border border-cream-200 px-5 py-4">
             <p className="text-xs text-gray-400 uppercase tracking-wide mb-2">Fórmula utilizada</p>
             <p className="text-sm text-gray-600 font-mono leading-relaxed">
-              (materiais × 3 + mão de obra) × 1,10
+              teto((materiais × 3 + mão de obra) × 1,10 + 1,00)
             </p>
           </div>
         </div>

@@ -100,6 +100,10 @@ export default function SaleForm({ onSave, onClose }: SaleFormProps): JSX.Elemen
   const totalCost = saleItems?.reduce((s, i) => s + i.quantity * i.unitCost, 0) ?? 0
   const profit = totalAmount - totalCost
 
+  const selectedFair = channel === 'Feira' && fairId !== ''
+    ? fairs.find((f) => f.id === fairId)
+    : undefined
+
   async function handleSubmit(e: React.FormEvent): Promise<void> {
     e.preventDefault()
     if (channel === 'Feira' && fairId === '') {
@@ -116,12 +120,14 @@ export default function SaleForm({ onSave, onClose }: SaleFormProps): JSX.Elemen
       return
     }
 
+    const effectiveSoldAt = selectedFair ? selectedFair.date : soldAt
+
     setSaving(true)
     try {
       await window.api.sales.create({
         channel,
         fairId: channel === 'Feira' && fairId !== '' ? fairId : undefined,
-        soldAt,
+        soldAt: effectiveSoldAt,
         items: builtItems
       })
       onSave()
@@ -157,15 +163,17 @@ export default function SaleForm({ onSave, onClose }: SaleFormProps): JSX.Elemen
               ))}
             </div>
           </div>
-          <div>
-            <label className="label">Data da venda</label>
-            <input
-              className="input"
-              type="date"
-              value={soldAt}
-              onChange={(e) => setSoldAt(e.target.value)}
-            />
-          </div>
+          {channel !== 'Feira' && (
+            <div>
+              <label className="label">Data da venda</label>
+              <input
+                className="input"
+                type="date"
+                value={soldAt}
+                onChange={(e) => setSoldAt(e.target.value)}
+              />
+            </div>
+          )}
         </div>
 
         {/* Feira */}
@@ -178,12 +186,23 @@ export default function SaleForm({ onSave, onClose }: SaleFormProps): JSX.Elemen
               onChange={(e) => setFairId(e.target.value === '' ? '' : Number(e.target.value))}
             >
               <option value="">Selecione a feira…</option>
-              {fairs.map((f) => (
-                <option key={f.id} value={f.id}>
-                  {f.name} — {f.date.slice(8, 10)}/{f.date.slice(5, 7)}/{f.date.slice(0, 4)}
-                </option>
-              ))}
+              {fairs.map((f) => {
+                const start = `${f.date.slice(8, 10)}/${f.date.slice(5, 7)}/${f.date.slice(0, 4)}`
+                const end = f.endDate && f.endDate !== f.date
+                  ? ` a ${f.endDate.slice(8, 10)}/${f.endDate.slice(5, 7)}`
+                  : ''
+                return (
+                  <option key={f.id} value={f.id}>
+                    {f.name} — {start}{end}
+                  </option>
+                )
+              })}
             </select>
+            {selectedFair && (
+              <p className="text-xs text-blush-600 mt-1">
+                A data da venda será registrada como o início desta feira.
+              </p>
+            )}
           </div>
         )}
 

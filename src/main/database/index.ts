@@ -80,7 +80,19 @@ function runMigrations(sqlite: InstanceType<typeof Database>): void {
       ('Brinco'),
       ('Tiara'),
       ('Pingente');
+
+    CREATE TABLE IF NOT EXISTS fair_additional_costs (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      fair_id INTEGER NOT NULL REFERENCES fairs(id) ON DELETE CASCADE,
+      description TEXT NOT NULL,
+      amount REAL NOT NULL DEFAULT 0
+    );
   `)
+
+  const fairColumns = sqlite.prepare('PRAGMA table_info(fairs)').all() as Array<{ name: string }>
+  if (!fairColumns.some((c) => c.name === 'end_date')) {
+    sqlite.exec('ALTER TABLE fairs ADD COLUMN end_date TEXT')
+  }
 }
 
 export function getDb(): ReturnType<typeof drizzle> {

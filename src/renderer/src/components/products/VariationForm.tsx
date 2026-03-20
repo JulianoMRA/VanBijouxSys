@@ -2,6 +2,12 @@ import { useState } from 'react'
 import Modal from '../ui/Modal'
 import type { ProductVariation } from '../../types'
 
+const LABOR_COST_KEY = 'pricing_default_labor_cost'
+
+function loadDefaultLaborCost(): string {
+  return localStorage.getItem(LABOR_COST_KEY) ?? ''
+}
+
 interface VariationFormProps {
   productId: number
   productName: string
@@ -25,7 +31,23 @@ export default function VariationForm({
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
+  const [showCalc, setShowCalc] = useState(false)
+  const [laborCost, setLaborCost] = useState(loadDefaultLaborCost)
+
   const isEditing = !!variation
+
+  const materials = parseFloat(costPrice) || 0
+  const labor = parseFloat(laborCost) || 0
+  const suggestedPrice = Math.ceil((materials * 3 + labor) * 1.1 + 1)
+  const hasCalcResult = materials > 0 || labor > 0
+
+  function saveDefaultLaborCost(): void {
+    localStorage.setItem(LABOR_COST_KEY, laborCost)
+  }
+
+  function useSuggestedPrice(): void {
+    setSalePrice(suggestedPrice.toString())
+  }
 
   async function handleSubmit(e: React.FormEvent): Promise<void> {
     e.preventDefault()
@@ -120,6 +142,88 @@ export default function VariationForm({
               placeholder="0,00"
             />
           </div>
+        </div>
+
+        {/* Calculadora de preço */}
+        <div className="border border-cream-200 rounded-xl overflow-hidden">
+          <button
+            type="button"
+            onClick={() => setShowCalc((v) => !v)}
+            className="w-full flex items-center justify-between px-4 py-2.5 bg-cream-50 hover:bg-cream-100 transition-colors text-sm"
+          >
+            <span className="font-medium text-gray-700">Calculadora de preço</span>
+            <span className="text-gray-400 text-xs">{showCalc ? '▲ Fechar' : '▼ Abrir'}</span>
+          </button>
+
+          {showCalc && (
+            <div className="px-4 py-3 space-y-3">
+              <p className="text-xs text-gray-400">
+                O custo de materiais é o preço de custo acima. Informe a mão de obra para calcular o preço sugerido.
+              </p>
+
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="label mb-0">Mão de obra (R$)</label>
+                  <button
+                    type="button"
+                    onClick={saveDefaultLaborCost}
+                    className="text-xs text-blush-600 hover:text-blush-800 transition-colors"
+                  >
+                    Salvar como padrão
+                  </button>
+                </div>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm pointer-events-none">
+                    R$
+                  </span>
+                  <input
+                    className="input pl-8"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    placeholder="0,00"
+                    value={laborCost}
+                    onChange={(e) => setLaborCost(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              {hasCalcResult && (
+                <div className="bg-blush-50 rounded-xl p-3 space-y-1 text-xs text-gray-500">
+                  <div className="flex justify-between">
+                    <span>Materiais × 3</span>
+                    <span>{(materials * 3).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>+ Mão de obra</span>
+                    <span>{labor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>× 1,10 (margem)</span>
+                    <span>{((materials * 3 + labor) * 1.1).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>+ Embalagem</span>
+                    <span>R$ 1,00</span>
+                  </div>
+                  <div className="flex justify-between font-semibold text-blush-700 pt-1 border-t border-blush-200">
+                    <span>Preço sugerido</span>
+                    <span>{suggestedPrice.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
+                  </div>
+                </div>
+              )}
+
+              {hasCalcResult && (
+                <button
+                  type="button"
+                  onClick={useSuggestedPrice}
+                  className="btn-secondary w-full text-sm"
+                >
+                  Usar R$ {suggestedPrice},00 como preço de venda
+                </button>
+              )}
+            </div>
+          )}
         </div>
 
         <div className="grid grid-cols-2 gap-4">

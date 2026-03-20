@@ -288,29 +288,35 @@ export default function Dashboard(): JSX.Element {
                 <div className="space-y-3 max-h-[220px] overflow-y-auto pr-1">
                   {stats!.salesByFair
                     .filter((f) => f.revenue > 0)
-                    .map((fair, i) => (
-                      <div key={i} className="bg-cream-50 rounded-xl px-4 py-3">
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="min-w-0">
-                            <p className="text-sm font-medium text-gray-800 truncate">{fair.fairName}</p>
-                            <p className="text-xs text-gray-400">
-                              {fair.date.slice(8, 10)}/{fair.date.slice(5, 7)}/{fair.date.slice(0, 4)}
-                            </p>
+                    .map((fair, i) => {
+                      const dateLabel = fair.endDate && fair.endDate !== fair.date
+                        ? `${fair.date.slice(8, 10)} a ${fair.endDate.slice(8, 10)}/${fair.date.slice(5, 7)}/${fair.date.slice(0, 4)}`
+                        : `${fair.date.slice(8, 10)}/${fair.date.slice(5, 7)}/${fair.date.slice(0, 4)}`
+                      const totalFairCost = fair.enrollmentCost + fair.additionalCosts
+                      return (
+                        <div key={i} className="bg-cream-50 rounded-xl px-4 py-3">
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="min-w-0">
+                              <p className="text-sm font-medium text-gray-800 truncate">{fair.fairName}</p>
+                              <p className="text-xs text-gray-400">{dateLabel}</p>
+                            </div>
+                            <div className="text-right shrink-0">
+                              <p className="text-sm font-semibold text-gray-800">{formatCurrency(fair.revenue)}</p>
+                              <p className={`text-xs font-medium ${fair.netProfit >= 0 ? 'text-emerald-600' : 'text-rose-500'}`}>
+                                Líquido: {formatCurrency(fair.netProfit)}
+                              </p>
+                            </div>
                           </div>
-                          <div className="text-right shrink-0">
-                            <p className="text-sm font-semibold text-gray-800">{formatCurrency(fair.revenue)}</p>
-                            <p className={`text-xs font-medium ${fair.netProfit >= 0 ? 'text-emerald-600' : 'text-rose-500'}`}>
-                              Líquido: {formatCurrency(fair.netProfit)}
+                          {totalFairCost > 0 && (
+                            <p className="text-xs text-gray-400 mt-1">
+                              Custo feira: {formatCurrency(totalFairCost)}
+                              {fair.additionalCosts > 0 && ` (inscrição ${formatCurrency(fair.enrollmentCost)} + outros ${formatCurrency(fair.additionalCosts)})`}
+                              {' '}· Lucro bruto: {formatCurrency(fair.profit)}
                             </p>
-                          </div>
+                          )}
                         </div>
-                        {fair.enrollmentCost > 0 && (
-                          <p className="text-xs text-gray-400 mt-1">
-                            Inscrição: {formatCurrency(fair.enrollmentCost)} · Lucro bruto: {formatCurrency(fair.profit)}
-                          </p>
-                        )}
-                      </div>
-                    ))}
+                      )
+                    })}
                 </div>
               )}
             </div>

@@ -34,8 +34,18 @@ export const fairs = sqliteTable('fairs', {
   location: text('location').notNull(),
   organizer: text('organizer'),
   date: text('date').notNull(),
+  endDate: text('end_date'),
   enrollmentCost: real('enrollment_cost').notNull().default(0),
   createdAt: text('created_at').notNull().default('CURRENT_TIMESTAMP')
+})
+
+export const fairAdditionalCosts = sqliteTable('fair_additional_costs', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  fairId: integer('fair_id')
+    .notNull()
+    .references(() => fairs.id, { onDelete: 'cascade' }),
+  description: text('description').notNull(),
+  amount: real('amount').notNull().default(0)
 })
 
 export const sales = sqliteTable('sales', {

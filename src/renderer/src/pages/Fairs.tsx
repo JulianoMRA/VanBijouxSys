@@ -17,8 +17,17 @@ function formatDate(dateStr: string): string {
   return `${day}/${month}/${year}`
 }
 
-function isFuture(dateStr: string): boolean {
-  return dateStr >= new Date().toISOString().slice(0, 10)
+function isFuture(fair: Fair): boolean {
+  const lastDay = fair.endDate ?? fair.date
+  return lastDay >= new Date().toISOString().slice(0, 10)
+}
+
+function formatDateRange(startDate: string, endDate: string | null): string {
+  if (!endDate || endDate === startDate) return formatDate(startDate)
+  const [sy, sm, sd] = startDate.split('-')
+  const [ey, em, ed] = endDate.split('-')
+  if (sy === ey && sm === em) return `${sd} a ${ed}/${em}/${sy}`
+  return `${formatDate(startDate)} a ${formatDate(endDate)}`
 }
 
 export default function Fairs(): JSX.Element {
@@ -41,8 +50,8 @@ export default function Fairs(): JSX.Element {
     await loadFairs()
   }
 
-  const upcoming = fairs.filter((f) => isFuture(f.date))
-  const past = fairs.filter((f) => !isFuture(f.date))
+  const upcoming = fairs.filter((f) => isFuture(f))
+  const past = fairs.filter((f) => !isFuture(f))
 
   return (
     <div>
@@ -148,6 +157,9 @@ function FairCard({
     return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
   }
 
+  const additionalTotal = fair.additionalCosts.reduce((s, c) => s + c.amount, 0)
+  const totalFairCost = fair.enrollmentCost + additionalTotal
+
   return (
     <div className="bg-white rounded-2xl border border-cream-200 shadow-card px-5 py-4">
       <div className="flex items-start justify-between gap-4">
@@ -164,6 +176,11 @@ function FairCard({
             <p className="text-2xl font-bold font-display leading-tight mt-0.5">
               {fair.date.slice(8, 10)}
             </p>
+            {fair.endDate && fair.endDate !== fair.date && (
+              <p className="text-xs font-medium leading-none mt-0.5">
+                – {fair.endDate.slice(8, 10)}
+              </p>
+            )}
           </div>
 
           {/* Info */}
@@ -175,13 +192,13 @@ function FairCard({
             )}
             <div className="flex items-center gap-3 mt-2 flex-wrap">
               <span className="text-xs text-gray-500">
-                Inscrição:{' '}
+                Custo total:{' '}
                 <span className="font-medium text-gray-700">
-                  {fair.enrollmentCost > 0 ? formatCurrency(fair.enrollmentCost) : 'Gratuita'}
+                  {totalFairCost > 0 ? formatCurrency(totalFairCost) : 'Gratuita'}
                 </span>
               </span>
               <span className="text-xs text-gray-300">·</span>
-              <span className="text-xs text-gray-400">{formatDate(fair.date)}</span>
+              <span className="text-xs text-gray-400">{formatDateRange(fair.date, fair.endDate)}</span>
             </div>
           </div>
         </div>

@@ -132,7 +132,7 @@ export default function Dashboard(): JSX.Element {
           {stats.lowStock.length > 0 && (
             <div>
               <p className="text-sm font-semibold text-amber-800 mb-2">
-                ⚠ {stats.lowStock.length} variação{stats.lowStock.length !== 1 ? 'ões' : ''} com estoque baixo
+                ⚠ {stats.lowStock.length} {stats.lowStock.length !== 1 ? 'variações' : 'variação'} com estoque baixo
               </p>
               <div className="flex flex-wrap gap-2">
                 {stats.lowStock.map((v) => (

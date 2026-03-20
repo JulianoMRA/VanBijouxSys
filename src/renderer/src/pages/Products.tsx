@@ -103,7 +103,7 @@ export default function Products(): JSX.Element {
           <h2 className="font-display text-2xl font-semibold text-gray-800">Produtos</h2>
           {lowStockCount > 0 && (
             <p className="text-sm text-amber-600 mt-0.5">
-              ⚠ {lowStockCount} variação{lowStockCount > 1 ? 'ões' : ''} com estoque baixo
+              ⚠ {lowStockCount} {lowStockCount > 1 ? 'variações' : 'variação'} com estoque baixo
             </p>
           )}
         </div>
@@ -207,7 +207,7 @@ export default function Products(): JSX.Element {
                   <Badge label={product.categoryName} variant="category" />
 
                   <span className="text-xs text-gray-400 whitespace-nowrap">
-                    {product.variations.length} variação{product.variations.length !== 1 ? 'ões' : ''}
+                    {product.variations.length !== 1 ? 'variações' : 'variação'}
                   </span>
 
                   <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>

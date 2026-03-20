@@ -1,4 +1,4 @@
-import { useEffect, useId, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { Product } from '../types'
 
 interface MaterialRow {
@@ -113,9 +113,9 @@ function ApplyToVariation({
 }
 
 export default function PriceCalculator(): JSX.Element {
-  const uid = useId()
+  const counter = useRef(0)
   const [materials, setMaterials] = useState<MaterialRow[]>([
-    { id: `${uid}-0`, name: '', cost: '' }
+    { id: 'item-0', name: '', cost: '' }
   ])
   const [laborCost, setLaborCost] = useState('')
   const [products, setProducts] = useState<Product[]>([])
@@ -126,9 +126,10 @@ export default function PriceCalculator(): JSX.Element {
   }, [])
 
   function addMaterial(): void {
+    counter.current += 1
     setMaterials((prev) => [
       ...prev,
-      { id: `${uid}-${Date.now()}`, name: '', cost: '' }
+      { id: `item-${counter.current}`, name: '', cost: '' }
     ])
   }
 

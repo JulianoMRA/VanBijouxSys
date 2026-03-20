@@ -151,7 +151,7 @@ export default function Dashboard(): JSX.Element {
               <div className="flex flex-wrap gap-2">
                 {stats.lowInsumos.map((i) => (
                   <span key={i.id} className="text-xs bg-amber-100 text-amber-700 px-2.5 py-1 rounded-full">
-                    {i.name} ({i.stockQuantity}/{i.minimumStock} {i.unit})
+                    {i.name} ({i.stockQuantity.toLocaleString('pt-BR')}/{i.minimumStock.toLocaleString('pt-BR')} {i.unit})
                   </span>
                 ))}
               </div>

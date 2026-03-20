@@ -125,7 +125,7 @@ export default function Stock(): JSX.Element {
                         : 'bg-amber-100 text-amber-700'
                     }`}
                   >
-                    {i.name} — {i.stockQuantity} {i.unit === 'unidade' ? 'un.' : i.unit}
+                    {i.name} — {i.stockQuantity.toLocaleString('pt-BR')} {i.unit === 'unidade' ? 'un.' : i.unit}
                   </span>
                 ))}
               </div>

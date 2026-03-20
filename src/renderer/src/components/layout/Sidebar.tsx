@@ -5,10 +5,10 @@ import type { LucideIcon } from 'lucide-react'
 const navItems: { to: string; label: string; Icon: LucideIcon }[] = [
   { to: '/', label: 'Dashboard', Icon: LayoutDashboard },
   { to: '/products', label: 'Produtos', Icon: Gem },
+  { to: '/price-calculator', label: 'Precificação', Icon: Tag },
   { to: '/stock', label: 'Estoque', Icon: Package },
   { to: '/sales', label: 'Vendas', Icon: ShoppingBag },
-  { to: '/fairs', label: 'Feiras', Icon: Store },
-  { to: '/price-calculator', label: 'Precificação', Icon: Tag }
+  { to: '/fairs', label: 'Feiras', Icon: Store }
 ]
 
 export default function Sidebar(): JSX.Element {

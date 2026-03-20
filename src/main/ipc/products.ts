@@ -109,6 +109,14 @@ export function registerProductHandlers(): void {
     for (const item of data.insumos ?? []) {
       db.insert(variationInsumos).values({ variationId, insumoId: item.insumoId, quantity: item.quantity }).run()
     }
+    if (data.stockQuantity > 0 && (data.insumos ?? []).length > 0) {
+      for (const item of data.insumos!) {
+        db.update(insumos)
+          .set({ stockQuantity: sql`stock_quantity - ${item.quantity * data.stockQuantity}` })
+          .where(eq(insumos.id, item.insumoId))
+          .run()
+      }
+    }
     return { id: variationId }
   })
 

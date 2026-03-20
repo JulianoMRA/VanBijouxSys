@@ -25,7 +25,7 @@ function getDurationDays(startDate: string, endDate: string | null | undefined):
   const start = new Date(startDate + 'T12:00:00')
   const end = new Date(endDate + 'T12:00:00')
   const diff = Math.round((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1
-  return Math.min(Math.max(diff, 1), 4)
+  return Math.max(diff, 1)
 }
 
 function formatDate(dateStr: string): string {
@@ -177,17 +177,14 @@ export default function FairForm({ fair, onSave, onClose }: FairFormProps): JSX.
             />
           </div>
           <div>
-            <label className="label">Duração</label>
-            <select
+            <label className="label">Duração (dias)</label>
+            <input
               className="input"
+              type="number"
+              min="1"
               value={duration}
-              onChange={(e) => setDuration(Number(e.target.value))}
-            >
-              <option value={1}>1 dia</option>
-              <option value={2}>2 dias</option>
-              <option value={3}>3 dias</option>
-              <option value={4}>4 dias</option>
-            </select>
+              onChange={(e) => setDuration(Math.max(1, parseInt(e.target.value) || 1))}
+            />
           </div>
         </div>
 

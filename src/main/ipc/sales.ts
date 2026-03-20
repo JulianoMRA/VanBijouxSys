@@ -76,7 +76,7 @@ export function registerSaleHandlers(): void {
         sqlite
           .prepare(
             `UPDATE product_variations
-             SET stock_quantity = stock_quantity - ?
+             SET stock_quantity = MAX(0, stock_quantity - ?)
              WHERE id = ?`
           )
           .run(item.quantity, item.variationId)

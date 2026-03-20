@@ -112,7 +112,7 @@ export function registerProductHandlers(): void {
     if (data.stockQuantity > 0 && (data.insumos ?? []).length > 0) {
       for (const item of data.insumos!) {
         db.update(insumos)
-          .set({ stockQuantity: sql`stock_quantity - ${item.quantity * data.stockQuantity}` })
+          .set({ stockQuantity: sql`MAX(0, stock_quantity - ${item.quantity * data.stockQuantity})` })
           .where(eq(insumos.id, item.insumoId))
           .run()
       }
@@ -158,7 +158,7 @@ export function registerProductHandlers(): void {
     const recipe = db.select().from(variationInsumos).where(eq(variationInsumos.variationId, id)).all()
     for (const item of recipe) {
       db.update(insumos)
-        .set({ stockQuantity: sql`stock_quantity - ${item.quantity * quantity}` })
+        .set({ stockQuantity: sql`MAX(0, stock_quantity - ${item.quantity * quantity})` })
         .where(eq(insumos.id, item.insumoId))
         .run()
     }

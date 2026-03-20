@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+  <!-- Background rounded square -->
+  <rect width="256" height="256" rx="52" fill="#1e0f1a"/>
+
+  <!-- Gem crown: trapezoid -->
+  <polygon points="88,70 168,70 204,126 52,126" fill="#f5aacb"/>
+
+  <!-- Gem pavilion: triangle -->
+  <polygon points="52,126 204,126 128,202" fill="#e44d8a"/>
+
+  <!-- Crown facets (light overlays for depth) -->
+  <!-- Left facet -->
+  <polygon points="88,70 114,70 90,126 52,126" fill="white" opacity="0.14"/>
+  <!-- Right facet -->
+  <polygon points="142,70 168,70 204,126 166,126" fill="white" opacity="0.07"/>
+  <!-- Center table -->
+  <polygon points="114,70 142,70 138,126 118,126" fill="white" opacity="0.11"/>
+
+  <!-- Pavilion facet left (slightly lighter) -->
+  <polygon points="52,126 90,126 128,202" fill="white" opacity="0.07"/>
+
+  <!-- Girdle separation line -->
+  <line x1="52" y1="126" x2="204" y2="126" stroke="#1e0f1a" stroke-width="3" opacity="0.35"/>
+</svg>

@@ -5,10 +5,12 @@ import { join } from 'path'
 import * as schema from './schema'
 
 let db: ReturnType<typeof drizzle>
+let sqliteInstance: InstanceType<typeof Database>
 
 export function initDatabase(): void {
   const dbPath = join(app.getPath('userData'), 'vanbijouxsys.db')
   const sqlite = new Database(dbPath)
+  sqliteInstance = sqlite
 
   sqlite.pragma('journal_mode = WAL')
   sqlite.pragma('foreign_keys = ON')
@@ -83,4 +85,8 @@ function runMigrations(sqlite: InstanceType<typeof Database>): void {
 
 export function getDb(): ReturnType<typeof drizzle> {
   return db
+}
+
+export function getSqlite(): InstanceType<typeof Database> {
+  return sqliteInstance
 }

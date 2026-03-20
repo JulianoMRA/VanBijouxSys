@@ -62,3 +62,40 @@ export type CreateFairInput = {
 }
 
 export type UpdateFairInput = CreateFairInput & { id: number }
+
+export type SaleChannel = 'Feira' | 'WhatsApp' | 'Instagram' | 'Outro'
+
+export interface SaleItem {
+  id: number
+  variationId: number
+  variationIdentifier: string
+  productName: string
+  quantity: number
+  unitPrice: number
+  unitCost: number
+}
+
+export interface Sale {
+  id: number
+  channel: SaleChannel
+  fairId: number | null
+  fairName: string | null
+  totalAmount: number
+  totalCost: number
+  soldAt: string
+  items: SaleItem[]
+}
+
+export interface CreateSaleItemInput {
+  variationId: number
+  quantity: number
+  unitPrice: number
+  unitCost: number
+}
+
+export interface CreateSaleInput {
+  channel: SaleChannel
+  fairId?: number
+  soldAt: string
+  items: CreateSaleItemInput[]
+}

@@ -127,21 +127,36 @@ export default function Dashboard(): JSX.Element {
       </div>
 
       {/* Alertas de estoque */}
-      {stats && stats.lowStock.length > 0 && (
-        <div className="bg-amber-50 border border-amber-200 rounded-2xl px-5 py-4 mb-5">
-          <p className="text-sm font-semibold text-amber-800 mb-2">
-            ⚠ {stats.lowStock.length} variação{stats.lowStock.length !== 1 ? 'ões' : ''} com estoque baixo
-          </p>
-          <div className="flex flex-wrap gap-2">
-            {stats.lowStock.map((v) => (
-              <span
-                key={v.id}
-                className="text-xs bg-amber-100 text-amber-700 px-2.5 py-1 rounded-full"
-              >
-                {v.productName} — {v.identifier} ({v.stockQuantity}/{v.minimumStock})
-              </span>
-            ))}
-          </div>
+      {stats && (stats.lowStock.length > 0 || stats.lowInsumos.length > 0) && (
+        <div className="bg-amber-50 border border-amber-200 rounded-2xl px-5 py-4 mb-5 space-y-3">
+          {stats.lowStock.length > 0 && (
+            <div>
+              <p className="text-sm font-semibold text-amber-800 mb-2">
+                ⚠ {stats.lowStock.length} variação{stats.lowStock.length !== 1 ? 'ões' : ''} com estoque baixo
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {stats.lowStock.map((v) => (
+                  <span key={v.id} className="text-xs bg-amber-100 text-amber-700 px-2.5 py-1 rounded-full">
+                    {v.productName} — {v.identifier} ({v.stockQuantity}/{v.minimumStock})
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+          {stats.lowInsumos.length > 0 && (
+            <div>
+              <p className="text-sm font-semibold text-amber-800 mb-2">
+                ⚠ {stats.lowInsumos.length} insumo{stats.lowInsumos.length !== 1 ? 's' : ''} com estoque baixo
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {stats.lowInsumos.map((i) => (
+                  <span key={i.id} className="text-xs bg-amber-100 text-amber-700 px-2.5 py-1 rounded-full">
+                    {i.name} ({i.stockQuantity}/{i.minimumStock} {i.unit})
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
 

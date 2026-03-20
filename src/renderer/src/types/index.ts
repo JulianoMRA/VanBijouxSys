@@ -179,4 +179,11 @@ export interface DashboardStats {
     stockQuantity: number
     minimumStock: number
   }>
+  lowInsumos: Array<{
+    id: number
+    name: string
+    unit: string
+    stockQuantity: number
+    minimumStock: number
+  }>
 }

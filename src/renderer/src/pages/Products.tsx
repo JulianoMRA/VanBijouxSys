@@ -4,6 +4,8 @@ import ConfirmDialog from '../components/ui/ConfirmDialog'
 import ProductForm from '../components/products/ProductForm'
 import VariationForm from '../components/products/VariationForm'
 import AddStockForm from '../components/products/AddStockForm'
+import Toast from '../components/ui/Toast'
+import { useToast } from '../hooks/useToast'
 import type { Category, Product, ProductVariation } from '../types'
 
 type Modal =
@@ -40,6 +42,7 @@ export default function Products(): JSX.Element {
   const [modal, setModal] = useState<Modal | null>(null)
   const [loading, setLoading] = useState(true)
   const [errorMessage, setErrorMessage] = useState('')
+  const [toastMsg, showToast, dismissToast] = useToast()
 
   async function loadData(): Promise<void> {
     const [prods, cats] = await Promise.all([
@@ -263,7 +266,17 @@ export default function Products(): JSX.Element {
                           {product.variations.map((v) => (
                             <tr key={v.id} className="hover:bg-cream-100 transition-colors">
                               <td className="py-2.5 font-medium text-gray-700">{v.identifier}</td>
-                              <td className="py-2.5 text-right text-gray-500">{formatCurrency(v.costPrice)}</td>
+                              <td className="py-2.5 text-right">
+                                <span className="text-gray-500">{formatCurrency(v.costPrice)}</span>
+                                {v.insumos.length > 0 && (() => {
+                                  const insumosCost = v.insumos.reduce((s, i) => s + i.costPerUnit * i.quantity, 0)
+                                  return (
+                                    <span className="block text-xs text-gray-400" title="Custo calculado pelos insumos">
+                                      insumos: {formatCurrency(insumosCost)}
+                                    </span>
+                                  )
+                                })()}
+                              </td>
                               <td className="py-2.5 text-right text-gray-800 font-medium">{formatCurrency(v.salePrice)}</td>
                               <td className="py-2.5 text-center">
                                 <Badge label={stockLabel(v)} variant={stockVariant(v)} />
@@ -305,10 +318,12 @@ export default function Products(): JSX.Element {
       )}
 
       {/* Modals */}
+      {toastMsg && <Toast message={toastMsg} onDismiss={dismissToast} />}
+
       {modal?.type === 'newProduct' && (
         <ProductForm
           categories={categories}
-          onSave={loadData}
+          onSave={() => { loadData(); showToast('Produto salvo!') }}
           onClose={() => setModal(null)}
         />
       )}
@@ -316,7 +331,7 @@ export default function Products(): JSX.Element {
         <ProductForm
           categories={categories}
           product={modal.product}
-          onSave={loadData}
+          onSave={() => { loadData(); showToast('Produto atualizado!') }}
           onClose={() => setModal(null)}
         />
       )}
@@ -334,7 +349,7 @@ export default function Products(): JSX.Element {
         <VariationForm
           productId={modal.product.id}
           productName={modal.product.name}
-          onSave={loadData}
+          onSave={() => { loadData(); showToast('Variação salva!') }}
           onClose={() => setModal(null)}
         />
       )}
@@ -343,7 +358,7 @@ export default function Products(): JSX.Element {
           productId={modal.product.id}
           productName={modal.product.name}
           variation={modal.variation}
-          onSave={loadData}
+          onSave={() => { loadData(); showToast('Variação atualizada!') }}
           onClose={() => setModal(null)}
         />
       )}
@@ -361,7 +376,7 @@ export default function Products(): JSX.Element {
         <AddStockForm
           variation={modal.variation}
           productName={modal.product.name}
-          onSave={loadData}
+          onSave={() => { loadData(); showToast('Estoque atualizado!') }}
           onClose={() => setModal(null)}
         />
       )}

@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react'
 import SaleForm from '../components/sales/SaleForm'
 import ConfirmDialog from '../components/ui/ConfirmDialog'
 import Badge from '../components/ui/Badge'
+import Toast from '../components/ui/Toast'
+import { useToast } from '../hooks/useToast'
 import type { Sale, SaleChannel } from '../types'
 
 type Modal =
@@ -39,6 +41,7 @@ export default function Sales(): JSX.Element {
   const [channelFilter, setChannelFilter] = useState<SaleChannel | 'Todos'>('Todos')
   const [loading, setLoading] = useState(true)
   const [errorMessage, setErrorMessage] = useState('')
+  const [toastMsg, showToast, dismissToast] = useToast()
 
   async function loadSales(): Promise<void> {
     const data = await window.api.sales.getAll()
@@ -223,8 +226,10 @@ export default function Sales(): JSX.Element {
         </div>
       )}
 
+      {toastMsg && <Toast message={toastMsg} onDismiss={dismissToast} />}
+
       {modal?.type === 'new' && (
-        <SaleForm onSave={loadSales} onClose={() => setModal(null)} />
+        <SaleForm onSave={() => { loadSales(); showToast('Venda registrada!') }} onClose={() => setModal(null)} />
       )}
       {modal?.type === 'delete' && (
         <ConfirmDialog

@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react'
 import FairForm from '../components/fairs/FairForm'
 import ConfirmDialog from '../components/ui/ConfirmDialog'
-import type { Fair } from '../types'
+import Toast from '../components/ui/Toast'
+import { useToast } from '../hooks/useToast'
+import type { Fair, Sale } from '../types'
 
 type Modal =
   | { type: 'new' }
@@ -32,13 +34,19 @@ function formatDateRange(startDate: string, endDate: string | null): string {
 
 export default function Fairs(): JSX.Element {
   const [fairs, setFairs] = useState<Fair[]>([])
+  const [sales, setSales] = useState<Sale[]>([])
   const [modal, setModal] = useState<Modal | null>(null)
   const [loading, setLoading] = useState(true)
   const [errorMessage, setErrorMessage] = useState('')
+  const [toastMsg, showToast, dismissToast] = useToast()
 
   async function loadFairs(): Promise<void> {
-    const data = await window.api.fairs.getAll()
+    const [data, allSales] = await Promise.all([
+      window.api.fairs.getAll(),
+      window.api.sales.getAll()
+    ])
     setFairs(data.slice().reverse())
+    setSales(allSales)
     setLoading(false)
   }
 
@@ -105,6 +113,7 @@ export default function Fairs(): JSX.Element {
                     key={fair.id}
                     fair={fair}
                     upcoming
+                    fairSales={sales.filter((s) => s.fairId === fair.id)}
                     onEdit={() => setModal({ type: 'edit', fair })}
                     onDelete={() => setModal({ type: 'delete', fair })}
                   />
@@ -124,6 +133,7 @@ export default function Fairs(): JSX.Element {
                     key={fair.id}
                     fair={fair}
                     upcoming={false}
+                    fairSales={sales.filter((s) => s.fairId === fair.id)}
                     onEdit={() => setModal({ type: 'edit', fair })}
                     onDelete={() => setModal({ type: 'delete', fair })}
                   />
@@ -134,11 +144,13 @@ export default function Fairs(): JSX.Element {
         </div>
       )}
 
+      {toastMsg && <Toast message={toastMsg} onDismiss={dismissToast} />}
+
       {modal?.type === 'new' && (
-        <FairForm onSave={loadFairs} onClose={() => setModal(null)} />
+        <FairForm onSave={() => { loadFairs(); showToast('Feira salva!') }} onClose={() => setModal(null)} />
       )}
       {modal?.type === 'edit' && (
-        <FairForm fair={modal.fair} onSave={loadFairs} onClose={() => setModal(null)} />
+        <FairForm fair={modal.fair} onSave={() => { loadFairs(); showToast('Feira atualizada!') }} onClose={() => setModal(null)} />
       )}
       {modal?.type === 'delete' && (
         <ConfirmDialog
@@ -157,25 +169,31 @@ export default function Fairs(): JSX.Element {
 function FairCard({
   fair,
   upcoming,
+  fairSales,
   onEdit,
   onDelete
 }: {
   fair: Fair
   upcoming: boolean
+  fairSales: Sale[]
   onEdit: () => void
   onDelete: () => void
 }): JSX.Element {
+  const [expanded, setExpanded] = useState(false)
+
   function formatCurrency(value: number): string {
     return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
   }
 
   const additionalTotal = fair.additionalCosts.reduce((s, c) => s + c.amount, 0)
   const totalFairCost = fair.enrollmentCost + additionalTotal
+  const totalRevenue = fairSales.reduce((s, sale) => s + sale.totalAmount, 0)
+  const totalProfit = fairSales.reduce((s, sale) => s + (sale.totalAmount - sale.totalCost), 0)
 
   return (
-    <div className="bg-white rounded-2xl border border-cream-200 shadow-card px-5 py-4">
-      <div className="flex items-start justify-between gap-4">
-        <div className="flex gap-4 items-start">
+    <div className="bg-white rounded-2xl border border-cream-200 shadow-card overflow-hidden">
+      <div className="flex items-start gap-4 px-5 py-4">
+        <div className="flex gap-4 items-start flex-1 min-w-0">
           {/* Data */}
           <div
             className={`shrink-0 w-14 rounded-xl text-center py-2 ${
@@ -196,7 +214,7 @@ function FairCard({
           </div>
 
           {/* Info */}
-          <div>
+          <div className="min-w-0">
             <p className="font-medium text-gray-800 text-sm">{fair.name}</p>
             <p className="text-xs text-gray-500 mt-0.5">{fair.location}</p>
             {fair.organizer && (
@@ -211,12 +229,28 @@ function FairCard({
               </span>
               <span className="text-xs text-gray-300">·</span>
               <span className="text-xs text-gray-400">{formatDateRange(fair.date, fair.endDate)}</span>
+              {!upcoming && fairSales.length > 0 && (
+                <>
+                  <span className="text-xs text-gray-300">·</span>
+                  <span className="text-xs font-medium text-emerald-600">
+                    {formatCurrency(totalRevenue)} faturado
+                  </span>
+                </>
+              )}
             </div>
           </div>
         </div>
 
         {/* Ações */}
-        <div className="flex gap-1 shrink-0">
+        <div className="flex gap-1 shrink-0 items-center">
+          {!upcoming && fairSales.length > 0 && (
+            <button
+              className="text-xs text-gray-500 hover:text-gray-700 px-2 py-1 rounded-lg hover:bg-cream-100 transition-colors"
+              onClick={() => setExpanded((v) => !v)}
+            >
+              Vendas ({fairSales.length}) {expanded ? '▲' : '▼'}
+            </button>
+          )}
           <button
             className="text-xs text-blush-600 hover:text-blush-800 px-2 py-1 rounded-lg hover:bg-blush-50 transition-colors"
             onClick={onEdit}
@@ -231,6 +265,42 @@ function FairCard({
           </button>
         </div>
       </div>
+
+      {expanded && (
+        <div className="border-t border-cream-100 bg-cream-50 px-5 py-4">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-xs text-gray-400 uppercase tracking-wide">
+                <th className="text-left pb-2 font-medium">Data</th>
+                <th className="text-left pb-2 font-medium">Itens</th>
+                <th className="text-right pb-2 font-medium">Total</th>
+                <th className="text-right pb-2 font-medium">Lucro</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-cream-200">
+              {fairSales.map((sale) => (
+                <tr key={sale.id}>
+                  <td className="py-2 text-gray-500">{formatDate(sale.soldAt)}</td>
+                  <td className="py-2 text-gray-500">
+                    {sale.items.map((i) => `${i.productName} — ${i.variationIdentifier} (${i.quantity}x)`).join(', ')}
+                  </td>
+                  <td className="py-2 text-right font-medium text-gray-800">{formatCurrency(sale.totalAmount)}</td>
+                  <td className="py-2 text-right text-emerald-600">{formatCurrency(sale.totalAmount - sale.totalCost)}</td>
+                </tr>
+              ))}
+            </tbody>
+            <tfoot>
+              <tr className="border-t border-cream-300">
+                <td colSpan={2} className="pt-2 text-xs text-gray-400">
+                  Lucro bruto: {formatCurrency(totalProfit)} · Custo da feira: {formatCurrency(totalFairCost)} · Lucro líquido: {formatCurrency(totalProfit - totalFairCost)}
+                </td>
+                <td className="pt-2 text-right font-semibold text-blush-700">{formatCurrency(totalRevenue)}</td>
+                <td className="pt-2 text-right font-semibold text-emerald-600">{formatCurrency(totalProfit)}</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      )}
     </div>
   )
 }

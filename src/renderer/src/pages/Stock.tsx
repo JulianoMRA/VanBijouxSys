@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react'
 import InsumoForm from '../components/insumos/InsumoForm'
 import AddInsumoStockForm from '../components/insumos/AddInsumoStockForm'
 import ConfirmDialog from '../components/ui/ConfirmDialog'
+import Toast from '../components/ui/Toast'
+import { useToast } from '../hooks/useToast'
 import type { Insumo } from '../types'
 
 type Modal =
@@ -25,6 +27,7 @@ export default function Stock(): JSX.Element {
   const [modal, setModal] = useState<Modal | null>(null)
   const [loading, setLoading] = useState(true)
   const [errorMessage, setErrorMessage] = useState('')
+  const [toastMsg, showToast, dismissToast] = useToast()
 
   async function loadInsumos(): Promise<void> {
     const data = await window.api.insumos.getAll()
@@ -205,14 +208,16 @@ export default function Stock(): JSX.Element {
         </>
       )}
 
+      {toastMsg && <Toast message={toastMsg} onDismiss={dismissToast} />}
+
       {modal?.type === 'new' && (
-        <InsumoForm onSave={() => loadInsumos()} onClose={() => setModal(null)} />
+        <InsumoForm onSave={() => { loadInsumos(); showToast('Insumo salvo!') }} onClose={() => setModal(null)} />
       )}
       {modal?.type === 'edit' && (
-        <InsumoForm insumo={modal.insumo} onSave={() => loadInsumos()} onClose={() => setModal(null)} />
+        <InsumoForm insumo={modal.insumo} onSave={() => { loadInsumos(); showToast('Insumo atualizado!') }} onClose={() => setModal(null)} />
       )}
       {modal?.type === 'addStock' && (
-        <AddInsumoStockForm insumo={modal.insumo} onSave={loadInsumos} onClose={() => setModal(null)} />
+        <AddInsumoStockForm insumo={modal.insumo} onSave={() => { loadInsumos(); showToast('Estoque atualizado!') }} onClose={() => setModal(null)} />
       )}
       {modal?.type === 'delete' && (
         <ConfirmDialog

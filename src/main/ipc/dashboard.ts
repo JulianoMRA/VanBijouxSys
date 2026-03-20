@@ -35,6 +35,13 @@ export interface DashboardStats {
     stockQuantity: number
     minimumStock: number
   }>
+  lowInsumos: Array<{
+    id: number
+    name: string
+    unit: string
+    stockQuantity: number
+    minimumStock: number
+  }>
 }
 
 export function registerDashboardHandlers(): void {
@@ -138,6 +145,20 @@ export function registerDashboardHandlers(): void {
       )
       .all() as DashboardStats['lowStock']
 
-    return { overview, revenueByMonth, salesByChannel, salesByFair, topVariations, lowStock }
+    const lowInsumos = sqlite
+      .prepare(
+        `SELECT
+          id,
+          name,
+          unit,
+          stock_quantity  AS stockQuantity,
+          minimum_stock   AS minimumStock
+         FROM insumos
+         WHERE minimum_stock > 0 AND stock_quantity < minimum_stock
+         ORDER BY (stock_quantity - minimum_stock) ASC`
+      )
+      .all() as DashboardStats['lowInsumos']
+
+    return { overview, revenueByMonth, salesByChannel, salesByFair, topVariations, lowStock, lowInsumos }
   })
 }

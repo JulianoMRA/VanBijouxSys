@@ -1,0 +1,11 @@
+Sobre a questão dos itens infantis:
+
+A cliente disse que a diferenciação principal necessária entre esses itens é o "fimo" (acessório que vai na pulseira/colar). Então, quando formos cadastrar um item infantil, ao invés de colocarmos a cor, colocaremos o fimo. Dúvidas?
+
+Sobre a stack: 
+
+Concordo. Podemos seguir com essa stack.
+
+
+Detalhe importante: 
+Devemos ter a função de cadastrar um item no estoque e de colocar a quantidade desejada de itens no estoque. Por exemplo, pulseiras de cristal verde, podemos ter apenas 2 no estoque e o alerta só deve aparecer quando tivermos menos de 2. Por outro lado, pulseiras de cristal brancas, devemos ter no mínimo 5. O ponto é: devemos poder, cadastrar um item, e adicionar um item. Não sei se ficou claro. Dúvidas?

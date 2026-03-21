@@ -1,14 +1,18 @@
 import { useEffect, useRef, useState } from 'react'
 import { calcSuggestedPrice } from '../utils/pricing'
 import { formatCurrency } from '../utils/format'
-import type { Product } from '../types'
+import type { Insumo, Product } from '../types'
 
 const LABOR_COST_KEY = 'pricing_default_labor_cost'
 
 interface MaterialRow {
   id: string
+  // manual mode
   name: string
   cost: string
+  // insumo mode (null = manual)
+  insumoId: number | null
+  quantity: string
 }
 
 function ApplyToVariation({
@@ -115,15 +119,17 @@ function ApplyToVariation({
 export default function PriceCalculator(): JSX.Element {
   const counter = useRef(0)
   const [materials, setMaterials] = useState<MaterialRow[]>([
-    { id: 'item-0', name: '', cost: '' }
+    { id: 'item-0', name: '', cost: '', insumoId: null, quantity: '' }
   ])
   const [laborCost, setLaborCost] = useState(() => localStorage.getItem(LABOR_COST_KEY) ?? '')
   const [products, setProducts] = useState<Product[]>([])
+  const [insumos, setInsumos] = useState<Insumo[]>([])
   const [showApply, setShowApply] = useState(false)
   const [laborSaved, setLaborSaved] = useState(false)
 
   useEffect(() => {
     window.api.products.getAll().then(setProducts)
+    window.api.insumos.getAll().then(setInsumos)
   }, [])
 
   function saveDefaultLaborCost(): void {
@@ -136,7 +142,7 @@ export default function PriceCalculator(): JSX.Element {
     counter.current += 1
     setMaterials((prev) => [
       ...prev,
-      { id: `item-${counter.current}`, name: '', cost: '' }
+      { id: `item-${counter.current}`, name: '', cost: '', insumoId: null, quantity: '' }
     ])
   }
 
@@ -144,16 +150,30 @@ export default function PriceCalculator(): JSX.Element {
     setMaterials((prev) => prev.filter((m) => m.id !== id))
   }
 
-  function updateMaterial(id: string, field: 'name' | 'cost', value: string): void {
+  function updateMaterial(id: string, field: 'name' | 'cost' | 'quantity', value: string): void {
     setMaterials((prev) =>
       prev.map((m) => (m.id === id ? { ...m, [field]: value } : m))
     )
   }
 
-  const totalMaterials = materials.reduce((sum, m) => {
+  function setMaterialInsumo(id: string, insumoId: number | null): void {
+    setMaterials((prev) =>
+      prev.map((m) => m.id === id ? { ...m, insumoId, quantity: '', name: '', cost: '' } : m)
+    )
+  }
+
+  function rowCost(m: MaterialRow): number {
+    if (m.insumoId !== null) {
+      const insumo = insumos.find((i) => i.id === m.insumoId)
+      if (!insumo) return 0
+      const qty = parseFloat(m.quantity)
+      return isNaN(qty) ? 0 : qty * insumo.costPerUnit
+    }
     const val = parseFloat(m.cost)
-    return sum + (isNaN(val) ? 0 : val)
-  }, 0)
+    return isNaN(val) ? 0 : val
+  }
+
+  const totalMaterials = materials.reduce((sum, m) => sum + rowCost(m), 0)
 
   const labor = parseFloat(laborCost)
   const laborValue = isNaN(labor) ? 0 : labor
@@ -190,39 +210,90 @@ export default function PriceCalculator(): JSX.Element {
             </div>
 
             <div className="space-y-2">
-              {materials.map((m, index) => (
-                <div key={m.id} className="flex gap-2 items-center">
-                  <input
-                    className="input flex-1"
-                    placeholder={`Material ${index + 1} (ex: fio de nylon)`}
-                    value={m.name}
-                    onChange={(e) => updateMaterial(m.id, 'name', e.target.value)}
-                  />
-                  <div className="relative w-32 shrink-0">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm pointer-events-none">
-                      R$
-                    </span>
-                    <input
-                      className="input pl-8"
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      placeholder="0,00"
-                      value={m.cost}
-                      onChange={(e) => updateMaterial(m.id, 'cost', e.target.value)}
-                    />
+              {materials.map((m, index) => {
+                const linkedInsumo = m.insumoId !== null ? insumos.find((i) => i.id === m.insumoId) : null
+                const computedCost = linkedInsumo ? rowCost(m) : null
+                const unitLabel = linkedInsumo
+                  ? (linkedInsumo.unit === 'unidade' ? 'un.' : linkedInsumo.unit)
+                  : null
+
+                return (
+                  <div key={m.id} className="space-y-1.5">
+                    <div className="flex gap-2 items-center">
+                      <select
+                        className="input flex-1"
+                        value={m.insumoId ?? ''}
+                        onChange={(e) =>
+                          setMaterialInsumo(m.id, e.target.value === '' ? null : Number(e.target.value))
+                        }
+                      >
+                        <option value="">Inserir manualmente…</option>
+                        {insumos.length > 0 && (
+                          <optgroup label="Insumos cadastrados">
+                            {insumos.map((i) => (
+                              <option key={i.id} value={i.id}>
+                                {i.name} ({i.unit === 'unidade' ? 'un.' : i.unit} · {formatCurrency(i.costPerUnit)})
+                              </option>
+                            ))}
+                          </optgroup>
+                        )}
+                      </select>
+                      {materials.length > 1 && (
+                        <button
+                          onClick={() => removeMaterial(m.id)}
+                          className="text-gray-300 hover:text-rose-400 transition-colors text-lg leading-none shrink-0"
+                          title="Remover"
+                        >
+                          ×
+                        </button>
+                      )}
+                    </div>
+
+                    {m.insumoId === null ? (
+                      <div className="flex gap-2 items-center pl-1">
+                        <input
+                          className="input flex-1"
+                          placeholder={`Nome do material ${index + 1}`}
+                          value={m.name}
+                          onChange={(e) => updateMaterial(m.id, 'name', e.target.value)}
+                        />
+                        <div className="relative w-32 shrink-0">
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm pointer-events-none">R$</span>
+                          <input
+                            className="input pl-8"
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            placeholder="0,00"
+                            value={m.cost}
+                            onChange={(e) => updateMaterial(m.id, 'cost', e.target.value)}
+                          />
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex gap-2 items-center pl-1">
+                        <div className="relative w-40 shrink-0">
+                          <input
+                            className="input"
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            placeholder={`Qtd. em ${unitLabel}`}
+                            value={m.quantity}
+                            onChange={(e) => updateMaterial(m.id, 'quantity', e.target.value)}
+                          />
+                        </div>
+                        <span className="text-xs text-gray-400">{unitLabel}</span>
+                        <span className="ml-auto text-sm font-medium text-gray-700">
+                          {computedCost !== null && computedCost > 0
+                            ? `= ${formatCurrency(computedCost)}`
+                            : <span className="text-gray-300">= R$ —</span>}
+                        </span>
+                      </div>
+                    )}
                   </div>
-                  {materials.length > 1 && (
-                    <button
-                      onClick={() => removeMaterial(m.id)}
-                      className="text-gray-300 hover:text-rose-400 transition-colors text-lg leading-none shrink-0"
-                      title="Remover"
-                    >
-                      ×
-                    </button>
-                  )}
-                </div>
-              ))}
+                )
+              })}
             </div>
 
             <div className="mt-3 flex justify-end">

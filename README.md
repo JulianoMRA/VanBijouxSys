@@ -9,11 +9,11 @@ Sistema desktop de gestão para negócios de bijuterias. Controla produtos, esto
 | Módulo | Descrição |
 |---|---|
 | **Dashboard** | Visão geral de faturamento, lucro, ticket médio e alertas de estoque baixo |
-| **Produtos** | Cadastro de produtos e variações com receita de insumos |
-| **Estoque** | Controle de insumos (matéria-prima) com rastreamento de consumo |
-| **Precificação** | Calculadora com fórmula personalizada e aplicação direta à variação |
+| **Produtos** | Cadastro de produtos e variações com receita de insumos; busca, filtro por categoria e ordenação |
+| **Estoque** | Controle de insumos com busca por nome, filtro por status (baixo/esgotado) e ordenação |
+| **Precificação** | Calculadora com fórmula personalizada, integração com insumos do cadastro e aplicação direta à variação |
 | **Vendas** | Registro de vendas por canal (WhatsApp, Instagram, Feira, Outro) |
-| **Feiras** | Cadastro de feiras com período, custos adicionais e resumo de vendas |
+| **Feiras** | Cadastro de feiras com período multi-dia, custos adicionais e resumo de vendas |
 
 ### Regras de negócio
 
@@ -21,7 +21,7 @@ Sistema desktop de gestão para negócios de bijuterias. Controla produtos, esto
 - **Dedução de insumos**: ocorre na fabricação (adicionar estoque à variação), não na venda
 - **Proteção de estoque negativo**: todas as deduções usam `MAX(0, estoque - quantidade)`
 - **Canais de venda**: Feira, WhatsApp, Instagram, Outro
-- **Feiras multi-dia**: suporte a períodos de 1 a 4 dias com custos extras (combustível, alimentação etc.)
+- **Feiras multi-dia**: suporte a períodos ilimitados com custos extras (combustível, alimentação etc.)
 
 ---
 

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import Badge from '../components/ui/Badge'
 import ConfirmDialog from '../components/ui/ConfirmDialog'
 import ProductForm from '../components/products/ProductForm'
@@ -7,6 +7,8 @@ import AddStockForm from '../components/products/AddStockForm'
 import Toast from '../components/ui/Toast'
 import { useToast } from '../hooks/useToast'
 import type { Category, Product, ProductVariation } from '../types'
+
+type SortOption = 'recente' | 'nome-az' | 'nome-za' | 'mais-variacoes' | 'menos-variacoes'
 
 type Modal =
   | { type: 'newProduct' }
@@ -38,6 +40,7 @@ export default function Products(): JSX.Element {
   const [categories, setCategories] = useState<Category[]>([])
   const [search, setSearch] = useState('')
   const [selectedCategory, setSelectedCategory] = useState<number | null>(null)
+  const [sortBy, setSortBy] = useState<SortOption>('recente')
   const [expandedProduct, setExpandedProduct] = useState<number | null>(null)
   const [modal, setModal] = useState<Modal | null>(null)
   const [loading, setLoading] = useState(true)
@@ -58,11 +61,24 @@ export default function Products(): JSX.Element {
     loadData()
   }, [])
 
-  const filtered = products.filter((p) => {
-    const matchesSearch = p.name.toLowerCase().includes(search.toLowerCase())
-    const matchesCategory = selectedCategory === null || p.categoryId === selectedCategory
-    return matchesSearch && matchesCategory
-  })
+  const filtered = useMemo(() => {
+    const result = products.filter((p) => {
+      const matchesSearch = p.name.toLowerCase().includes(search.toLowerCase())
+      const matchesCategory = selectedCategory === null || p.categoryId === selectedCategory
+      return matchesSearch && matchesCategory
+    })
+
+    return [...result].sort((a, b) => {
+      switch (sortBy) {
+        case 'nome-az': return a.name.localeCompare(b.name, 'pt-BR')
+        case 'nome-za': return b.name.localeCompare(a.name, 'pt-BR')
+        case 'mais-variacoes': return b.variations.length - a.variations.length
+        case 'menos-variacoes': return a.variations.length - b.variations.length
+        case 'recente': return b.id - a.id
+        default: return 0
+      }
+    })
+  }, [products, search, selectedCategory, sortBy])
 
   const lowStockCount = products.reduce((acc, p) => {
     return acc + p.variations.filter((v) => v.stockQuantity < v.minimumStock).length
@@ -101,11 +117,16 @@ export default function Products(): JSX.Element {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h2 className="font-display text-2xl font-semibold text-gray-800">Produtos</h2>
-          {lowStockCount > 0 && (
-            <p className="text-sm text-amber-600 mt-0.5">
-              ⚠ {lowStockCount} {lowStockCount > 1 ? 'variações' : 'variação'} com estoque baixo
-            </p>
-          )}
+          <p className="text-sm text-gray-400 mt-0.5">
+            {products.length === 0
+              ? 'Nenhum produto cadastrado'
+              : (search || selectedCategory !== null)
+                ? `${filtered.length} de ${products.length} produto${products.length !== 1 ? 's' : ''}`
+                : `${products.length} produto${products.length !== 1 ? 's' : ''} cadastrado${products.length !== 1 ? 's' : ''}`}
+            {lowStockCount > 0 && (
+              <span className="ml-2 text-amber-600">· ⚠ {lowStockCount} {lowStockCount > 1 ? 'variações' : 'variação'} com estoque baixo</span>
+            )}
+          </p>
         </div>
         <button className="btn-primary" onClick={() => setModal({ type: 'newProduct' })}>
           + Novo produto
@@ -126,13 +147,24 @@ export default function Products(): JSX.Element {
       )}
 
       {/* Filtros */}
-      <div className="flex gap-3 mb-4 flex-wrap">
+      <div className="flex gap-3 mb-4 flex-wrap items-center">
         <input
           className="input max-w-xs"
           placeholder="Buscar produto…"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
+        <select
+          value={sortBy}
+          onChange={(e) => setSortBy(e.target.value as SortOption)}
+          className="px-3 py-2 rounded-xl border border-cream-200 bg-white text-xs text-gray-600 focus:outline-none focus:ring-2 focus:ring-blush-300"
+        >
+          <option value="recente">Último adicionado</option>
+          <option value="nome-az">Nome A→Z</option>
+          <option value="nome-za">Nome Z→A</option>
+          <option value="mais-variacoes">Mais variações</option>
+          <option value="menos-variacoes">Menos variações</option>
+        </select>
         <div className="flex gap-2 flex-wrap">
           <button
             onClick={() => setSelectedCategory(null)}

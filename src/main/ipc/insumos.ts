@@ -1,4 +1,5 @@
-import { ipcMain } from 'electron'
+import { ipcMain, dialog } from 'electron'
+import { writeFileSync } from 'fs'
 import { eq } from 'drizzle-orm'
 import { getDb } from '../database'
 import { insumos } from '../database/schema'
@@ -59,5 +60,15 @@ export function registerInsumoHandlers(): void {
     } catch {
       return { success: false, error: 'insumo_in_use' }
     }
+  })
+
+  ipcMain.handle('insumos:exportCsv', async (_event, csvContent: string, defaultFileName: string) => {
+    const result = await dialog.showSaveDialog({
+      defaultPath: defaultFileName,
+      filters: [{ name: 'CSV (Excel)', extensions: ['csv'] }]
+    })
+    if (result.canceled || !result.filePath) return { success: false, canceled: true }
+    writeFileSync(result.filePath, '\uFEFF' + csvContent, 'utf8')
+    return { success: true }
   })
 }

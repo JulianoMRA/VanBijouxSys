@@ -48,7 +48,9 @@ const api = {
     create: (data: CreateInsumoInput) => ipcRenderer.invoke('insumos:create', data),
     update: (data: UpdateInsumoInput) => ipcRenderer.invoke('insumos:update', data),
     addStock: (id: number, quantity: number) => ipcRenderer.invoke('insumos:addStock', id, quantity),
-    delete: (id: number) => ipcRenderer.invoke('insumos:delete', id)
+    delete: (id: number) => ipcRenderer.invoke('insumos:delete', id),
+    exportCsv: (csvContent: string, defaultFileName: string) =>
+      ipcRenderer.invoke('insumos:exportCsv', csvContent, defaultFileName)
   }
 }
 

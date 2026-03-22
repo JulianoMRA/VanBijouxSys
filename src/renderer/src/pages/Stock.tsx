@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from 'react'
+import { useEffect, useState, useMemo, useRef } from 'react'
 import InsumoForm from '../components/insumos/InsumoForm'
 import AddInsumoStockForm from '../components/insumos/AddInsumoStockForm'
 import ConfirmDialog from '../components/ui/ConfirmDialog'
@@ -35,6 +35,8 @@ export default function Stock(): JSX.Element {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('todos')
   const [sortBy, setSortBy] = useState<SortOption>('recente')
   const [lowStockExpanded, setLowStockExpanded] = useState(true)
+  const [exportMenuOpen, setExportMenuOpen] = useState(false)
+  const exportMenuRef = useRef<HTMLDivElement>(null)
 
   async function loadInsumos(): Promise<void> {
     const data = await window.api.insumos.getAll()
@@ -45,6 +47,61 @@ export default function Stock(): JSX.Element {
   useEffect(() => {
     loadInsumos()
   }, [])
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent): void {
+      if (exportMenuRef.current && !exportMenuRef.current.contains(e.target as Node)) {
+        setExportMenuOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
+  function unitLabel(unit: Insumo['unit']): string {
+    return unit === 'unidade' ? 'un.' : unit
+  }
+
+  function buildCsv(rows: Insumo[]): string {
+    const headers = ['Nome', 'Unidade', 'Estoque Atual', 'Estoque Mínimo', 'Déficit']
+    const lines = rows.map((i) => {
+      const ul = unitLabel(i.unit)
+      const deficit =
+        i.minimumStock > 0 && i.stockQuantity < i.minimumStock
+          ? `${(i.minimumStock - i.stockQuantity).toLocaleString('pt-BR')} ${ul}`
+          : '—'
+      return [
+        `"${i.name}"`,
+        ul,
+        `${i.stockQuantity.toLocaleString('pt-BR')} ${ul}`,
+        i.minimumStock > 0 ? `${i.minimumStock.toLocaleString('pt-BR')} ${ul}` : '—',
+        deficit
+      ].join(';')
+    })
+    return [headers.join(';'), ...lines].join('\r\n')
+  }
+
+  async function handleExport(mode: 'todos' | 'baixo' | 'atual'): Promise<void> {
+    setExportMenuOpen(false)
+    let rows: Insumo[]
+    let fileName: string
+    if (mode === 'todos') {
+      rows = insumos
+      fileName = 'insumos_todos.csv'
+    } else if (mode === 'baixo') {
+      rows = lowStock
+      fileName = 'insumos_estoque_baixo.csv'
+    } else {
+      rows = displayedInsumos
+      fileName = 'insumos_filtro_atual.csv'
+    }
+    if (rows.length === 0) {
+      showToast('Nenhum insumo para exportar.')
+      return
+    }
+    const result = await window.api.insumos.exportCsv(buildCsv(rows), fileName)
+    if (result.success) showToast('Arquivo exportado com sucesso!')
+  }
 
   async function handleDelete(insumo: Insumo): Promise<void> {
     const result = await window.api.insumos.delete(insumo.id)
@@ -101,9 +158,48 @@ export default function Stock(): JSX.Element {
                 : `${insumos.length} insumo${insumos.length !== 1 ? 's' : ''} cadastrado${insumos.length !== 1 ? 's' : ''}`}
           </p>
         </div>
-        <button className="btn-primary" onClick={() => setModal({ type: 'new' })}>
-          + Novo insumo
-        </button>
+        <div className="flex items-center gap-2">
+          {insumos.length > 0 && (
+            <div className="relative" ref={exportMenuRef}>
+              <button
+                className="btn-secondary"
+                onClick={() => setExportMenuOpen((v) => !v)}
+              >
+                Exportar ↓
+              </button>
+              {exportMenuOpen && (
+                <div className="absolute right-0 mt-1 w-52 bg-white border border-cream-200 rounded-xl shadow-lg z-10 overflow-hidden">
+                  <button
+                    className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-cream-50 transition-colors"
+                    onClick={() => handleExport('todos')}
+                  >
+                    Todos os insumos
+                  </button>
+                  <button
+                    className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-cream-50 transition-colors disabled:opacity-40"
+                    onClick={() => handleExport('baixo')}
+                    disabled={lowStock.length === 0}
+                  >
+                    Estoque baixo / esgotado
+                    {lowStock.length > 0 && (
+                      <span className="ml-1.5 text-xs text-amber-600">({lowStock.length})</span>
+                    )}
+                  </button>
+                  <button
+                    className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-cream-50 transition-colors"
+                    onClick={() => handleExport('atual')}
+                  >
+                    Visão atual da tela
+                    <span className="ml-1.5 text-xs text-gray-400">({displayedInsumos.length})</span>
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+          <button className="btn-primary" onClick={() => setModal({ type: 'new' })}>
+            + Novo insumo
+          </button>
+        </div>
       </div>
 
       {errorMessage && (

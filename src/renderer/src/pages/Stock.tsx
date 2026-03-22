@@ -34,6 +34,7 @@ export default function Stock(): JSX.Element {
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('todos')
   const [sortBy, setSortBy] = useState<SortOption>('recente')
+  const [lowStockExpanded, setLowStockExpanded] = useState(true)
 
   async function loadInsumos(): Promise<void> {
     const data = await window.api.insumos.getAll()
@@ -150,23 +151,33 @@ export default function Stock(): JSX.Element {
           {/* Alertas */}
           {lowStock.length > 0 && (
             <div className="bg-amber-50 border border-amber-200 rounded-2xl px-5 py-4 mb-4">
-              <p className="text-sm font-semibold text-amber-800 mb-2">
-                ⚠ {lowStock.length} insumo{lowStock.length !== 1 ? 's' : ''} com estoque baixo ou esgotado
-              </p>
-              <div className="flex flex-wrap gap-2">
-                {lowStock.map((i) => (
-                  <span
-                    key={i.id}
-                    className={`text-xs px-2.5 py-1 rounded-full ${
-                      stockStatus(i) === 'out'
-                        ? 'bg-rose-100 text-rose-700'
-                        : 'bg-amber-100 text-amber-700'
-                    }`}
-                  >
-                    {i.name} — {i.stockQuantity.toLocaleString('pt-BR')} {i.unit === 'unidade' ? 'un.' : i.unit}
-                  </span>
-                ))}
-              </div>
+              <button
+                onClick={() => setLowStockExpanded((v) => !v)}
+                className="flex items-center justify-between w-full text-left"
+              >
+                <p className="text-sm font-semibold text-amber-800">
+                  ⚠ {lowStock.length} insumo{lowStock.length !== 1 ? 's' : ''} com estoque baixo ou esgotado
+                </p>
+                <span className="text-amber-500 text-xs font-medium ml-3 shrink-0">
+                  {lowStockExpanded ? '▲ Recolher' : '▼ Expandir'}
+                </span>
+              </button>
+              {lowStockExpanded && (
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {lowStock.map((i) => (
+                    <span
+                      key={i.id}
+                      className={`text-xs px-2.5 py-1 rounded-full ${
+                        stockStatus(i) === 'out'
+                          ? 'bg-rose-100 text-rose-700'
+                          : 'bg-amber-100 text-amber-700'
+                      }`}
+                    >
+                      {i.name} — {i.stockQuantity.toLocaleString('pt-BR')} {i.unit === 'unidade' ? 'un.' : i.unit}
+                    </span>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 

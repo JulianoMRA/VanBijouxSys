@@ -10,7 +10,7 @@ Sistema desktop de gestão para negócios de bijuterias. Controla produtos, esto
 |---|---|
 | **Dashboard** | Visão geral de faturamento, lucro, ticket médio e alertas de estoque baixo |
 | **Produtos** | Cadastro de produtos e variações com receita de insumos; busca, filtro por categoria e ordenação |
-| **Estoque** | Controle de insumos com busca por nome, filtro por status (baixo/esgotado) e ordenação |
+| **Estoque** | Controle de insumos com busca por nome, filtro por status (baixo/esgotado), ordenação, alerta recolhível de estoque baixo e exportação em CSV |
 | **Precificação** | Calculadora com fórmula personalizada, integração com insumos do cadastro e aplicação direta à variação |
 | **Vendas** | Registro de vendas por canal (WhatsApp, Instagram, Feira, Outro) |
 | **Feiras** | Cadastro de feiras com período multi-dia, custos adicionais e resumo de vendas |

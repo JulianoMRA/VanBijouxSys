@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.2.1] - 2026-03-22
+
+### Adicionado
+
+- **Estoque de insumos**: botão para recolher/expandir a lista de alertas de estoque baixo, evitando que uma lista grande ocupe excessivamente a tela
+- **Estoque de insumos**: exportação da lista em CSV (compatível com Excel/Google Sheets) com três opções — todos os insumos, apenas estoque baixo/esgotado, ou visão atual da tela; o arquivo inclui nome, unidade, estoque atual, estoque mínimo e déficit por item
+
+---
+
 ## [0.2.0] - 2026-03-21
 
 ### Adicionado

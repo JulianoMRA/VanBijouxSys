@@ -14,7 +14,7 @@
     "test:watch": "vitest"
   },
   "dependencies": {
-    "better-sqlite3": "^11.5.0",
+    "better-sqlite3": "^12.8.0",
     "drizzle-orm": "^0.36.4",
     "lucide-react": "^0.577.0",
     "react": "^18.3.1",
@@ -39,7 +39,7 @@
     "@vitejs/plugin-react": "^4.3.4",
     "autoprefixer": "^10.4.20",
     "drizzle-kit": "^0.28.1",
-    "electron": "^33.2.1",
+    "electron": "^41.0.4",
     "electron-builder": "^26.8.1",
     "electron-vite": "^3.0.0",
     "png-to-ico": "^3.0.1",

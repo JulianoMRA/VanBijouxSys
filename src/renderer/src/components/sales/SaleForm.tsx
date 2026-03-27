@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import Modal from '../ui/Modal'
-import type { Fair, Product, ProductVariation, SaleChannel, CreateSaleItemInput } from '../../types'
+import type { Fair, Product, ProductVariation, SaleChannel, PaymentMethod, CreateSaleItemInput } from '../../types'
 
 interface SaleFormProps {
   onSave: () => void
@@ -17,8 +17,22 @@ interface ItemRow {
 
 const CHANNELS: SaleChannel[] = ['Feira', 'WhatsApp', 'Instagram', 'Outro']
 
+const PAYMENT_METHODS: { value: PaymentMethod; label: string }[] = [
+  { value: 'dinheiro', label: 'Dinheiro' },
+  { value: 'pix', label: 'PIX' },
+  { value: 'debito', label: 'Débito' },
+  { value: 'credito', label: 'Crédito' }
+]
+
+const FEE_STORAGE_KEY = (method: PaymentMethod) => `lastFee_${method}`
+
 function formatCurrency(value: number): string {
   return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+}
+
+function loadLastFee(method: PaymentMethod): string {
+  if (method === 'dinheiro') return '0'
+  return localStorage.getItem(FEE_STORAGE_KEY(method)) ?? ''
 }
 
 export default function SaleForm({ onSave, onClose }: SaleFormProps): JSX.Element {
@@ -28,11 +42,14 @@ export default function SaleForm({ onSave, onClose }: SaleFormProps): JSX.Elemen
     const d = new Date()
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
   })
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('dinheiro')
+  const [feePercentage, setFeePercentage] = useState<string>('0')
   const [items, setItems] = useState<ItemRow[]>([{ key: 0, productId: '', variationId: '', quantity: '1', unitPrice: '' }])
   const [products, setProducts] = useState<Product[]>([])
   const [fairs, setFairs] = useState<Fair[]>([])
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+
   useEffect(() => {
     async function load(): Promise<void> {
       const [prods, frs] = await Promise.all([
@@ -44,6 +61,11 @@ export default function SaleForm({ onSave, onClose }: SaleFormProps): JSX.Elemen
     }
     load()
   }, [])
+
+  function handlePaymentMethodChange(method: PaymentMethod): void {
+    setPaymentMethod(method)
+    setFeePercentage(loadLastFee(method))
+  }
 
   function getVariations(productId: number | ''): ProductVariation[] {
     if (productId === '') return []
@@ -104,6 +126,10 @@ export default function SaleForm({ onSave, onClose }: SaleFormProps): JSX.Elemen
   const totalCost = saleItems?.reduce((s, i) => s + i.quantity * i.unitCost, 0) ?? 0
   const profit = totalAmount - totalCost
 
+  const feePercent = parseFloat(feePercentage) || 0
+  const feeAmount = totalAmount * feePercent / 100
+  const netAmount = totalAmount - feeAmount
+
   const selectedFair = channel === 'Feira' && fairId !== ''
     ? fairs.find((f) => f.id === fairId)
     : undefined
@@ -124,12 +150,20 @@ export default function SaleForm({ onSave, onClose }: SaleFormProps): JSX.Elemen
       return
     }
 
+    if (paymentMethod !== 'dinheiro' && feePercent > 0) {
+      localStorage.setItem(FEE_STORAGE_KEY(paymentMethod), feePercentage)
+    }
+
     setSaving(true)
     try {
       await window.api.sales.create({
         channel,
         fairId: channel === 'Feira' && fairId !== '' ? fairId : undefined,
         soldAt,
+        paymentMethod,
+        feePercentage: feePercent,
+        feeAmount,
+        netAmount,
         items: builtItems
       })
       onSave()
@@ -165,17 +199,17 @@ export default function SaleForm({ onSave, onClose }: SaleFormProps): JSX.Elemen
               ))}
             </div>
           </div>
-            <div>
-              <label className="label">Data da venda</label>
-              <input
-                className="input"
-                type="date"
-                value={soldAt}
-                min={selectedFair ? selectedFair.date : undefined}
-                max={selectedFair ? (selectedFair.endDate ?? selectedFair.date) : undefined}
-                onChange={(e) => setSoldAt(e.target.value)}
-              />
-            </div>
+          <div>
+            <label className="label">Data da venda</label>
+            <input
+              className="input"
+              type="date"
+              value={soldAt}
+              min={selectedFair ? selectedFair.date : undefined}
+              max={selectedFair ? (selectedFair.endDate ?? selectedFair.date) : undefined}
+              onChange={(e) => setSoldAt(e.target.value)}
+            />
+          </div>
         </div>
 
         {/* Feira */}
@@ -214,6 +248,54 @@ export default function SaleForm({ onSave, onClose }: SaleFormProps): JSX.Elemen
             )}
           </div>
         )}
+
+        {/* Método de pagamento e taxa */}
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="label">Forma de pagamento</label>
+            <div className="flex gap-2 flex-wrap">
+              {PAYMENT_METHODS.map(({ value, label }) => (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() => handlePaymentMethodChange(value)}
+                  className={`px-3 py-1.5 rounded-xl text-sm font-medium transition-all ${
+                    paymentMethod === value
+                      ? 'bg-blush-500 text-white'
+                      : 'bg-cream-100 text-gray-600 hover:bg-cream-200'
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+          {paymentMethod !== 'dinheiro' && (
+            <div>
+              <label className="label">
+                Taxa ({paymentMethod === 'pix' ? 'sugerido: 0,99%' : paymentMethod === 'debito' ? 'sugerido: 1,69%' : 'variável'})
+              </label>
+              <div className="relative">
+                <input
+                  className="input pr-8"
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="0.01"
+                  value={feePercentage}
+                  onChange={(e) => setFeePercentage(e.target.value)}
+                  placeholder="0,00"
+                />
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-400">%</span>
+              </div>
+              {feePercent > 0 && totalAmount > 0 && (
+                <p className="text-xs text-gray-500 mt-1">
+                  Taxa: {formatCurrency(feeAmount)} · Líquido: {formatCurrency(netAmount)}
+                </p>
+              )}
+            </div>
+          )}
+        </div>
 
         {/* Itens */}
         <div>
@@ -350,9 +432,21 @@ export default function SaleForm({ onSave, onClose }: SaleFormProps): JSX.Elemen
               <span>Total da venda</span>
               <span className="text-blush-700 text-base">{formatCurrency(totalAmount)}</span>
             </div>
+            {paymentMethod !== 'dinheiro' && feePercent > 0 && (
+              <div className="flex justify-between text-rose-600 text-xs">
+                <span>Taxa ({feePercent}%)</span>
+                <span className="font-medium">− {formatCurrency(feeAmount)}</span>
+              </div>
+            )}
+            {paymentMethod !== 'dinheiro' && feePercent > 0 && (
+              <div className="flex justify-between text-emerald-800 text-xs font-semibold">
+                <span>Valor líquido recebido</span>
+                <span>{formatCurrency(netAmount)}</span>
+              </div>
+            )}
             <div className="flex justify-between text-emerald-700 text-xs">
               <span>Lucro estimado</span>
-              <span className="font-medium">{formatCurrency(profit)}</span>
+              <span className="font-medium">{formatCurrency(profit - feeAmount)}</span>
             </div>
           </div>
         )}

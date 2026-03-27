@@ -14,7 +14,14 @@ import type {
   DashboardStats,
   Insumo,
   CreateInsumoInput,
-  UpdateInsumoInput
+  UpdateInsumoInput,
+  ExpenseCategory,
+  CreateExpenseCategoryInput,
+  UpdateExpenseCategoryInput,
+  CashExpense,
+  CreateCashExpenseInput,
+  UpdateCashExpenseInput,
+  CashSettings
 } from '.'
 
 declare global {
@@ -56,6 +63,27 @@ declare global {
         addStock: (id: number, quantity: number) => Promise<{ success: boolean }>
         delete: (id: number) => Promise<{ success: boolean; error?: string }>
         exportCsv: (csvContent: string, defaultFileName: string) => Promise<{ success: boolean; filePath?: string; cancelled?: boolean; error?: string }>
+      }
+      expenseCategories: {
+        getAll: () => Promise<ExpenseCategory[]>
+        create: (data: CreateExpenseCategoryInput) => Promise<{ id: number }>
+        update: (data: UpdateExpenseCategoryInput) => Promise<{ success: boolean }>
+        delete: (id: number) => Promise<{ success: boolean }>
+      }
+      cashExpenses: {
+        getAll: (filters?: { startDate?: string; endDate?: string; categoryId?: number }) => Promise<CashExpense[]>
+        create: (data: CreateCashExpenseInput) => Promise<{ id: number }>
+        update: (data: UpdateCashExpenseInput) => Promise<{ success: boolean }>
+        delete: (id: number) => Promise<{ success: boolean }>
+        getStats: (filters?: { startDate?: string; endDate?: string }) => Promise<{
+          totalExpenses: number
+          totalIncome: number
+          openingBalance: number
+        }>
+      }
+      cashSettings: {
+        get: () => Promise<CashSettings>
+        setOpeningBalance: (balance: number) => Promise<{ success: boolean }>
       }
     }
   }

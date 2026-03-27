@@ -16,6 +16,10 @@ export function registerSaleHandlers(): void {
         fairName: fairs.name,
         totalAmount: sales.totalAmount,
         totalCost: sales.totalCost,
+        paymentMethod: sales.paymentMethod,
+        feePercentage: sales.feePercentage,
+        feeAmount: sales.feeAmount,
+        netAmount: sales.netAmount,
         soldAt: sales.soldAt
       })
       .from(sales)
@@ -54,14 +58,18 @@ export function registerSaleHandlers(): void {
     const createSale = sqlite.transaction(() => {
       const saleResult = sqlite
         .prepare(
-          `INSERT INTO sales (channel, fair_id, total_amount, total_cost, sold_at)
-           VALUES (?, ?, ?, ?, ?)`
+          `INSERT INTO sales (channel, fair_id, total_amount, total_cost, payment_method, fee_percentage, fee_amount, net_amount, sold_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
         )
         .run(
           data.channel,
           data.fairId ?? null,
           totalAmount,
           totalCost,
+          data.paymentMethod,
+          data.feePercentage,
+          data.feeAmount,
+          data.netAmount,
           data.soldAt
         )
 

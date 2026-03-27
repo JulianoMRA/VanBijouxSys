@@ -4,6 +4,7 @@ import { getSqlite } from '../database'
 export interface DashboardStats {
   overview: {
     totalRevenue: number
+    totalNetRevenue: number
     totalCost: number
     totalProfit: number
     totalSales: number
@@ -42,6 +43,13 @@ export interface DashboardStats {
     stockQuantity: number
     minimumStock: number
   }>
+  cashFlow: Array<{ month: string; income: number; expenses: number }>
+  cashSummary: {
+    openingBalance: number
+    totalIncome: number
+    totalExpenses: number
+    currentBalance: number
+  }
 }
 
 export function registerDashboardHandlers(): void {
@@ -54,8 +62,9 @@ export function registerDashboardHandlers(): void {
       .prepare(
         `SELECT
           COALESCE(SUM(s.total_amount), 0)                    AS totalRevenue,
+          COALESCE(SUM(s.net_amount), 0)                      AS totalNetRevenue,
           COALESCE(SUM(s.total_cost),   0)                    AS totalCost,
-          COALESCE(SUM(s.total_amount - s.total_cost), 0)     AS totalProfit,
+          COALESCE(SUM(s.net_amount - s.total_cost), 0)       AS totalProfit,
           COUNT(s.id)                                          AS totalSales,
           COALESCE(AVG(s.total_amount), 0)                    AS avgTicket
          FROM sales s
@@ -68,7 +77,7 @@ export function registerDashboardHandlers(): void {
         `SELECT
           strftime('%Y-%m', s.sold_at)                        AS month,
           COALESCE(SUM(s.total_amount), 0)                    AS revenue,
-          COALESCE(SUM(s.total_amount - s.total_cost), 0)     AS profit
+          COALESCE(SUM(s.net_amount - s.total_cost), 0)       AS profit
          FROM sales s
          WHERE 1=1 ${dateFilter}
          GROUP BY month
@@ -81,7 +90,7 @@ export function registerDashboardHandlers(): void {
         `SELECT
           s.channel,
           COALESCE(SUM(s.total_amount), 0)                    AS revenue,
-          COALESCE(SUM(s.total_amount - s.total_cost), 0)     AS profit,
+          COALESCE(SUM(s.net_amount - s.total_cost), 0)       AS profit,
           COUNT(s.id)                                          AS count
          FROM sales s
          WHERE 1=1 ${dateFilter}
@@ -159,6 +168,51 @@ export function registerDashboardHandlers(): void {
       )
       .all() as DashboardStats['lowInsumos']
 
-    return { overview, revenueByMonth, salesByChannel, salesByFair, topVariations, lowStock, lowInsumos }
+    const salesDateFilter = fromDate ? `AND sold_at >= '${fromDate}'` : ''
+    const expenseDateFilter = fromDate ? `AND expense_date >= '${fromDate}'` : ''
+
+    const cashFlow = sqlite
+      .prepare(
+        `SELECT
+          month,
+          COALESCE(SUM(income), 0)   AS income,
+          COALESCE(SUM(expenses), 0) AS expenses
+         FROM (
+           SELECT strftime('%Y-%m', sold_at) AS month, net_amount AS income, 0 AS expenses
+           FROM sales
+           WHERE 1=1 ${salesDateFilter}
+           UNION ALL
+           SELECT strftime('%Y-%m', expense_date) AS month, 0 AS income, amount AS expenses
+           FROM cash_expenses
+           WHERE 1=1 ${expenseDateFilter}
+         )
+         GROUP BY month
+         ORDER BY month ASC`
+      )
+      .all() as DashboardStats['cashFlow']
+
+    const cashSettings = sqlite
+      .prepare('SELECT opening_balance FROM cash_settings WHERE id = 1')
+      .get() as { opening_balance: number } | undefined
+
+    const cashIncomeTotal = sqlite
+      .prepare(`SELECT COALESCE(SUM(net_amount), 0) AS total FROM sales WHERE 1=1 ${salesDateFilter}`)
+      .get() as { total: number }
+
+    const cashExpensesTotal = sqlite
+      .prepare(
+        `SELECT COALESCE(SUM(amount), 0) AS total FROM cash_expenses WHERE 1=1 ${expenseDateFilter}`
+      )
+      .get() as { total: number }
+
+    const openingBalance = cashSettings?.opening_balance ?? 0
+    const cashSummary = {
+      openingBalance,
+      totalIncome: cashIncomeTotal.total,
+      totalExpenses: cashExpensesTotal.total,
+      currentBalance: openingBalance + cashIncomeTotal.total - cashExpensesTotal.total
+    }
+
+    return { overview, revenueByMonth, salesByChannel, salesByFair, topVariations, lowStock, lowInsumos, cashFlow, cashSummary }
   })
 }

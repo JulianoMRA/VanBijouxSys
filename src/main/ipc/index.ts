@@ -3,6 +3,7 @@ import { registerFairHandlers } from './fairs'
 import { registerSaleHandlers } from './sales'
 import { registerDashboardHandlers } from './dashboard'
 import { registerInsumoHandlers } from './insumos'
+import { registerCashHandlers } from './cash'
 
 export function registerAllHandlers(): void {
   registerProductHandlers()
@@ -10,4 +11,5 @@ export function registerAllHandlers(): void {
   registerSaleHandlers()
   registerDashboardHandlers()
   registerInsumoHandlers()
+  registerCashHandlers()
 }

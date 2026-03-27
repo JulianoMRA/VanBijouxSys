@@ -4,7 +4,7 @@ import ConfirmDialog from '../components/ui/ConfirmDialog'
 import Badge from '../components/ui/Badge'
 import Toast from '../components/ui/Toast'
 import { useToast } from '../hooks/useToast'
-import type { Sale, SaleChannel } from '../types'
+import type { Sale, SaleChannel, PaymentMethod } from '../types'
 
 type Modal =
   | { type: 'new' }
@@ -32,6 +32,13 @@ function channelVariant(channel: SaleChannel): 'category' | 'success' | 'default
   if (channel === 'WhatsApp') return 'success'
   if (channel === 'Instagram') return 'warning'
   return 'default'
+}
+
+const PAYMENT_LABELS: Record<PaymentMethod, string> = {
+  dinheiro: 'Dinheiro',
+  pix: 'PIX',
+  debito: 'Débito',
+  credito: 'Crédito'
 }
 
 export default function Sales(): JSX.Element {
@@ -68,7 +75,8 @@ export default function Sales(): JSX.Element {
     : sales.filter((s) => s.channel === channelFilter)
 
   const totalRevenue = filtered.reduce((s, sale) => s + sale.totalAmount, 0)
-  const totalProfit = filtered.reduce((s, sale) => s + (sale.totalAmount - sale.totalCost), 0)
+  const totalNetRevenue = filtered.reduce((s, sale) => s + sale.netAmount, 0)
+  const totalProfit = filtered.reduce((s, sale) => s + (sale.netAmount - sale.totalCost), 0)
   const avgTicket = filtered.length > 0 ? totalRevenue / filtered.length : 0
 
   return (
@@ -108,15 +116,17 @@ export default function Sales(): JSX.Element {
       {filtered.length > 0 && (
         <div className="grid grid-cols-3 gap-4 mb-5">
           <div className="card py-4">
-            <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">Faturamento</p>
+            <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">Faturamento bruto</p>
             <p className="font-display text-xl font-semibold text-gray-800">{formatCurrency(totalRevenue)}</p>
-            <p className="text-xs text-gray-400 mt-0.5">{filtered.length} venda{filtered.length !== 1 ? 's' : ''}</p>
+            <p className="text-xs text-gray-400 mt-0.5">
+              {filtered.length} venda{filtered.length !== 1 ? 's' : ''} · líquido {formatCurrency(totalNetRevenue)}
+            </p>
           </div>
           <div className="card py-4">
             <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">Lucro</p>
             <p className="font-display text-xl font-semibold text-emerald-600">{formatCurrency(totalProfit)}</p>
             <p className="text-xs text-gray-400 mt-0.5">
-              {totalRevenue > 0 ? `${((totalProfit / totalRevenue) * 100).toFixed(1)}% de margem` : '—'}
+              {totalNetRevenue > 0 ? `${((totalProfit / totalNetRevenue) * 100).toFixed(1)}% de margem` : '—'}
             </p>
           </div>
           <div className="card py-4">
@@ -145,7 +155,7 @@ export default function Sales(): JSX.Element {
         <div className="space-y-2">
           {filtered.map((sale) => {
             const isExpanded = expandedSale === sale.id
-            const profit = sale.totalAmount - sale.totalCost
+            const profit = sale.netAmount - sale.totalCost
 
             return (
               <div
@@ -162,12 +172,19 @@ export default function Sales(): JSX.Element {
                       {sale.fairName && (
                         <span className="text-xs text-gray-400">{sale.fairName}</span>
                       )}
+                      <span className="text-xs text-gray-400 bg-cream-100 px-2 py-0.5 rounded-lg">
+                        {PAYMENT_LABELS[sale.paymentMethod]}
+                        {sale.feePercentage > 0 ? ` (${sale.feePercentage}%)` : ''}
+                      </span>
                     </div>
                     <p className="text-xs text-gray-400 mt-1">{formatDate(sale.soldAt)}</p>
                   </div>
 
                   <div className="text-right shrink-0">
                     <p className="text-sm font-semibold text-gray-800">{formatCurrency(sale.totalAmount)}</p>
+                    {sale.feeAmount > 0 && (
+                      <p className="text-xs text-gray-400">líq. {formatCurrency(sale.netAmount)}</p>
+                    )}
                     <p className="text-xs text-emerald-600">+{formatCurrency(profit)}</p>
                   </div>
 
@@ -216,6 +233,24 @@ export default function Sales(): JSX.Element {
                             {formatCurrency(sale.totalAmount)}
                           </td>
                         </tr>
+                        {sale.feeAmount > 0 && (
+                          <tr>
+                            <td colSpan={3} className="pt-1 text-xs text-rose-500">
+                              Taxa {PAYMENT_LABELS[sale.paymentMethod]} ({sale.feePercentage}%)
+                            </td>
+                            <td className="pt-1 text-right text-xs text-rose-500">
+                              − {formatCurrency(sale.feeAmount)}
+                            </td>
+                          </tr>
+                        )}
+                        {sale.feeAmount > 0 && (
+                          <tr>
+                            <td colSpan={3} className="text-xs text-gray-500 font-medium">Valor líquido recebido</td>
+                            <td className="text-right text-xs font-semibold text-emerald-700">
+                              {formatCurrency(sale.netAmount)}
+                            </td>
+                          </tr>
+                        )}
                       </tfoot>
                     </table>
                   </div>

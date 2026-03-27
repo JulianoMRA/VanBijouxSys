@@ -117,6 +117,48 @@ function runMigrations(sqlite: InstanceType<typeof Database>): void {
   if (!variationColumns.some((c) => c.name === 'labor_cost')) {
     sqlite.exec('ALTER TABLE product_variations ADD COLUMN labor_cost REAL NOT NULL DEFAULT 0')
   }
+
+  const salesColumns = sqlite.prepare('PRAGMA table_info(sales)').all() as Array<{ name: string }>
+  if (!salesColumns.some((c) => c.name === 'payment_method')) {
+    sqlite.exec("ALTER TABLE sales ADD COLUMN payment_method TEXT NOT NULL DEFAULT 'dinheiro'")
+  }
+  if (!salesColumns.some((c) => c.name === 'fee_percentage')) {
+    sqlite.exec('ALTER TABLE sales ADD COLUMN fee_percentage REAL NOT NULL DEFAULT 0')
+  }
+  if (!salesColumns.some((c) => c.name === 'fee_amount')) {
+    sqlite.exec('ALTER TABLE sales ADD COLUMN fee_amount REAL NOT NULL DEFAULT 0')
+  }
+  if (!salesColumns.some((c) => c.name === 'net_amount')) {
+    sqlite.exec('ALTER TABLE sales ADD COLUMN net_amount REAL NOT NULL DEFAULT 0')
+    sqlite.exec('UPDATE sales SET net_amount = total_amount WHERE net_amount = 0')
+  }
+
+  sqlite.exec(`
+    CREATE TABLE IF NOT EXISTS expense_categories (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL UNIQUE,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS cash_expenses (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      category_id INTEGER NOT NULL REFERENCES expense_categories(id),
+      description TEXT NOT NULL,
+      amount REAL NOT NULL,
+      expense_date TEXT NOT NULL,
+      notes TEXT,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS cash_settings (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      opening_balance REAL NOT NULL DEFAULT 0,
+      updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+
+    INSERT OR IGNORE INTO cash_settings (id, opening_balance, updated_at)
+    VALUES (1, 0, CURRENT_TIMESTAMP);
+  `)
 }
 
 export function getDb(): ReturnType<typeof drizzle> {

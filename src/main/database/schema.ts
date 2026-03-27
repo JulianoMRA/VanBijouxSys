@@ -76,7 +76,35 @@ export const sales = sqliteTable('sales', {
   fairId: integer('fair_id').references(() => fairs.id),
   totalAmount: real('total_amount').notNull(),
   totalCost: real('total_cost').notNull(),
+  paymentMethod: text('payment_method').notNull().default('dinheiro'),
+  feePercentage: real('fee_percentage').notNull().default(0),
+  feeAmount: real('fee_amount').notNull().default(0),
+  netAmount: real('net_amount').notNull().default(0),
   soldAt: text('sold_at').notNull().default('CURRENT_TIMESTAMP')
+})
+
+export const expenseCategories = sqliteTable('expense_categories', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  name: text('name').notNull().unique(),
+  createdAt: text('created_at').notNull().default('CURRENT_TIMESTAMP')
+})
+
+export const cashExpenses = sqliteTable('cash_expenses', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  categoryId: integer('category_id')
+    .notNull()
+    .references(() => expenseCategories.id),
+  description: text('description').notNull(),
+  amount: real('amount').notNull(),
+  expenseDate: text('expense_date').notNull(),
+  notes: text('notes'),
+  createdAt: text('created_at').notNull().default('CURRENT_TIMESTAMP')
+})
+
+export const cashSettings = sqliteTable('cash_settings', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  openingBalance: real('opening_balance').notNull().default(0),
+  updatedAt: text('updated_at').notNull().default('CURRENT_TIMESTAMP')
 })
 
 export const saleItems = sqliteTable('sale_items', {

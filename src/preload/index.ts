@@ -9,7 +9,11 @@ import type {
   UpdateFairInput,
   CreateSaleInput,
   CreateInsumoInput,
-  UpdateInsumoInput
+  UpdateInsumoInput,
+  CreateExpenseCategoryInput,
+  UpdateExpenseCategoryInput,
+  CreateCashExpenseInput,
+  UpdateCashExpenseInput
 } from '../renderer/src/types'
 
 const api = {
@@ -51,6 +55,25 @@ const api = {
     delete: (id: number) => ipcRenderer.invoke('insumos:delete', id),
     exportCsv: (csvContent: string, defaultFileName: string) =>
       ipcRenderer.invoke('insumos:exportCsv', csvContent, defaultFileName)
+  },
+  expenseCategories: {
+    getAll: () => ipcRenderer.invoke('expense-categories:getAll'),
+    create: (data: CreateExpenseCategoryInput) => ipcRenderer.invoke('expense-categories:create', data),
+    update: (data: UpdateExpenseCategoryInput) => ipcRenderer.invoke('expense-categories:update', data),
+    delete: (id: number) => ipcRenderer.invoke('expense-categories:delete', id)
+  },
+  cashExpenses: {
+    getAll: (filters?: { startDate?: string; endDate?: string; categoryId?: number }) =>
+      ipcRenderer.invoke('cash-expenses:getAll', filters),
+    create: (data: CreateCashExpenseInput) => ipcRenderer.invoke('cash-expenses:create', data),
+    update: (data: UpdateCashExpenseInput) => ipcRenderer.invoke('cash-expenses:update', data),
+    delete: (id: number) => ipcRenderer.invoke('cash-expenses:delete', id),
+    getStats: (filters?: { startDate?: string; endDate?: string }) =>
+      ipcRenderer.invoke('cash-expenses:getStats', filters)
+  },
+  cashSettings: {
+    get: () => ipcRenderer.invoke('cash-settings:get'),
+    setOpeningBalance: (balance: number) => ipcRenderer.invoke('cash-settings:setOpeningBalance', balance)
   }
 }
 

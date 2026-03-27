@@ -170,19 +170,19 @@ export default function Dashboard(): JSX.Element {
       ) : (
         <>
           {/* Cards de visão geral */}
-          <div className="grid grid-cols-4 gap-4 mb-6">
+          <div className="grid grid-cols-4 gap-4 mb-4">
             <StatCard
-              label="Faturamento"
+              label="Faturamento bruto"
               value={formatCurrency(stats!.overview.totalRevenue)}
-              sub={`${stats!.overview.totalSales} venda${stats!.overview.totalSales !== 1 ? 's' : ''}`}
+              sub={`líquido ${formatCurrency(stats!.overview.totalNetRevenue)} · ${stats!.overview.totalSales} venda${stats!.overview.totalSales !== 1 ? 's' : ''}`}
               accent
             />
             <StatCard
               label="Lucro"
               value={formatCurrency(stats!.overview.totalProfit)}
               sub={
-                stats!.overview.totalRevenue > 0
-                  ? `${((stats!.overview.totalProfit / stats!.overview.totalRevenue) * 100).toFixed(1)}% de margem`
+                stats!.overview.totalNetRevenue > 0
+                  ? `${((stats!.overview.totalProfit / stats!.overview.totalNetRevenue) * 100).toFixed(1)}% de margem`
                   : undefined
               }
             />
@@ -197,6 +197,33 @@ export default function Dashboard(): JSX.Element {
               sub="materiais + produção"
             />
           </div>
+
+          {/* Card de saldo do caixa */}
+          {stats!.cashSummary && (
+            <div className="grid grid-cols-4 gap-4 mb-6">
+              <div className="card py-4 bg-cream-50">
+                <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">Saldo de abertura</p>
+                <p className="font-display text-lg font-semibold text-gray-600">{formatCurrency(stats!.cashSummary.openingBalance)}</p>
+              </div>
+              <div className="card py-4 bg-emerald-50 border-emerald-200">
+                <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">Entradas (caixa)</p>
+                <p className="font-display text-lg font-semibold text-emerald-700">{formatCurrency(stats!.cashSummary.totalIncome)}</p>
+                <p className="text-xs text-gray-400 mt-0.5">vendas líquidas</p>
+              </div>
+              <div className="card py-4 bg-rose-50 border-rose-200">
+                <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">Saídas (caixa)</p>
+                <p className="font-display text-lg font-semibold text-rose-700">{formatCurrency(stats!.cashSummary.totalExpenses)}</p>
+                <p className="text-xs text-gray-400 mt-0.5">despesas registradas</p>
+              </div>
+              <div className={`card py-4 ${stats!.cashSummary.currentBalance >= 0 ? 'bg-emerald-50 border-emerald-200' : 'bg-rose-50 border-rose-200'}`}>
+                <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">Saldo atual</p>
+                <p className={`font-display text-lg font-semibold ${stats!.cashSummary.currentBalance >= 0 ? 'text-emerald-700' : 'text-rose-700'}`}>
+                  {formatCurrency(stats!.cashSummary.currentBalance)}
+                </p>
+                <p className="text-xs text-gray-400 mt-0.5">abertura + entradas − saídas</p>
+              </div>
+            </div>
+          )}
 
           {/* Gráfico de receita por mês + canal */}
           <div className="grid grid-cols-3 gap-5 mb-5">
@@ -263,6 +290,24 @@ export default function Dashboard(): JSX.Element {
               )}
             </div>
           </div>
+
+          {/* Gráfico de fluxo de caixa */}
+          {stats!.cashFlow.length > 0 && (
+            <div className="card mb-5">
+              <p className="text-sm font-semibold text-gray-700 mb-4">Fluxo de caixa — Entradas vs. Saídas por mês</p>
+              <ResponsiveContainer width="100%" height={200}>
+                <BarChart data={stats!.cashFlow.map((d) => ({ ...d, month: formatMonth(d.month) }))} barCategoryGap="30%">
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f5ede6" />
+                  <XAxis dataKey="month" tick={{ fontSize: 11, fill: '#9ca3af' }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fontSize: 11, fill: '#9ca3af' }} axisLine={false} tickLine={false} tickFormatter={(v) => `R$${(v / 1000).toFixed(0)}k`} />
+                  <Tooltip formatter={(value: number) => formatCurrency(value)} contentStyle={{ borderRadius: '12px', border: '1px solid #edddd2', fontSize: 12 }} />
+                  <Legend iconType="square" iconSize={10} wrapperStyle={{ fontSize: 11, color: '#6b7280' }} />
+                  <Bar dataKey="income" name="Entradas" fill="#10b981" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="expenses" name="Saídas" fill="#f87171" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          )}
 
           {/* Top variações + Feiras */}
           <div className="grid grid-cols-2 gap-5 mb-5">

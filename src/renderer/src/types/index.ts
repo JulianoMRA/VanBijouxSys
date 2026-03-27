@@ -112,6 +112,8 @@ export type UpdateFairInput = CreateFairInput & { id: number }
 
 export type SaleChannel = 'Feira' | 'WhatsApp' | 'Instagram' | 'Outro'
 
+export type PaymentMethod = 'dinheiro' | 'pix' | 'debito' | 'credito'
+
 export interface SaleItem {
   id: number
   variationId: number
@@ -129,6 +131,10 @@ export interface Sale {
   fairName: string | null
   totalAmount: number
   totalCost: number
+  paymentMethod: PaymentMethod
+  feePercentage: number
+  feeAmount: number
+  netAmount: number
   soldAt: string
   items: SaleItem[]
 }
@@ -144,12 +150,63 @@ export interface CreateSaleInput {
   channel: SaleChannel
   fairId?: number
   soldAt: string
+  paymentMethod: PaymentMethod
+  feePercentage: number
+  feeAmount: number
+  netAmount: number
   items: CreateSaleItemInput[]
+}
+
+export interface ExpenseCategory {
+  id: number
+  name: string
+  createdAt: string
+}
+
+export type CreateExpenseCategoryInput = {
+  name: string
+}
+
+export type UpdateExpenseCategoryInput = CreateExpenseCategoryInput & { id: number }
+
+export interface CashExpense {
+  id: number
+  categoryId: number
+  categoryName: string
+  description: string
+  amount: number
+  expenseDate: string
+  notes: string | null
+  createdAt: string
+}
+
+export type CreateCashExpenseInput = {
+  categoryId: number
+  description: string
+  amount: number
+  expenseDate: string
+  notes?: string
+}
+
+export type UpdateCashExpenseInput = CreateCashExpenseInput & { id: number }
+
+export interface CashSettings {
+  id: number
+  openingBalance: number
+  updatedAt: string
+}
+
+export interface CashSummary {
+  openingBalance: number
+  totalIncome: number
+  totalExpenses: number
+  currentBalance: number
 }
 
 export interface DashboardStats {
   overview: {
     totalRevenue: number
+    totalNetRevenue: number
     totalCost: number
     totalProfit: number
     totalSales: number
@@ -188,4 +245,11 @@ export interface DashboardStats {
     stockQuantity: number
     minimumStock: number
   }>
+  cashFlow: Array<{ month: string; income: number; expenses: number }>
+  cashSummary: {
+    openingBalance: number
+    totalIncome: number
+    totalExpenses: number
+    currentBalance: number
+  }
 }

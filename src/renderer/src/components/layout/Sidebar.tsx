@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom'
-import { LayoutDashboard, Gem, Package, ShoppingBag, Store, Tag } from 'lucide-react'
+import { LayoutDashboard, Gem, Package, ShoppingBag, Store, Tag, Landmark } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 
 const navItems: { to: string; label: string; Icon: LucideIcon }[] = [
@@ -8,7 +8,8 @@ const navItems: { to: string; label: string; Icon: LucideIcon }[] = [
   { to: '/price-calculator', label: 'Precificação', Icon: Tag },
   { to: '/stock', label: 'Estoque', Icon: Package },
   { to: '/sales', label: 'Vendas', Icon: ShoppingBag },
-  { to: '/fairs', label: 'Feiras', Icon: Store }
+  { to: '/fairs', label: 'Feiras', Icon: Store },
+  { to: '/cash', label: 'Caixa', Icon: Landmark }
 ]
 
 export default function Sidebar(): JSX.Element {
@@ -58,7 +59,7 @@ export default function Sidebar(): JSX.Element {
       </nav>
 
       <div className="px-6 py-4" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
-        <p className="text-xs" style={{ color: '#4a2438' }}>v1.0.0</p>
+        <p className="text-xs" style={{ color: '#4a2438' }}>v1.1.0</p>
       </div>
     </aside>
   )

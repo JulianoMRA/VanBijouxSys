@@ -6,6 +6,7 @@ import Stock from './pages/Stock'
 import Sales from './pages/Sales'
 import Fairs from './pages/Fairs'
 import PriceCalculator from './pages/PriceCalculator'
+import Cash from './pages/Cash'
 
 export default function App(): JSX.Element {
   return (
@@ -17,6 +18,7 @@ export default function App(): JSX.Element {
         <Route path="sales" element={<Sales />} />
         <Route path="fairs" element={<Fairs />} />
         <Route path="price-calculator" element={<PriceCalculator />} />
+        <Route path="cash" element={<Cash />} />
       </Route>
     </Routes>
   )

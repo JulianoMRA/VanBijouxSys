@@ -1,6 +1,6 @@
 {
   "name": "van-bijoux-sys",
-  "version": "0.2.1",
+  "version": "1.0.0",
   "description": "Sistema de gestão de estoque e vendas para bijouterias",
   "main": "./out/main/index.js",
   "type": "module",

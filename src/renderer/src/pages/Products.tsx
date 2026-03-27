@@ -3,6 +3,7 @@ import Badge from '../components/ui/Badge'
 import ConfirmDialog from '../components/ui/ConfirmDialog'
 import ProductForm from '../components/products/ProductForm'
 import VariationForm from '../components/products/VariationForm'
+import VariationDetailsModal from '../components/products/VariationDetailsModal'
 import AddStockForm from '../components/products/AddStockForm'
 import Toast from '../components/ui/Toast'
 import { useToast } from '../hooks/useToast'
@@ -18,6 +19,7 @@ type Modal =
   | { type: 'editVariation'; product: Product; variation: ProductVariation }
   | { type: 'deleteVariation'; product: Product; variation: ProductVariation }
   | { type: 'addStock'; product: Product; variation: ProductVariation }
+  | { type: 'detailsVariation'; product: Product; variation: ProductVariation }
 
 function formatCurrency(value: number): string {
   return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
@@ -317,6 +319,13 @@ export default function Products(): JSX.Element {
                               <td className="py-2.5">
                                 <div className="flex justify-end gap-1">
                                   <button
+                                    className="text-xs text-gray-500 hover:text-gray-700 px-2 py-1 rounded-lg hover:bg-gray-100 transition-colors"
+                                    onClick={() => setModal({ type: 'detailsVariation', product, variation: v })}
+                                    title="Ver detalhes"
+                                  >
+                                    Detalhes
+                                  </button>
+                                  <button
                                     className="text-xs text-emerald-600 hover:text-emerald-800 px-2 py-1 rounded-lg hover:bg-emerald-50 transition-colors"
                                     onClick={() => setModal({ type: 'addStock', product, variation: v })}
                                   >
@@ -409,6 +418,13 @@ export default function Products(): JSX.Element {
           variation={modal.variation}
           productName={modal.product.name}
           onSave={() => { loadData(); showToast('Estoque atualizado!') }}
+          onClose={() => setModal(null)}
+        />
+      )}
+      {modal?.type === 'detailsVariation' && (
+        <VariationDetailsModal
+          product={modal.product}
+          variation={modal.variation}
           onClose={() => setModal(null)}
         />
       )}

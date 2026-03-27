@@ -45,7 +45,8 @@ function ApplyToVariation({
         costPrice: variation.costPrice,
         salePrice: suggestedPrice,
         stockQuantity: variation.stockQuantity,
-        minimumStock: variation.minimumStock
+        minimumStock: variation.minimumStock,
+        laborCost: variation.laborCost
       })
       setSuccess(true)
       setTimeout(() => {
@@ -128,8 +129,15 @@ export default function PriceCalculator(): JSX.Element {
   const [laborSaved, setLaborSaved] = useState(false)
 
   useEffect(() => {
-    window.api.products.getAll().then(setProducts)
-    window.api.insumos.getAll().then(setInsumos)
+    async function loadData(): Promise<void> {
+      const [prods, insms] = await Promise.all([
+        window.api.products.getAll(),
+        window.api.insumos.getAll()
+      ])
+      setProducts(prods)
+      setInsumos(insms)
+    }
+    loadData()
   }, [])
 
   function saveDefaultLaborCost(): void {

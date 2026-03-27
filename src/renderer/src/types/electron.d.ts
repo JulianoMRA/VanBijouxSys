@@ -55,6 +55,7 @@ declare global {
         update: (data: UpdateInsumoInput) => Promise<{ success: boolean }>
         addStock: (id: number, quantity: number) => Promise<{ success: boolean }>
         delete: (id: number) => Promise<{ success: boolean; error?: string }>
+        exportCsv: (csvContent: string, defaultFileName: string) => Promise<{ success: boolean; filePath?: string; cancelled?: boolean; error?: string }>
       }
     }
   }

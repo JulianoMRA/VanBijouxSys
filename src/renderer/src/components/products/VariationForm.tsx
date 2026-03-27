@@ -41,7 +41,9 @@ export default function VariationForm({
   const [error, setError] = useState('')
 
   const [showCalc, setShowCalc] = useState(false)
-  const [laborCost, setLaborCost] = useState(loadDefaultLaborCost)
+  const [laborCost, setLaborCost] = useState(() =>
+    variation?.laborCost ? variation.laborCost.toString() : loadDefaultLaborCost()
+  )
 
   const [allInsumos, setAllInsumos] = useState<Insumo[]>([])
   const [insumoRows, setInsumoRows] = useState<InsumoRow[]>(
@@ -57,7 +59,10 @@ export default function VariationForm({
   const isEditing = !!variation
 
   useEffect(() => {
-    window.api.insumos.getAll().then(setAllInsumos)
+    async function load(): Promise<void> {
+      setAllInsumos(await window.api.insumos.getAll())
+    }
+    load()
   }, [])
 
   // Custo de materiais: prioridade para insumos se cadastrados, senão usa campo manual
@@ -144,6 +149,8 @@ export default function VariationForm({
 
     setSaving(true)
     try {
+      const parsedLaborCost = parseFloat(laborCost) || 0
+
       if (isEditing) {
         await window.api.variations.update({
           id: variation.id,
@@ -153,6 +160,7 @@ export default function VariationForm({
           salePrice: sale,
           stockQuantity: stock,
           minimumStock: minStock,
+          laborCost: parsedLaborCost,
           insumos: parsedInsumos
         })
       } else {
@@ -163,6 +171,7 @@ export default function VariationForm({
           salePrice: sale,
           stockQuantity: stock,
           minimumStock: minStock,
+          laborCost: parsedLaborCost,
           insumos: parsedInsumos
         })
       }

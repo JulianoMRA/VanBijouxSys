@@ -33,15 +33,16 @@ export default function SaleForm({ onSave, onClose }: SaleFormProps): JSX.Elemen
   const [fairs, setFairs] = useState<Fair[]>([])
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
-  const nextKey = { current: 1 }
-
   useEffect(() => {
-    Promise.all([window.api.products.getAll(), window.api.fairs.getAll()]).then(
-      ([prods, frs]) => {
-        setProducts(prods)
-        setFairs(frs)
-      }
-    )
+    async function load(): Promise<void> {
+      const [prods, frs] = await Promise.all([
+        window.api.products.getAll(),
+        window.api.fairs.getAll()
+      ])
+      setProducts(prods)
+      setFairs(frs)
+    }
+    load()
   }, [])
 
   function getVariations(productId: number | ''): ProductVariation[] {

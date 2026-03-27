@@ -1,5 +1,5 @@
 import { ipcMain } from 'electron'
-import { eq, desc } from 'drizzle-orm'
+import { eq } from 'drizzle-orm'
 import { getDb, getSqlite } from '../database'
 import { expenseCategories, cashExpenses, cashSettings } from '../database/schema'
 import type {

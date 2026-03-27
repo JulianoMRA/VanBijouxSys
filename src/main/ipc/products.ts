@@ -102,7 +102,8 @@ export function registerProductHandlers(): void {
         costPrice: data.costPrice,
         salePrice: data.salePrice,
         stockQuantity: data.stockQuantity,
-        minimumStock: data.minimumStock
+        minimumStock: data.minimumStock,
+        laborCost: data.laborCost
       })
       .run()
     const variationId = Number(result.lastInsertRowid)
@@ -128,7 +129,8 @@ export function registerProductHandlers(): void {
         costPrice: data.costPrice,
         salePrice: data.salePrice,
         stockQuantity: data.stockQuantity,
-        minimumStock: data.minimumStock
+        minimumStock: data.minimumStock,
+        laborCost: data.laborCost
       })
       .where(eq(productVariations.id, data.id))
       .run()

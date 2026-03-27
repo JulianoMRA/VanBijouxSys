@@ -43,6 +43,7 @@ export interface ProductVariation {
   salePrice: number
   stockQuantity: number
   minimumStock: number
+  laborCost: number
   createdAt: string
   insumos: VariationInsumo[]
 }
@@ -72,6 +73,7 @@ export type CreateVariationInput = {
   salePrice: number
   stockQuantity: number
   minimumStock: number
+  laborCost: number
   insumos?: { insumoId: number; quantity: number }[]
 }
 

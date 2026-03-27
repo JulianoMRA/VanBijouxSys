@@ -110,6 +110,13 @@ function runMigrations(sqlite: InstanceType<typeof Database>): void {
   if (!fairColumns.some((c) => c.name === 'end_date')) {
     sqlite.exec('ALTER TABLE fairs ADD COLUMN end_date TEXT')
   }
+
+  const variationColumns = sqlite
+    .prepare('PRAGMA table_info(product_variations)')
+    .all() as Array<{ name: string }>
+  if (!variationColumns.some((c) => c.name === 'labor_cost')) {
+    sqlite.exec('ALTER TABLE product_variations ADD COLUMN labor_cost REAL NOT NULL DEFAULT 0')
+  }
 }
 
 export function getDb(): ReturnType<typeof drizzle> {

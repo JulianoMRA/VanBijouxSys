@@ -25,6 +25,7 @@ export const productVariations = sqliteTable('product_variations', {
   salePrice: real('sale_price').notNull().default(0),
   stockQuantity: integer('stock_quantity').notNull().default(0),
   minimumStock: integer('minimum_stock').notNull().default(1),
+  laborCost: real('labor_cost').notNull().default(0),
   createdAt: text('created_at').notNull().default('CURRENT_TIMESTAMP')
 })
 

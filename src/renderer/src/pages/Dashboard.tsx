@@ -84,8 +84,6 @@ function StatCard({
   )
 }
 
-const currencyTooltip = (value: number): string => formatCurrency(value)
-
 export default function Dashboard(): JSX.Element {
   const [period, setPeriod] = useState<Period>('month')
   const [stats, setStats] = useState<DashboardStats | null>(null)

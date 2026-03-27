@@ -10,10 +10,6 @@ type Modal =
   | { type: 'edit'; fair: Fair }
   | { type: 'delete'; fair: Fair }
 
-function formatCurrency(value: number): string {
-  return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
-}
-
 function formatDate(dateStr: string): string {
   const [year, month, day] = dateStr.split('-')
   return `${day}/${month}/${year}`

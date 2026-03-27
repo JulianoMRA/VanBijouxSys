@@ -1,5 +1,7 @@
 # Van Bijoux Sys
 
+> **v1.0.0** — primeiro release estável de produção.
+
 Sistema desktop de gestão para negócios de bijuterias. Controla produtos, estoque, insumos, vendas e feiras, com dashboard analítico e calculadora de precificação.
 
 ---
@@ -9,15 +11,17 @@ Sistema desktop de gestão para negócios de bijuterias. Controla produtos, esto
 | Módulo | Descrição |
 |---|---|
 | **Dashboard** | Visão geral de faturamento, lucro, ticket médio e alertas de estoque baixo |
-| **Produtos** | Cadastro de produtos e variações com receita de insumos; busca, filtro por categoria e ordenação |
+| **Produtos** | Cadastro de produtos e variações com receita de insumos, mão de obra, modal de detalhes financeiros; busca, filtro por categoria e ordenação |
 | **Estoque** | Controle de insumos com busca por nome, filtro por status (baixo/esgotado), ordenação, alerta recolhível de estoque baixo e exportação em CSV |
-| **Precificação** | Calculadora com fórmula personalizada, integração com insumos do cadastro e aplicação direta à variação |
+| **Precificação** | Calculadora com fórmula personalizada, campo de mão de obra, integração com insumos do cadastro e aplicação direta à variação |
 | **Vendas** | Registro de vendas por canal (WhatsApp, Instagram, Feira, Outro) |
 | **Feiras** | Cadastro de feiras com período multi-dia, custos adicionais e resumo de vendas |
 
 ### Regras de negócio
 
 - **Fórmula de precificação**: `teto((materiais × 3 + mão de obra) × 1,10 + R$ 1,00)`
+- **Mão de obra por variação**: custo de `labor_cost` salvo individualmente; valor padrão persistido em `localStorage`
+- **Modal de detalhes da variação**: composição de insumos, precificação sugerida e resumo financeiro
 - **Dedução de insumos**: ocorre na fabricação (adicionar estoque à variação), não na venda
 - **Proteção de estoque negativo**: todas as deduções usam `MAX(0, estoque - quantidade)`
 - **Canais de venda**: Feira, WhatsApp, Instagram, Outro
@@ -28,8 +32,8 @@ Sistema desktop de gestão para negócios de bijuterias. Controla produtos, esto
 ## Stack
 
 - **Frontend**: React 18 + TypeScript + Tailwind CSS + Recharts
-- **Backend**: Electron (main process) + better-sqlite3 + Drizzle ORM
-- **Build**: electron-vite + electron-builder
+- **Backend**: Electron 41 (main process) + better-sqlite3 + Drizzle ORM
+- **Build**: electron-vite 3 + electron-builder
 - **Testes**: Vitest + sql.js
 
 ---
@@ -119,7 +123,7 @@ src/
 ├── renderer/src/           # Interface (React)
 │   ├── components/         # Componentes reutilizáveis
 │   │   ├── ui/             # Modal, Badge, Toast, ConfirmDialog
-│   │   ├── products/       # ProductForm, VariationForm, AddStockForm
+│   │   ├── products/       # ProductForm, VariationForm, VariationDetailsModal, AddStockForm
 │   │   ├── sales/          # SaleForm
 │   │   ├── fairs/          # FairForm
 │   │   └── insumos/        # InsumoForm, AddInsumoStockForm
@@ -148,7 +152,7 @@ As migrations rodam automaticamente na inicialização — não é necessário n
 |---|---|
 | `categories` | Categorias fixas (Colar, Pulseira, Brinco, Tiara, Pingente) |
 | `products` | Produtos com categoria |
-| `product_variations` | Variações de cada produto (tamanho, cor etc.) com estoque |
+| `product_variations` | Variações de cada produto (tamanho, cor etc.) com estoque e mão de obra (`labor_cost`) |
 | `insumos` | Matéria-prima com custo e estoque |
 | `variation_insumos` | Receita: quantidade de cada insumo por variação |
 | `fairs` | Feiras com período e custo de inscrição |

@@ -8,6 +8,8 @@ import AddStockForm from '../components/products/AddStockForm'
 import Toast from '../components/ui/Toast'
 import { useToast } from '../hooks/useToast'
 import type { Category, Product, ProductVariation } from '../types'
+import { filterAndSortVariations } from '../utils/variation-filters'
+import type { VariationSortOption, VariationStockFilter } from '../utils/variation-filters'
 
 type SortOption = 'recente' | 'nome-az' | 'nome-za' | 'mais-variacoes' | 'menos-variacoes'
 
@@ -44,6 +46,11 @@ export default function Products(): JSX.Element {
   const [selectedCategory, setSelectedCategory] = useState<number | null>(null)
   const [sortBy, setSortBy] = useState<SortOption>('recente')
   const [expandedProduct, setExpandedProduct] = useState<number | null>(null)
+  const [variationSearch, setVariationSearch] = useState('')
+  const [variationStockFilter, setVariationStockFilter] = useState<VariationStockFilter>('todos')
+  const [variationPriceMin, setVariationPriceMin] = useState('')
+  const [variationPriceMax, setVariationPriceMax] = useState('')
+  const [variationSortBy, setVariationSortBy] = useState<VariationSortOption>('recente')
   const [modal, setModal] = useState<Modal | null>(null)
   const [loading, setLoading] = useState(true)
   const [errorMessage, setErrorMessage] = useState('')
@@ -86,8 +93,30 @@ export default function Products(): JSX.Element {
     return acc + p.variations.filter((v) => v.stockQuantity < v.minimumStock).length
   }, 0)
 
+  function resetVariationFilters(): void {
+    setVariationSearch('')
+    setVariationStockFilter('todos')
+    setVariationPriceMin('')
+    setVariationPriceMax('')
+    setVariationSortBy('recente')
+  }
+
   function toggleExpand(id: number): void {
-    setExpandedProduct((prev) => (prev === id ? null : id))
+    setExpandedProduct((prev) => {
+      if (prev === id) return null
+      resetVariationFilters()
+      return id
+    })
+  }
+
+  function getFilteredVariations(variations: ProductVariation[]): ProductVariation[] {
+    return filterAndSortVariations(variations, {
+      search: variationSearch,
+      stockFilter: variationStockFilter,
+      priceMin: variationPriceMin,
+      priceMax: variationPriceMax,
+      sortBy: variationSortBy
+    })
   }
 
   async function handleDeleteProduct(product: Product): Promise<void> {
@@ -284,72 +313,150 @@ export default function Products(): JSX.Element {
                           + Cadastrar variação
                         </button>
                       </div>
-                    ) : (
-                      <table className="w-full text-sm">
-                        <thead>
-                          <tr className="text-xs text-gray-400 uppercase tracking-wide">
-                            <th className="text-left pb-2 font-medium">Identificador</th>
-                            <th className="text-right pb-2 font-medium">Custo</th>
-                            <th className="text-right pb-2 font-medium">Venda</th>
-                            <th className="text-center pb-2 font-medium">Estoque</th>
-                            <th className="text-center pb-2 font-medium">Mín.</th>
-                            <th className="pb-2" />
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-cream-200">
-                          {product.variations.map((v) => (
-                            <tr key={v.id} className="hover:bg-cream-100 transition-colors">
-                              <td className="py-2.5 font-medium text-gray-700">{v.identifier}</td>
-                              <td className="py-2.5 text-right">
-                                <span className="text-gray-500">{formatCurrency(v.costPrice)}</span>
-                                {v.insumos.length > 0 && (() => {
-                                  const insumosCost = v.insumos.reduce((s, i) => s + i.costPerUnit * i.quantity, 0)
-                                  return (
-                                    <span className="block text-xs text-gray-400" title="Custo calculado pelos insumos">
-                                      insumos: {formatCurrency(insumosCost)}
-                                    </span>
-                                  )
-                                })()}
-                              </td>
-                              <td className="py-2.5 text-right text-gray-800 font-medium">{formatCurrency(v.salePrice)}</td>
-                              <td className="py-2.5 text-center">
-                                <Badge label={stockLabel(v)} variant={stockVariant(v)} />
-                              </td>
-                              <td className="py-2.5 text-center text-gray-400">{v.minimumStock}</td>
-                              <td className="py-2.5">
-                                <div className="flex justify-end gap-1">
-                                  <button
-                                    className="text-xs text-gray-500 hover:text-gray-700 px-2 py-1 rounded-lg hover:bg-gray-100 transition-colors"
-                                    onClick={() => setModal({ type: 'detailsVariation', product, variation: v })}
-                                    title="Ver detalhes"
-                                  >
-                                    Detalhes
-                                  </button>
-                                  <button
-                                    className="text-xs text-emerald-600 hover:text-emerald-800 px-2 py-1 rounded-lg hover:bg-emerald-50 transition-colors"
-                                    onClick={() => setModal({ type: 'addStock', product, variation: v })}
-                                  >
-                                    + Estoque
-                                  </button>
-                                  <button
-                                    className="text-xs text-blush-600 hover:text-blush-800 px-2 py-1 rounded-lg hover:bg-blush-50 transition-colors"
-                                    onClick={() => setModal({ type: 'editVariation', product, variation: v })}
-                                  >
-                                    Editar
-                                  </button>
-                                  <button
-                                    className="text-xs text-rose-500 hover:text-rose-700 px-2 py-1 rounded-lg hover:bg-rose-50 transition-colors"
-                                    onClick={() => setModal({ type: 'deleteVariation', product, variation: v })}
-                                  >
-                                    Excluir
-                                  </button>
-                                </div>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    )}
+                    ) : (() => {
+                      const filteredVariations = getFilteredVariations(product.variations)
+                      const hasActiveFilters = variationSearch !== '' || variationStockFilter !== 'todos' || variationPriceMin !== '' || variationPriceMax !== ''
+
+                      return (
+                        <>
+                          {/* Filtros de variações */}
+                          <div className="flex gap-2 mb-3 flex-wrap items-center">
+                            <input
+                              className="input max-w-[180px] text-xs"
+                              placeholder="Buscar variação…"
+                              value={variationSearch}
+                              onChange={(e) => setVariationSearch(e.target.value)}
+                            />
+                            <select
+                              value={variationSortBy}
+                              onChange={(e) => setVariationSortBy(e.target.value as VariationSortOption)}
+                              className="px-2.5 py-1.5 rounded-xl border border-cream-200 bg-white text-xs text-gray-600 focus:outline-none focus:ring-2 focus:ring-blush-300"
+                            >
+                              <option value="recente">Mais recente</option>
+                              <option value="nome-az">Nome A→Z</option>
+                              <option value="nome-za">Nome Z→A</option>
+                              <option value="preco-maior">Maior preço</option>
+                              <option value="preco-menor">Menor preço</option>
+                              <option value="estoque-maior">Maior estoque</option>
+                              <option value="estoque-menor">Menor estoque</option>
+                            </select>
+                            <select
+                              value={variationStockFilter}
+                              onChange={(e) => setVariationStockFilter(e.target.value as VariationStockFilter)}
+                              className="px-2.5 py-1.5 rounded-xl border border-cream-200 bg-white text-xs text-gray-600 focus:outline-none focus:ring-2 focus:ring-blush-300"
+                            >
+                              <option value="todos">Todos os estoques</option>
+                              <option value="sem-estoque">Sem estoque</option>
+                              <option value="estoque-baixo">Estoque baixo</option>
+                              <option value="normal">Estoque normal</option>
+                            </select>
+                            <div className="flex items-center gap-1">
+                              <input
+                                type="number"
+                                className="input w-24 text-xs"
+                                placeholder="Preço mín."
+                                value={variationPriceMin}
+                                onChange={(e) => setVariationPriceMin(e.target.value)}
+                                min="0"
+                                step="0.01"
+                              />
+                              <span className="text-xs text-gray-400">—</span>
+                              <input
+                                type="number"
+                                className="input w-24 text-xs"
+                                placeholder="Preço máx."
+                                value={variationPriceMax}
+                                onChange={(e) => setVariationPriceMax(e.target.value)}
+                                min="0"
+                                step="0.01"
+                              />
+                            </div>
+                            {hasActiveFilters && (
+                              <button
+                                onClick={resetVariationFilters}
+                                className="text-xs text-blush-600 hover:text-blush-800 px-2 py-1 rounded-lg hover:bg-blush-50 transition-colors"
+                              >
+                                Limpar filtros
+                              </button>
+                            )}
+                            <span className="text-xs text-gray-400 ml-auto">
+                              {hasActiveFilters
+                                ? `${filteredVariations.length} de ${product.variations.length}`
+                                : `${product.variations.length}`} variação{product.variations.length !== 1 ? 'ões' : ''}
+                            </span>
+                          </div>
+
+                          {filteredVariations.length === 0 ? (
+                            <p className="text-sm text-gray-400 text-center py-4">Nenhuma variação encontrada com os filtros aplicados.</p>
+                          ) : (
+                            <table className="w-full text-sm">
+                              <thead>
+                                <tr className="text-xs text-gray-400 uppercase tracking-wide">
+                                  <th className="text-left pb-2 font-medium">Identificador</th>
+                                  <th className="text-right pb-2 font-medium">Custo</th>
+                                  <th className="text-right pb-2 font-medium">Venda</th>
+                                  <th className="text-center pb-2 font-medium">Estoque</th>
+                                  <th className="text-center pb-2 font-medium">Mín.</th>
+                                  <th className="pb-2" />
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-cream-200">
+                                {filteredVariations.map((v) => (
+                                  <tr key={v.id} className="hover:bg-cream-100 transition-colors">
+                                    <td className="py-2.5 font-medium text-gray-700">{v.identifier}</td>
+                                    <td className="py-2.5 text-right">
+                                      <span className="text-gray-500">{formatCurrency(v.costPrice)}</span>
+                                      {v.insumos.length > 0 && (() => {
+                                        const insumosCost = v.insumos.reduce((s, i) => s + i.costPerUnit * i.quantity, 0)
+                                        return (
+                                          <span className="block text-xs text-gray-400" title="Custo calculado pelos insumos">
+                                            insumos: {formatCurrency(insumosCost)}
+                                          </span>
+                                        )
+                                      })()}
+                                    </td>
+                                    <td className="py-2.5 text-right text-gray-800 font-medium">{formatCurrency(v.salePrice)}</td>
+                                    <td className="py-2.5 text-center">
+                                      <Badge label={stockLabel(v)} variant={stockVariant(v)} />
+                                    </td>
+                                    <td className="py-2.5 text-center text-gray-400">{v.minimumStock}</td>
+                                    <td className="py-2.5">
+                                      <div className="flex justify-end gap-1">
+                                        <button
+                                          className="text-xs text-gray-500 hover:text-gray-700 px-2 py-1 rounded-lg hover:bg-gray-100 transition-colors"
+                                          onClick={() => setModal({ type: 'detailsVariation', product, variation: v })}
+                                          title="Ver detalhes"
+                                        >
+                                          Detalhes
+                                        </button>
+                                        <button
+                                          className="text-xs text-emerald-600 hover:text-emerald-800 px-2 py-1 rounded-lg hover:bg-emerald-50 transition-colors"
+                                          onClick={() => setModal({ type: 'addStock', product, variation: v })}
+                                        >
+                                          + Estoque
+                                        </button>
+                                        <button
+                                          className="text-xs text-blush-600 hover:text-blush-800 px-2 py-1 rounded-lg hover:bg-blush-50 transition-colors"
+                                          onClick={() => setModal({ type: 'editVariation', product, variation: v })}
+                                        >
+                                          Editar
+                                        </button>
+                                        <button
+                                          className="text-xs text-rose-500 hover:text-rose-700 px-2 py-1 rounded-lg hover:bg-rose-50 transition-colors"
+                                          onClick={() => setModal({ type: 'deleteVariation', product, variation: v })}
+                                        >
+                                          Excluir
+                                        </button>
+                                      </div>
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          )}
+                        </>
+                      )
+                    })()}
                   </div>
                 )}
               </div>

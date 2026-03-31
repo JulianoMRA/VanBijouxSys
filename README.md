@@ -1,6 +1,6 @@
 # Van Bijoux Sys
 
-> **v1.1.0** — controle de fluxo de caixa, formas de pagamento e taxas de cartão.
+> **v1.2.0** — pesquisa, filtros e ordenação de variações de produtos.
 
 Sistema desktop de gestão para negócios de bijuterias. Controla produtos, estoque, insumos, vendas, feiras e fluxo de caixa, com dashboard analítico e calculadora de precificação.
 

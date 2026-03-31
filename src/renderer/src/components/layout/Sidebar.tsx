@@ -59,7 +59,7 @@ export default function Sidebar(): JSX.Element {
       </nav>
 
       <div className="px-6 py-4" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
-        <p className="text-xs" style={{ color: '#4a2438' }}>v1.1.0</p>
+        <p className="text-xs" style={{ color: '#4a2438' }}>v1.2.0</p>
       </div>
     </aside>
   )

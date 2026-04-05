@@ -2,7 +2,7 @@ import { ipcMain } from 'electron'
 import { eq } from 'drizzle-orm'
 import { getDb, getSqlite } from '../database'
 import { sales, saleItems, productVariations, products, fairs } from '../database/schema'
-import type { CreateSaleInput } from '../../renderer/src/types'
+import type { CreateSaleInput, UpdateSaleInput } from '../../renderer/src/types'
 
 export function registerSaleHandlers(): void {
   ipcMain.handle('sales:getAll', async () => {
@@ -96,6 +96,66 @@ export function registerSaleHandlers(): void {
     })
 
     return createSale()
+  })
+
+  ipcMain.handle('sales:update', async (_event, data: UpdateSaleInput) => {
+    const sqlite = getSqlite()
+
+    const updateSale = sqlite.transaction(() => {
+      const oldItems = sqlite
+        .prepare(`SELECT variation_id, quantity FROM sale_items WHERE sale_id = ?`)
+        .all(data.id) as { variation_id: number; quantity: number }[]
+
+      for (const item of oldItems) {
+        sqlite
+          .prepare(`UPDATE product_variations SET stock_quantity = stock_quantity + ? WHERE id = ?`)
+          .run(item.quantity, item.variation_id)
+      }
+
+      sqlite.prepare(`DELETE FROM sale_items WHERE sale_id = ?`).run(data.id)
+
+      const totalAmount = data.items.reduce((s, i) => s + i.quantity * i.unitPrice, 0)
+      const totalCost = data.items.reduce((s, i) => s + i.quantity * i.unitCost, 0)
+
+      sqlite
+        .prepare(
+          `UPDATE sales SET channel = ?, fair_id = ?, total_amount = ?, total_cost = ?,
+           payment_method = ?, fee_percentage = ?, fee_amount = ?, net_amount = ?, sold_at = ?
+           WHERE id = ?`
+        )
+        .run(
+          data.channel,
+          data.fairId ?? null,
+          totalAmount,
+          totalCost,
+          data.paymentMethod,
+          data.feePercentage,
+          data.feeAmount,
+          data.netAmount,
+          data.soldAt,
+          data.id
+        )
+
+      for (const item of data.items) {
+        sqlite
+          .prepare(
+            `INSERT INTO sale_items (sale_id, variation_id, quantity, unit_price, unit_cost)
+             VALUES (?, ?, ?, ?, ?)`
+          )
+          .run(data.id, item.variationId, item.quantity, item.unitPrice, item.unitCost)
+
+        sqlite
+          .prepare(
+            `UPDATE product_variations
+             SET stock_quantity = MAX(0, stock_quantity - ?)
+             WHERE id = ?`
+          )
+          .run(item.quantity, item.variationId)
+      }
+    })
+
+    updateSale()
+    return { success: true }
   })
 
   ipcMain.handle('sales:delete', async (_event, id: number) => {

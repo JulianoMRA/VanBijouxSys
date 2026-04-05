@@ -157,6 +157,8 @@ export interface CreateSaleInput {
   items: CreateSaleItemInput[]
 }
 
+export type UpdateSaleInput = CreateSaleInput & { id: number }
+
 export interface ExpenseCategory {
   id: number
   name: string

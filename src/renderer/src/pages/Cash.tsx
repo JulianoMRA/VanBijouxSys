@@ -5,16 +5,17 @@ import ConfirmDialog from '../components/ui/ConfirmDialog'
 import Toast from '../components/ui/Toast'
 import ExpenseForm from '../components/cash/ExpenseForm'
 import { useToast } from '../hooks/useToast'
-import type { Sale, CashExpense, ExpenseCategory, PaymentMethod } from '../types'
+import type { Sale, CashExpense, ExpenseCategory, Fair, PaymentMethod } from '../types'
 
-type PeriodKey = 'mes' | '3meses' | '6meses' | 'ano' | 'tudo'
+type PeriodKey = 'mes' | '3meses' | '6meses' | 'ano' | 'tudo' | 'custom'
 
 const PERIODS: { label: string; value: PeriodKey }[] = [
   { label: 'Este mês', value: 'mes' },
   { label: '3 meses', value: '3meses' },
   { label: '6 meses', value: '6meses' },
   { label: 'Este ano', value: 'ano' },
-  { label: 'Tudo', value: 'tudo' }
+  { label: 'Tudo', value: 'tudo' },
+  { label: 'Personalizado', value: 'custom' }
 ]
 
 const PAYMENT_LABELS: Record<PaymentMethod, string> = {
@@ -64,11 +65,25 @@ type ExpenseModal =
   | { type: 'edit'; expense: CashExpense }
   | { type: 'delete'; expense: CashExpense }
 
+function buildFairCostSub(fair: Fair): string {
+  const parts: string[] = []
+  if (fair.enrollmentCost > 0) {
+    parts.push(`Inscrição ${fair.enrollmentCost.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}`)
+  }
+  fair.additionalCosts.forEach((c) => {
+    parts.push(`${c.description} ${c.amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}`)
+  })
+  return parts.join(' · ') || 'Sem detalhes'
+}
+
 export default function Cash(): JSX.Element {
   const [period, setPeriod] = useState<PeriodKey>('mes')
+  const [customStart, setCustomStart] = useState('')
+  const [customEnd, setCustomEnd] = useState('')
   const [sales, setSales] = useState<Sale[]>([])
   const [expenses, setExpenses] = useState<CashExpense[]>([])
   const [categories, setCategories] = useState<ExpenseCategory[]>([])
+  const [fairs, setFairs] = useState<Fair[]>([])
   const [openingBalance, setOpeningBalance] = useState(0)
   const [loading, setLoading] = useState(true)
 
@@ -90,15 +105,17 @@ export default function Cash(): JSX.Element {
   const [balanceInput, setBalanceInput] = useState('')
 
   async function loadAll(): Promise<void> {
-    const [allSales, allExpenses, allCategories, settings] = await Promise.all([
+    const [allSales, allExpenses, allCategories, settings, allFairs] = await Promise.all([
       window.api.sales.getAll(),
       window.api.cashExpenses.getAll(),
       window.api.expenseCategories.getAll(),
-      window.api.cashSettings.get()
+      window.api.cashSettings.get(),
+      window.api.fairs.getAll()
     ])
     setSales(allSales)
     setExpenses(allExpenses)
     setCategories(allCategories)
+    setFairs(allFairs)
     setOpeningBalance(settings?.openingBalance ?? 0)
     setLoading(false)
   }
@@ -108,7 +125,9 @@ export default function Cash(): JSX.Element {
   }, [])
 
   // ── Filtering ────────────────────────────────────────────────────────────
-  const dateRange = getPeriodDates(period)
+  const dateRange = period === 'custom'
+    ? (customStart && customEnd ? { startDate: customStart, endDate: customEnd } : null)
+    : getPeriodDates(period)
 
   const filteredSales = useMemo(() => {
     if (!dateRange) return sales
@@ -125,14 +144,25 @@ export default function Cash(): JSX.Element {
     })
   }, [expenses, dateRange])
 
+  const filteredFairExpenses = useMemo(() => {
+    const rows = fairs.flatMap((f) => {
+      const total = f.enrollmentCost + f.additionalCosts.reduce((s, c) => s + c.amount, 0)
+      if (total === 0) return []
+      return [{ fairId: f.id, date: f.date, label: f.name, sub: buildFairCostSub(f), amount: total }]
+    })
+    if (!dateRange) return rows
+    return rows.filter((r) => r.date >= dateRange.startDate && r.date <= dateRange.endDate)
+  }, [fairs, dateRange])
+
   const totalIncome = filteredSales.reduce((s, sale) => s + sale.netAmount, 0)
-  const totalExpenses = filteredExpenses.reduce((s, e) => s + e.amount, 0)
+  const totalExpenses = filteredExpenses.reduce((s, e) => s + e.amount, 0) + filteredFairExpenses.reduce((s, fe) => s + fe.amount, 0)
   const currentBalance = openingBalance + totalIncome - totalExpenses
 
   // ── Unified transaction list ─────────────────────────────────────────────
   type TransactionRow =
     | { kind: 'income'; id: number; date: string; label: string; sub: string; amount: number; netAmount: number; feeAmount: number; paymentMethod: PaymentMethod }
     | { kind: 'expense'; id: number; date: string; label: string; sub: string; amount: number; raw: CashExpense }
+    | { kind: 'fair-expense'; fairId: number; date: string; label: string; sub: string; amount: number }
 
   const transactions = useMemo((): TransactionRow[] => {
     const incomeRows: TransactionRow[] = filteredSales.map((s) => ({
@@ -159,11 +189,20 @@ export default function Cash(): JSX.Element {
       raw: e
     }))
 
-    return [...incomeRows, ...expenseRows].sort((a, b) => {
+    const fairExpenseRows: TransactionRow[] = filteredFairExpenses.map((fe) => ({
+      kind: 'fair-expense',
+      fairId: fe.fairId,
+      date: fe.date,
+      label: fe.label,
+      sub: fe.sub,
+      amount: fe.amount
+    }))
+
+    return [...incomeRows, ...expenseRows, ...fairExpenseRows].sort((a, b) => {
       if (b.date !== a.date) return b.date.localeCompare(a.date)
       return 0
     })
-  }, [filteredSales, filteredExpenses])
+  }, [filteredSales, filteredExpenses, filteredFairExpenses])
 
   // ── Handlers: despesas ───────────────────────────────────────────────────
   async function handleDeleteExpense(expense: CashExpense): Promise<void> {
@@ -267,20 +306,40 @@ export default function Cash(): JSX.Element {
       )}
 
       {/* Filtro de período */}
-      <div className="flex gap-2 mb-5 flex-wrap">
-        {PERIODS.map((p) => (
-          <button
-            key={p.value}
-            onClick={() => setPeriod(p.value)}
-            className={`px-3 py-2 rounded-xl text-sm font-medium transition-all ${
-              period === p.value
-                ? 'bg-blush-500 text-white'
-                : 'bg-white border border-cream-300 text-gray-600 hover:bg-cream-100'
-            }`}
-          >
-            {p.label}
-          </button>
-        ))}
+      <div className="mb-5">
+        <div className="flex gap-2 flex-wrap">
+          {PERIODS.map((p) => (
+            <button
+              key={p.value}
+              onClick={() => setPeriod(p.value)}
+              className={`px-3 py-2 rounded-xl text-sm font-medium transition-all ${
+                period === p.value
+                  ? 'bg-blush-500 text-white'
+                  : 'bg-white border border-cream-300 text-gray-600 hover:bg-cream-100'
+              }`}
+            >
+              {p.label}
+            </button>
+          ))}
+        </div>
+        {period === 'custom' && (
+          <div className="flex items-center gap-2 mt-3">
+            <input
+              type="date"
+              className="input w-auto"
+              value={customStart}
+              onChange={(e) => setCustomStart(e.target.value)}
+            />
+            <span className="text-gray-400 text-sm">até</span>
+            <input
+              type="date"
+              className="input w-auto"
+              value={customEnd}
+              min={customStart || undefined}
+              onChange={(e) => setCustomEnd(e.target.value)}
+            />
+          </div>
+        )}
       </div>
 
       {/* Cards de resumo */}
@@ -307,7 +366,10 @@ export default function Cash(): JSX.Element {
             <TrendingDown size={12} className="text-rose-500" /> Saídas
           </p>
           <p className="font-display text-xl font-semibold text-rose-600">{formatCurrency(totalExpenses)}</p>
-          <p className="text-xs text-gray-400 mt-0.5">{filteredExpenses.length} despesa{filteredExpenses.length !== 1 ? 's' : ''}</p>
+          <p className="text-xs text-gray-400 mt-0.5">
+            {filteredExpenses.length} despesa{filteredExpenses.length !== 1 ? 's' : ''}
+            {filteredFairExpenses.length > 0 && ` · ${filteredFairExpenses.length} feira${filteredFairExpenses.length !== 1 ? 's' : ''}`}
+          </p>
         </div>
         <div className={`card py-4 ${currentBalance >= 0 ? 'bg-emerald-50 border-emerald-200' : 'bg-rose-50 border-rose-200'}`}>
           <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">Saldo atual</p>
@@ -363,7 +425,7 @@ export default function Cash(): JSX.Element {
                 )}
               </div>
 
-              {/* Ações (só despesas) */}
+              {/* Ações (só despesas manuais) */}
               {tx.kind === 'expense' && (
                 <div className="flex items-center gap-1 shrink-0">
                   <button
@@ -380,6 +442,11 @@ export default function Cash(): JSX.Element {
                   >
                     <Trash2 size={14} />
                   </button>
+                </div>
+              )}
+              {tx.kind === 'fair-expense' && (
+                <div className="w-16 shrink-0 flex justify-end">
+                  <span className="text-xs text-gray-300 italic">feira</span>
                 </div>
               )}
             </div>

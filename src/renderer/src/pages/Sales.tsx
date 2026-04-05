@@ -8,6 +8,7 @@ import type { Sale, SaleChannel, PaymentMethod } from '../types'
 
 type Modal =
   | { type: 'new' }
+  | { type: 'edit'; sale: Sale }
   | { type: 'delete'; sale: Sale }
 
 const CHANNEL_FILTERS: { label: string; value: SaleChannel | 'Todos' }[] = [
@@ -23,8 +24,8 @@ function formatCurrency(value: number): string {
 }
 
 function formatDate(dateStr: string): string {
-  const d = new Date(dateStr)
-  return d.toLocaleDateString('pt-BR')
+  const [year, month, day] = dateStr.slice(0, 10).split('-')
+  return `${day}/${month}/${year}`
 }
 
 function channelVariant(channel: SaleChannel): 'category' | 'success' | 'default' | 'warning' {
@@ -190,6 +191,12 @@ export default function Sales(): JSX.Element {
 
                   <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
                     <button
+                      className="text-xs text-blush-600 hover:text-blush-800 px-2 py-1 rounded-lg hover:bg-blush-50 transition-colors"
+                      onClick={() => setModal({ type: 'edit', sale })}
+                    >
+                      Editar
+                    </button>
+                    <button
                       className="text-xs text-rose-500 hover:text-rose-700 px-2 py-1 rounded-lg hover:bg-rose-50 transition-colors"
                       onClick={() => setModal({ type: 'delete', sale })}
                     >
@@ -265,6 +272,9 @@ export default function Sales(): JSX.Element {
 
       {modal?.type === 'new' && (
         <SaleForm onSave={() => { loadSales(); showToast('Venda registrada!') }} onClose={() => setModal(null)} />
+      )}
+      {modal?.type === 'edit' && (
+        <SaleForm sale={modal.sale} onSave={() => { loadSales(); showToast('Venda atualizada!') }} onClose={() => setModal(null)} />
       )}
       {modal?.type === 'delete' && (
         <ConfirmDialog

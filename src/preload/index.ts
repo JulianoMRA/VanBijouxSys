@@ -8,6 +8,7 @@ import type {
   CreateFairInput,
   UpdateFairInput,
   CreateSaleInput,
+  UpdateSaleInput,
   CreateInsumoInput,
   UpdateInsumoInput,
   CreateExpenseCategoryInput,
@@ -42,6 +43,7 @@ const api = {
   sales: {
     getAll: () => ipcRenderer.invoke('sales:getAll'),
     create: (data: CreateSaleInput) => ipcRenderer.invoke('sales:create', data),
+    update: (data: UpdateSaleInput) => ipcRenderer.invoke('sales:update', data),
     delete: (id: number) => ipcRenderer.invoke('sales:delete', id)
   },
   dashboard: {

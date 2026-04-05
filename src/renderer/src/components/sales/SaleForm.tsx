@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
 import Modal from '../ui/Modal'
-import type { Fair, Product, ProductVariation, SaleChannel, PaymentMethod, CreateSaleItemInput } from '../../types'
+import type { Fair, Product, ProductVariation, Sale, SaleChannel, PaymentMethod, CreateSaleItemInput } from '../../types'
 
 interface SaleFormProps {
+  sale?: Sale
   onSave: () => void
   onClose: () => void
 }
@@ -35,20 +36,28 @@ function loadLastFee(method: PaymentMethod): string {
   return localStorage.getItem(FEE_STORAGE_KEY(method)) ?? ''
 }
 
-export default function SaleForm({ onSave, onClose }: SaleFormProps): JSX.Element {
-  const [channel, setChannel] = useState<SaleChannel>('Feira')
-  const [fairId, setFairId] = useState<number | ''>('')
+export default function SaleForm({ sale, onSave, onClose }: SaleFormProps): JSX.Element {
+  const [channel, setChannel] = useState<SaleChannel>(sale?.channel ?? 'Feira')
+  const [fairId, setFairId] = useState<number | ''>(sale?.fairId ?? '')
   const [soldAt, setSoldAt] = useState(() => {
+    if (sale) return sale.soldAt.slice(0, 10)
     const d = new Date()
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
   })
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('dinheiro')
-  const [feePercentage, setFeePercentage] = useState<string>('0')
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>(sale?.paymentMethod ?? 'dinheiro')
+  const [feePercentage, setFeePercentage] = useState<string>(sale ? String(sale.feePercentage) : '0')
   const [items, setItems] = useState<ItemRow[]>([{ key: 0, productId: '', variationId: '', quantity: '1', unitPrice: '' }])
   const [products, setProducts] = useState<Product[]>([])
   const [fairs, setFairs] = useState<Fair[]>([])
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+
+  const originalQuantities: Record<number, number> = sale
+    ? sale.items.reduce((acc, item) => {
+        acc[item.variationId] = (acc[item.variationId] ?? 0) + item.quantity
+        return acc
+      }, {} as Record<number, number>)
+    : {}
 
   useEffect(() => {
     async function load(): Promise<void> {
@@ -58,6 +67,20 @@ export default function SaleForm({ onSave, onClose }: SaleFormProps): JSX.Elemen
       ])
       setProducts(prods)
       setFairs(frs)
+
+      if (sale) {
+        const itemRows: ItemRow[] = sale.items.map((item) => {
+          const product = prods.find((p) => p.variations.some((v) => v.id === item.variationId))
+          return {
+            key: item.id,
+            productId: product?.id ?? '',
+            variationId: item.variationId as number | '',
+            quantity: String(item.quantity),
+            unitPrice: String(item.unitPrice)
+          }
+        })
+        setItems(itemRows)
+      }
     }
     load()
   }, [])
@@ -156,7 +179,7 @@ export default function SaleForm({ onSave, onClose }: SaleFormProps): JSX.Elemen
 
     setSaving(true)
     try {
-      await window.api.sales.create({
+      const payload = {
         channel,
         fairId: channel === 'Feira' && fairId !== '' ? fairId : undefined,
         soldAt,
@@ -165,18 +188,23 @@ export default function SaleForm({ onSave, onClose }: SaleFormProps): JSX.Elemen
         feeAmount,
         netAmount,
         items: builtItems
-      })
+      }
+      if (sale) {
+        await window.api.sales.update({ ...payload, id: sale.id })
+      } else {
+        await window.api.sales.create(payload)
+      }
       onSave()
       onClose()
     } catch {
-      setError('Erro ao registrar venda. Tente novamente.')
+      setError(sale ? 'Erro ao atualizar venda. Tente novamente.' : 'Erro ao registrar venda. Tente novamente.')
     } finally {
       setSaving(false)
     }
   }
 
   return (
-    <Modal title="Registrar Venda" onClose={onClose} size="lg">
+    <Modal title={sale ? 'Editar Venda' : 'Registrar Venda'} onClose={onClose} size="lg">
       <form onSubmit={handleSubmit} className="space-y-5">
         {/* Canal e data */}
         <div className="grid grid-cols-2 gap-4">
@@ -353,11 +381,14 @@ export default function SaleForm({ onSave, onClose }: SaleFormProps): JSX.Elemen
                         }
                       >
                         <option value="">Selecione…</option>
-                        {variations.map((v) => (
-                          <option key={v.id} value={v.id}>
-                            {v.identifier} (estoque: {v.stockQuantity})
-                          </option>
-                        ))}
+                        {variations.map((v) => {
+                          const effectiveStock = v.stockQuantity + (originalQuantities[v.id] ?? 0)
+                          return (
+                            <option key={v.id} value={v.id}>
+                              {v.identifier} (estoque: {effectiveStock})
+                            </option>
+                          )
+                        })}
                       </select>
                     </div>
                   </div>
@@ -405,12 +436,14 @@ export default function SaleForm({ onSave, onClose }: SaleFormProps): JSX.Elemen
                     </div>
                   </div>
 
-                  {selectedVariation &&
-                    parseInt(item.quantity) > selectedVariation.stockQuantity && (
+                  {selectedVariation && (() => {
+                    const effectiveStock = selectedVariation.stockQuantity + (originalQuantities[selectedVariation.id] ?? 0)
+                    return parseInt(item.quantity) > effectiveStock ? (
                       <p className="text-xs text-amber-600">
-                        ⚠ Quantidade maior que o estoque disponível ({selectedVariation.stockQuantity} un.)
+                        ⚠ Quantidade maior que o estoque disponível ({effectiveStock} un.)
                       </p>
-                    )}
+                    ) : null
+                  })()}
                 </div>
               )
             })}
@@ -458,7 +491,7 @@ export default function SaleForm({ onSave, onClose }: SaleFormProps): JSX.Elemen
             Cancelar
           </button>
           <button type="submit" className="btn-primary" disabled={saving}>
-            {saving ? 'Registrando…' : 'Registrar venda'}
+            {saving ? (sale ? 'Salvando…' : 'Registrando…') : (sale ? 'Salvar alterações' : 'Registrar venda')}
           </button>
         </div>
       </form>

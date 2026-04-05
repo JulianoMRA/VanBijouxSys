@@ -11,6 +11,7 @@ import type {
   UpdateFairInput,
   Sale,
   CreateSaleInput,
+  UpdateSaleInput,
   DashboardStats,
   Insumo,
   CreateInsumoInput,
@@ -51,6 +52,7 @@ declare global {
       sales: {
         getAll: () => Promise<Sale[]>
         create: (data: CreateSaleInput) => Promise<{ id: number }>
+        update: (data: UpdateSaleInput) => Promise<{ success: boolean }>
         delete: (id: number) => Promise<{ success: boolean }>
       }
       dashboard: {

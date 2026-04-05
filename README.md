@@ -1,6 +1,6 @@
 # Van Bijoux Sys
 
-> **v1.2.0** — pesquisa, filtros e ordenação de variações de produtos.
+> **v1.3.0** — edição de vendas, custos de feira no caixa e filtro personalizado de período.
 
 Sistema desktop de gestão para negócios de bijuterias. Controla produtos, estoque, insumos, vendas, feiras e fluxo de caixa, com dashboard analítico e calculadora de precificação.
 
@@ -14,9 +14,9 @@ Sistema desktop de gestão para negócios de bijuterias. Controla produtos, esto
 | **Produtos** | Cadastro de produtos e variações com receita de insumos, mão de obra, modal de detalhes financeiros; busca, filtro por categoria e ordenação |
 | **Estoque** | Controle de insumos com busca por nome, filtro por status (baixo/esgotado), ordenação, alerta recolhível de estoque baixo e exportação em CSV |
 | **Precificação** | Calculadora com fórmula personalizada, campo de mão de obra, integração com insumos do cadastro e aplicação direta à variação |
-| **Vendas** | Registro de vendas por canal (WhatsApp, Instagram, Feira, Outro) com forma de pagamento (Dinheiro, PIX, Débito, Crédito) e cálculo de taxa |
+| **Vendas** | Registro e edição de vendas por canal (WhatsApp, Instagram, Feira, Outro) com forma de pagamento (Dinheiro, PIX, Débito, Crédito), cálculo de taxa e reajuste automático de estoque |
 | **Feiras** | Cadastro de feiras com período multi-dia, custos adicionais e resumo de vendas |
-| **Caixa** | Fluxo de caixa com entradas (vendas líquidas), saídas manuais por categoria, saldo de abertura e gráfico mensal |
+| **Caixa** | Fluxo de caixa com entradas (vendas líquidas), saídas manuais por categoria, custos de feira como saídas automáticas, saldo de abertura, filtros de período pré-definidos e intervalo personalizado |
 
 ### Regras de negócio
 
@@ -27,7 +27,8 @@ Sistema desktop de gestão para negócios de bijuterias. Controla produtos, esto
 - **Proteção de estoque negativo**: todas as deduções usam `MAX(0, estoque - quantidade)`
 - **Canais de venda**: Feira, WhatsApp, Instagram, Outro
 - **Formas de pagamento**: Dinheiro (sem taxa), PIX, Débito e Crédito; taxa (%) preenchida pela usuária com memória da última usada por método; valor líquido calculado automaticamente
-- **Fluxo de caixa**: entradas geradas pelas vendas (valor líquido após taxa); saídas manuais com categorias criadas pela usuária; saldo de abertura configurável
+- **Fluxo de caixa**: entradas geradas pelas vendas (valor líquido após taxa); saídas manuais com categorias criadas pela usuária; custos de feira (inscrição + adicionais) contabilizados automaticamente como saídas; saldo de abertura configurável; filtros: este mês, 3 meses, 6 meses, este ano, tudo e intervalo personalizado
+- **Edição de venda**: todos os campos editáveis com reajuste automático de estoque (devolve itens antigos e desconta os novos)
 - **Feiras multi-dia**: suporte a períodos ilimitados com custos extras (combustível, alimentação etc.)
 
 ---

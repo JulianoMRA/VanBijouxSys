@@ -56,7 +56,7 @@ declare global {
         delete: (id: number) => Promise<{ success: boolean }>
       }
       dashboard: {
-        getStats: (fromDate: string | null) => Promise<DashboardStats>
+        getStats: (period: string) => Promise<DashboardStats>
       }
       insumos: {
         getAll: () => Promise<Insumo[]>

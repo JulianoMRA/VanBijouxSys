@@ -47,7 +47,7 @@ const api = {
     delete: (id: number) => ipcRenderer.invoke('sales:delete', id)
   },
   dashboard: {
-    getStats: (fromDate: string | null) => ipcRenderer.invoke('dashboard:getStats', fromDate)
+    getStats: (period: string) => ipcRenderer.invoke('dashboard:getStats', period)
   },
   insumos: {
     getAll: () => ipcRenderer.invoke('insumos:getAll'),

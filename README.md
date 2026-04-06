@@ -1,6 +1,6 @@
 # Van Bijoux Sys
 
-> **v1.3.0** — edição de vendas, custos de feira no caixa e filtro personalizado de período.
+> **v1.4.0** — dashboard analítico reformulado com insights, comparativo de período, categorias e distribuição diária de feiras.
 
 Sistema desktop de gestão para negócios de bijuterias. Controla produtos, estoque, insumos, vendas, feiras e fluxo de caixa, com dashboard analítico e calculadora de precificação.
 
@@ -10,7 +10,7 @@ Sistema desktop de gestão para negócios de bijuterias. Controla produtos, esto
 
 | Módulo | Descrição |
 |---|---|
-| **Dashboard** | Visão geral de faturamento, lucro, ticket médio e alertas de estoque baixo |
+| **Dashboard** | KPIs com comparativo do período anterior, painel de insights automáticos, faturamento por categoria, alertas recolhíveis separados por esgotado/baixo e distribuição de vendas por dia dentro de cada feira |
 | **Produtos** | Cadastro de produtos e variações com receita de insumos, mão de obra, modal de detalhes financeiros; busca, filtro por categoria e ordenação |
 | **Estoque** | Controle de insumos com busca por nome, filtro por status (baixo/esgotado), ordenação, alerta recolhível de estoque baixo e exportação em CSV |
 | **Precificação** | Calculadora com fórmula personalizada, campo de mão de obra, integração com insumos do cadastro e aplicação direta à variação |

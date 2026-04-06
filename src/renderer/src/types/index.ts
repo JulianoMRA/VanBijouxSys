@@ -214,8 +214,17 @@ export interface DashboardStats {
     totalSales: number
     avgTicket: number
   }
+  previousOverview: {
+    totalRevenue: number
+    totalNetRevenue: number
+    totalCost: number
+    totalProfit: number
+    totalSales: number
+    avgTicket: number
+  } | null
   revenueByMonth: Array<{ month: string; revenue: number; profit: number }>
   salesByChannel: Array<{ channel: string; revenue: number; profit: number; count: number }>
+  salesByCategory: Array<{ category: string; revenue: number; quantity: number; count: number }>
   salesByFair: Array<{
     fairName: string
     date: string
@@ -225,6 +234,7 @@ export interface DashboardStats {
     enrollmentCost: number
     additionalCosts: number
     netProfit: number
+    dailyBreakdown: Array<{ day: string; revenue: number; salesCount: number }>
   }>
   topVariations: Array<{
     productName: string
@@ -232,11 +242,26 @@ export interface DashboardStats {
     quantity: number
     revenue: number
   }>
+  outOfStock: Array<{
+    id: number
+    productName: string
+    categoryName: string
+    identifier: string
+    stockQuantity: number
+    minimumStock: number
+  }>
   lowStock: Array<{
     id: number
     productName: string
     categoryName: string
     identifier: string
+    stockQuantity: number
+    minimumStock: number
+  }>
+  outOfInsumos: Array<{
+    id: number
+    name: string
+    unit: string
     stockQuantity: number
     minimumStock: number
   }>

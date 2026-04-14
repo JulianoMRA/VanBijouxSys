@@ -360,6 +360,7 @@ export function registerDashboardHandlers(): void {
 
     const salesDateFilter = fromDate ? `AND sold_at >= '${fromDate}'` : ''
     const expenseDateFilter = fromDate ? `AND expense_date >= '${fromDate}'` : ''
+    const fairDateFilter = fromDate ? `AND f.date >= '${fromDate}'` : ''
 
     const cashFlow = sqlite
       .prepare(
@@ -373,6 +374,11 @@ export function registerDashboardHandlers(): void {
            UNION ALL
            SELECT strftime('%Y-%m', expense_date) AS month, 0 AS income, amount AS expenses
            FROM cash_expenses WHERE 1=1 ${expenseDateFilter}
+           UNION ALL
+           SELECT strftime('%Y-%m', f.date) AS month, 0 AS income,
+             f.enrollment_cost + COALESCE((SELECT SUM(fac.amount) FROM fair_additional_costs fac WHERE fac.fair_id = f.id), 0) AS expenses
+           FROM fairs f
+           WHERE (f.enrollment_cost > 0 OR EXISTS (SELECT 1 FROM fair_additional_costs fac WHERE fac.fair_id = f.id)) ${fairDateFilter}
          )
          GROUP BY month
          ORDER BY month ASC`
@@ -393,12 +399,20 @@ export function registerDashboardHandlers(): void {
       )
       .get() as { total: number }
 
+    const fairCostsTotal = sqlite
+      .prepare(
+        `SELECT COALESCE(SUM(f.enrollment_cost + COALESCE((SELECT SUM(fac.amount) FROM fair_additional_costs fac WHERE fac.fair_id = f.id), 0)), 0) AS total
+         FROM fairs f WHERE 1=1 ${fairDateFilter}`
+      )
+      .get() as { total: number }
+
+    const totalExpenses = cashExpensesTotal.total + fairCostsTotal.total
     const openingBalance = cashSettings?.opening_balance ?? 0
     const cashSummary = {
       openingBalance,
       totalIncome: cashIncomeTotal.total,
-      totalExpenses: cashExpensesTotal.total,
-      currentBalance: openingBalance + cashIncomeTotal.total - cashExpensesTotal.total
+      totalExpenses,
+      currentBalance: openingBalance + cashIncomeTotal.total - totalExpenses
     }
 
     return {

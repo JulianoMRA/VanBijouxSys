@@ -77,17 +77,25 @@ export interface DashboardStats {
   }
 }
 
-type Period = 'month' | 'quarter' | 'halfyear' | 'year' | 'all'
+type Period = 'month' | 'quarter' | 'halfyear' | 'year' | 'all' | 'custom'
 
-function computePeriodDates(period: Period): {
+interface DashboardParams {
+  period: Period
+  customFrom?: string
+  customTo?: string
+}
+
+function computePeriodDates(period: Exclude<Period, 'custom'>): {
   fromDate: string | null
+  toDate: string | null
   prevFromDate: string | null
   prevToDate: string | null
 } {
   const now = new Date()
+  const today = now.toISOString().slice(0, 10)
 
   if (period === 'all') {
-    return { fromDate: null, prevFromDate: null, prevToDate: null }
+    return { fromDate: null, toDate: null, prevFromDate: null, prevToDate: null }
   }
 
   if (period === 'month') {
@@ -96,6 +104,7 @@ function computePeriodDates(period: Period): {
     const prevTo = new Date(now.getFullYear(), now.getMonth(), 0)
     return {
       fromDate,
+      toDate: today,
       prevFromDate: prevFrom.toISOString().slice(0, 10),
       prevToDate: prevTo.toISOString().slice(0, 10)
     }
@@ -110,6 +119,7 @@ function computePeriodDates(period: Period): {
     prevTo.setDate(prevTo.getDate() - 1)
     return {
       fromDate: from.toISOString().slice(0, 10),
+      toDate: today,
       prevFromDate: prevFrom.toISOString().slice(0, 10),
       prevToDate: prevTo.toISOString().slice(0, 10)
     }
@@ -124,6 +134,7 @@ function computePeriodDates(period: Period): {
     prevTo.setDate(prevTo.getDate() - 1)
     return {
       fromDate: from.toISOString().slice(0, 10),
+      toDate: today,
       prevFromDate: prevFrom.toISOString().slice(0, 10),
       prevToDate: prevTo.toISOString().slice(0, 10)
     }
@@ -133,15 +144,30 @@ function computePeriodDates(period: Period): {
   const fromDate = new Date(now.getFullYear(), 0, 1).toISOString().slice(0, 10)
   const prevFromDate = new Date(now.getFullYear() - 1, 0, 1).toISOString().slice(0, 10)
   const prevToDate = new Date(now.getFullYear() - 1, 11, 31).toISOString().slice(0, 10)
-  return { fromDate, prevFromDate, prevToDate }
+  return { fromDate, toDate: today, prevFromDate, prevToDate }
 }
 
 export function registerDashboardHandlers(): void {
-  ipcMain.handle('dashboard:getStats', async (_event, period: Period) => {
+  ipcMain.handle('dashboard:getStats', async (_event, params: DashboardParams) => {
     const sqlite = getSqlite()
-    const { fromDate, prevFromDate, prevToDate } = computePeriodDates(period)
 
-    const dateFilter = fromDate ? `AND s.sold_at >= '${fromDate}'` : ''
+    let fromDate: string | null
+    let toDate: string | null
+    let prevFromDate: string | null
+    let prevToDate: string | null
+
+    if (params.period === 'custom') {
+      fromDate = params.customFrom ?? null
+      toDate = params.customTo ?? null
+      prevFromDate = null
+      prevToDate = null
+    } else {
+      ;({ fromDate, toDate, prevFromDate, prevToDate } = computePeriodDates(params.period))
+    }
+
+    const dateFilter = fromDate
+      ? `AND s.sold_at >= '${fromDate}'${toDate ? ` AND s.sold_at <= '${toDate}'` : ''}`
+      : ''
     const prevDateFilter =
       prevFromDate && prevToDate
         ? `AND date(s.sold_at) >= '${prevFromDate}' AND date(s.sold_at) <= '${prevToDate}'`
@@ -155,7 +181,7 @@ export function registerDashboardHandlers(): void {
           COALESCE(SUM(s.total_cost), 0)                AS totalCost,
           COALESCE(SUM(s.net_amount - s.total_cost), 0) AS totalProfit,
           COUNT(s.id)                                    AS totalSales,
-          COALESCE(AVG(s.total_amount), 0)              AS avgTicket
+          COALESCE(AVG(s.net_amount), 0)                AS avgTicket
          FROM sales s
          WHERE 1=1 ${dateFilter}`
       )
@@ -171,7 +197,7 @@ export function registerDashboardHandlers(): void {
             COALESCE(SUM(s.total_cost), 0)                AS totalCost,
             COALESCE(SUM(s.net_amount - s.total_cost), 0) AS totalProfit,
             COUNT(s.id)                                    AS totalSales,
-            COALESCE(AVG(s.total_amount), 0)              AS avgTicket
+            COALESCE(AVG(s.net_amount), 0)                AS avgTicket
            FROM sales s
            WHERE 1=1 ${prevDateFilter}`
         )
@@ -223,7 +249,9 @@ export function registerDashboardHandlers(): void {
       )
       .all() as DashboardStats['salesByCategory']
 
-    const fairDateFilter = fromDate ? `AND s.sold_at >= '${fromDate}'` : ''
+    const fairDateFilter = fromDate
+      ? `AND s.sold_at >= '${fromDate}'${toDate ? ` AND s.sold_at <= '${toDate}'` : ''}`
+      : ''
 
     const salesByFairRaw = sqlite
       .prepare(
@@ -235,8 +263,8 @@ export function registerDashboardHandlers(): void {
           f.enrollment_cost                              AS enrollmentCost,
           COALESCE((SELECT SUM(fac.amount) FROM fair_additional_costs fac WHERE fac.fair_id = f.id), 0) AS additionalCosts,
           COALESCE(SUM(s.total_amount), 0)              AS revenue,
-          COALESCE(SUM(s.total_amount - s.total_cost), 0) AS profit,
-          COALESCE(SUM(s.total_amount - s.total_cost), 0)
+          COALESCE(SUM(s.net_amount - s.total_cost), 0) AS profit,
+          COALESCE(SUM(s.net_amount - s.total_cost), 0)
             - f.enrollment_cost
             - COALESCE((SELECT SUM(fac.amount) FROM fair_additional_costs fac WHERE fac.fair_id = f.id), 0) AS netProfit
          FROM fairs f
@@ -264,7 +292,7 @@ export function registerDashboardHandlers(): void {
           COALESCE(SUM(total_amount), 0)   AS revenue,
           COUNT(id)                        AS salesCount
          FROM sales
-         WHERE fair_id IS NOT NULL${fromDate ? ` AND sold_at >= '${fromDate}'` : ''}
+         WHERE fair_id IS NOT NULL${fromDate ? ` AND sold_at >= '${fromDate}'${toDate ? ` AND sold_at <= '${toDate}'` : ''}` : ''}
          GROUP BY fair_id, day
          ORDER BY fair_id, day ASC`
       )
@@ -358,8 +386,15 @@ export function registerDashboardHandlers(): void {
       )
       .all() as DashboardStats['lowInsumos']
 
-    const salesDateFilter = fromDate ? `AND sold_at >= '${fromDate}'` : ''
-    const expenseDateFilter = fromDate ? `AND expense_date >= '${fromDate}'` : ''
+    const salesDateFilter = fromDate
+      ? `AND sold_at >= '${fromDate}'${toDate ? ` AND sold_at <= '${toDate}'` : ''}`
+      : ''
+    const expenseDateFilter = fromDate
+      ? `AND expense_date >= '${fromDate}'${toDate ? ` AND expense_date <= '${toDate}'` : ''}`
+      : ''
+    const fairCostDateFilter = fromDate
+      ? `AND f.date >= '${fromDate}'${toDate ? ` AND f.date <= '${toDate}'` : ''}`
+      : ''
 
     const cashFlow = sqlite
       .prepare(
@@ -373,6 +408,11 @@ export function registerDashboardHandlers(): void {
            UNION ALL
            SELECT strftime('%Y-%m', expense_date) AS month, 0 AS income, amount AS expenses
            FROM cash_expenses WHERE 1=1 ${expenseDateFilter}
+           UNION ALL
+           SELECT strftime('%Y-%m', f.date) AS month, 0 AS income,
+             f.enrollment_cost + COALESCE((SELECT SUM(fac.amount) FROM fair_additional_costs fac WHERE fac.fair_id = f.id), 0) AS expenses
+           FROM fairs f
+           WHERE (f.enrollment_cost > 0 OR EXISTS (SELECT 1 FROM fair_additional_costs fac WHERE fac.fair_id = f.id)) ${fairCostDateFilter}
          )
          GROUP BY month
          ORDER BY month ASC`
@@ -393,12 +433,20 @@ export function registerDashboardHandlers(): void {
       )
       .get() as { total: number }
 
+    const fairCostsTotal = sqlite
+      .prepare(
+        `SELECT COALESCE(SUM(f.enrollment_cost + COALESCE((SELECT SUM(fac.amount) FROM fair_additional_costs fac WHERE fac.fair_id = f.id), 0)), 0) AS total
+         FROM fairs f WHERE 1=1 ${fairCostDateFilter}`
+      )
+      .get() as { total: number }
+
+    const totalExpenses = cashExpensesTotal.total + fairCostsTotal.total
     const openingBalance = cashSettings?.opening_balance ?? 0
     const cashSummary = {
       openingBalance,
       totalIncome: cashIncomeTotal.total,
-      totalExpenses: cashExpensesTotal.total,
-      currentBalance: openingBalance + cashIncomeTotal.total - cashExpensesTotal.total
+      totalExpenses,
+      currentBalance: openingBalance + cashIncomeTotal.total - totalExpenses
     }
 
     return {

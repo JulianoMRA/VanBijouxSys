@@ -17,14 +17,15 @@ import {
 import { ChevronDown, ChevronUp, AlertTriangle, XCircle, Trophy, Gem, Star, TrendingUp } from 'lucide-react'
 import type { DashboardStats } from '../types'
 
-type Period = 'month' | 'quarter' | 'halfyear' | 'year' | 'all'
+type Period = 'month' | 'quarter' | 'halfyear' | 'year' | 'all' | 'custom'
 
 const PERIODS: { label: string; value: Period }[] = [
   { label: 'Este mês', value: 'month' },
   { label: '3 meses', value: 'quarter' },
   { label: '6 meses', value: 'halfyear' },
   { label: 'Este ano', value: 'year' },
-  { label: 'Tudo', value: 'all' }
+  { label: 'Tudo', value: 'all' },
+  { label: 'Personalizado', value: 'custom' }
 ]
 
 const CHANNEL_COLORS: Record<string, string> = {
@@ -317,13 +318,20 @@ function FairCard({
 
 export default function Dashboard(): JSX.Element {
   const [period, setPeriod] = useState<Period>('month')
+  const [customFrom, setCustomFrom] = useState('')
+  const [customTo, setCustomTo] = useState('')
   const [stats, setStats] = useState<DashboardStats | null>(null)
   const [loading, setLoading] = useState(true)
   const [alertsExpanded, setAlertsExpanded] = useState(true)
 
-  async function loadStats(p: Period): Promise<void> {
+  async function loadStats(p: Period, from?: string, to?: string): Promise<void> {
+    if (p === 'custom' && (!from || !to)) return
     setLoading(true)
-    const data = await window.api.dashboard.getStats(p)
+    const data = await window.api.dashboard.getStats({
+      period: p,
+      customFrom: from,
+      customTo: to
+    })
     setStats(data)
     setLoading(false)
   }
@@ -331,6 +339,12 @@ export default function Dashboard(): JSX.Element {
   useEffect(() => {
     loadStats(period)
   }, [period])
+
+  useEffect(() => {
+    if (period === 'custom' && customFrom && customTo) {
+      loadStats('custom', customFrom, customTo)
+    }
+  }, [customFrom, customTo])
 
   const empty = !stats || stats.overview.totalSales === 0
   const prev = stats?.previousOverview
@@ -341,9 +355,9 @@ export default function Dashboard(): JSX.Element {
   return (
     <div>
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-4">
         <h2 className="font-display text-2xl font-semibold text-gray-800">Dashboard</h2>
-        <div className="flex gap-1.5">
+        <div className="flex gap-1.5 flex-wrap justify-end">
           {PERIODS.map((p) => (
             <button
               key={p.value}
@@ -359,6 +373,25 @@ export default function Dashboard(): JSX.Element {
           ))}
         </div>
       </div>
+
+      {period === 'custom' && (
+        <div className="flex items-center gap-2 mb-5 justify-end">
+          <input
+            type="date"
+            className="input w-auto text-sm"
+            value={customFrom}
+            onChange={(e) => setCustomFrom(e.target.value)}
+          />
+          <span className="text-gray-400 text-sm">até</span>
+          <input
+            type="date"
+            className="input w-auto text-sm"
+            value={customTo}
+            min={customFrom || undefined}
+            onChange={(e) => setCustomTo(e.target.value)}
+          />
+        </div>
+      )}
 
       {/* Alertas de estoque */}
       {stats && (totalOutOfStock > 0 || totalLowStock > 0) && (
@@ -482,7 +515,7 @@ export default function Dashboard(): JSX.Element {
             <StatCard
               label="Ticket médio"
               value={formatCurrency(stats!.overview.avgTicket)}
-              sub="por venda"
+              sub="por venda (líquido)"
               delta={prev ? calcDelta(stats!.overview.avgTicket, prev.avgTicket) : null}
             />
             <StatCard
@@ -520,7 +553,7 @@ export default function Dashboard(): JSX.Element {
                 <p className="font-display text-lg font-semibold text-rose-700">
                   {formatCurrency(stats!.cashSummary.totalExpenses)}
                 </p>
-                <p className="text-xs text-gray-400 mt-0.5">despesas registradas</p>
+                <p className="text-xs text-gray-400 mt-0.5">despesas + custos de feira</p>
               </div>
               <div
                 className={`card py-4 ${stats!.cashSummary.currentBalance >= 0 ? 'bg-emerald-50 border-emerald-200' : 'bg-rose-50 border-rose-200'}`}

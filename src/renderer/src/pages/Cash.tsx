@@ -5,6 +5,7 @@ import ConfirmDialog from '../components/ui/ConfirmDialog'
 import Toast from '../components/ui/Toast'
 import ExpenseForm from '../components/cash/ExpenseForm'
 import { useToast } from '../hooks/useToast'
+import { formatCurrency, formatDate } from '../utils/format'
 import type { Sale, CashExpense, ExpenseCategory, Fair, PaymentMethod } from '../types'
 
 type PeriodKey = 'mes' | '3meses' | '6meses' | 'ano' | 'tudo' | 'custom'
@@ -23,15 +24,6 @@ const PAYMENT_LABELS: Record<PaymentMethod, string> = {
   pix: 'PIX',
   debito: 'Débito',
   credito: 'Crédito'
-}
-
-function formatCurrency(value: number): string {
-  return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
-}
-
-function formatDate(dateStr: string): string {
-  const [year, month, day] = dateStr.slice(0, 10).split('-')
-  return `${day}/${month}/${year}`
 }
 
 function getPeriodDates(period: PeriodKey): { startDate: string; endDate: string } | null {

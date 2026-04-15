@@ -88,8 +88,8 @@ if (process.contextIsolated) {
     console.error(error)
   }
 } else {
-  // @ts-ignore
+  // @ts-expect-error — window.electron não está no tipo global; acesso apenas fora do contextBridge (dev/test)
   window.electron = electronAPI
-  // @ts-ignore
+  // @ts-expect-error — window.api não está no tipo global; acesso apenas fora do contextBridge (dev/test)
   window.api = api
 }

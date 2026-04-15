@@ -85,6 +85,8 @@ interface DashboardParams {
   customTo?: string
 }
 
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/
+
 function computePeriodDates(period: Exclude<Period, 'custom'>): {
   fromDate: string | null
   toDate: string | null
@@ -149,47 +151,52 @@ function computePeriodDates(period: Exclude<Period, 'custom'>): {
 
 export function registerDashboardHandlers(): void {
   ipcMain.handle('dashboard:getStats', async (_event, params: DashboardParams) => {
-    const sqlite = getSqlite()
+    try {
+      const sqlite = getSqlite()
 
-    let fromDate: string | null
-    let toDate: string | null
-    let prevFromDate: string | null
-    let prevToDate: string | null
+      let fromDate: string | null
+      let toDate: string | null
+      let prevFromDate: string | null
+      let prevToDate: string | null
 
-    if (params.period === 'custom') {
-      fromDate = params.customFrom ?? null
-      toDate = params.customTo ?? null
-      prevFromDate = null
-      prevToDate = null
-    } else {
-      ;({ fromDate, toDate, prevFromDate, prevToDate } = computePeriodDates(params.period))
-    }
+      if (params.period === 'custom') {
+        fromDate = params.customFrom ?? null
+        toDate = params.customTo ?? null
+        prevFromDate = null
+        prevToDate = null
+      } else {
+        ;({ fromDate, toDate, prevFromDate, prevToDate } = computePeriodDates(params.period))
+      }
 
-    const dateFilter = fromDate
-      ? `AND s.sold_at >= '${fromDate}'${toDate ? ` AND s.sold_at <= '${toDate}'` : ''}`
-      : ''
-    const prevDateFilter =
-      prevFromDate && prevToDate
-        ? `AND date(s.sold_at) >= '${prevFromDate}' AND date(s.sold_at) <= '${prevToDate}'`
-        : null
+      if (fromDate && !ISO_DATE.test(fromDate)) throw new Error('Invalid fromDate format')
+      if (toDate && !ISO_DATE.test(toDate)) throw new Error('Invalid toDate format')
 
-    const overview = sqlite
-      .prepare(
-        `SELECT
-          COALESCE(SUM(s.total_amount), 0)              AS totalRevenue,
-          COALESCE(SUM(s.net_amount), 0)                AS totalNetRevenue,
-          COALESCE(SUM(s.total_cost), 0)                AS totalCost,
-          COALESCE(SUM(s.net_amount - s.total_cost), 0) AS totalProfit,
-          COUNT(s.id)                                    AS totalSales,
-          COALESCE(AVG(s.net_amount), 0)                AS avgTicket
-         FROM sales s
-         WHERE 1=1 ${dateFilter}`
-      )
-      .get() as DashboardStats['overview']
+      // Cláusulas e parâmetros reutilizáveis
+      const sSoldAtClause = fromDate
+        ? ` AND s.sold_at >= ?${toDate ? ' AND s.sold_at <= ?' : ''}`
+        : ''
+      const soldAtClause = fromDate
+        ? ` AND sold_at >= ?${toDate ? ' AND sold_at <= ?' : ''}`
+        : ''
+      const expenseDateClause = fromDate
+        ? ` AND expense_date >= ?${toDate ? ' AND expense_date <= ?' : ''}`
+        : ''
+      const fDateClause = fromDate
+        ? ` AND f.date >= ?${toDate ? ' AND f.date <= ?' : ''}`
+        : ''
+      const prevSoldAtClause =
+        prevFromDate && prevToDate
+          ? ` AND date(s.sold_at) >= ? AND date(s.sold_at) <= ?`
+          : ''
 
-    let previousOverview: DashboardStats['previousOverview'] = null
-    if (prevDateFilter) {
-      previousOverview = sqlite
+      const dateParams: string[] = [
+        ...(fromDate ? [fromDate] : []),
+        ...(toDate ? [toDate] : [])
+      ]
+      const prevDateParams: string[] =
+        prevFromDate && prevToDate ? [prevFromDate, prevToDate] : []
+
+      const overview = sqlite
         .prepare(
           `SELECT
             COALESCE(SUM(s.total_amount), 0)              AS totalRevenue,
@@ -199,270 +206,284 @@ export function registerDashboardHandlers(): void {
             COUNT(s.id)                                    AS totalSales,
             COALESCE(AVG(s.net_amount), 0)                AS avgTicket
            FROM sales s
-           WHERE 1=1 ${prevDateFilter}`
+           WHERE 1=1${sSoldAtClause}`
         )
-        .get() as DashboardStats['overview']
-    }
+        .get(...dateParams) as DashboardStats['overview']
 
-    const revenueByMonth = sqlite
-      .prepare(
-        `SELECT
-          strftime('%Y-%m', s.sold_at)                  AS month,
-          COALESCE(SUM(s.total_amount), 0)              AS revenue,
-          COALESCE(SUM(s.net_amount - s.total_cost), 0) AS profit
-         FROM sales s
-         WHERE 1=1 ${dateFilter}
-         GROUP BY month
-         ORDER BY month ASC`
-      )
-      .all() as DashboardStats['revenueByMonth']
+      let previousOverview: DashboardStats['previousOverview'] = null
+      if (prevSoldAtClause) {
+        previousOverview = sqlite
+          .prepare(
+            `SELECT
+              COALESCE(SUM(s.total_amount), 0)              AS totalRevenue,
+              COALESCE(SUM(s.net_amount), 0)                AS totalNetRevenue,
+              COALESCE(SUM(s.total_cost), 0)                AS totalCost,
+              COALESCE(SUM(s.net_amount - s.total_cost), 0) AS totalProfit,
+              COUNT(s.id)                                    AS totalSales,
+              COALESCE(AVG(s.net_amount), 0)                AS avgTicket
+             FROM sales s
+             WHERE 1=1${prevSoldAtClause}`
+          )
+          .get(...prevDateParams) as DashboardStats['overview']
+      }
 
-    const salesByChannel = sqlite
-      .prepare(
-        `SELECT
-          s.channel,
-          COALESCE(SUM(s.total_amount), 0)              AS revenue,
-          COALESCE(SUM(s.net_amount - s.total_cost), 0) AS profit,
-          COUNT(s.id)                                    AS count
-         FROM sales s
-         WHERE 1=1 ${dateFilter}
-         GROUP BY s.channel
-         ORDER BY revenue DESC`
-      )
-      .all() as DashboardStats['salesByChannel']
+      const revenueByMonth = sqlite
+        .prepare(
+          `SELECT
+            strftime('%Y-%m', s.sold_at)                  AS month,
+            COALESCE(SUM(s.total_amount), 0)              AS revenue,
+            COALESCE(SUM(s.net_amount - s.total_cost), 0) AS profit
+           FROM sales s
+           WHERE 1=1${sSoldAtClause}
+           GROUP BY month
+           ORDER BY month ASC`
+        )
+        .all(...dateParams) as DashboardStats['revenueByMonth']
 
-    const salesByCategory = sqlite
-      .prepare(
-        `SELECT
-          c.name                                         AS category,
-          COALESCE(SUM(si.quantity * si.unit_price), 0) AS revenue,
-          COALESCE(SUM(si.quantity), 0)                  AS quantity,
-          COUNT(DISTINCT s.id)                           AS count
-         FROM sale_items si
-         JOIN sales s ON s.id = si.sale_id
-         JOIN product_variations pv ON pv.id = si.variation_id
-         JOIN products p ON p.id = pv.product_id
-         JOIN categories c ON c.id = p.category_id
-         WHERE 1=1 ${dateFilter}
-         GROUP BY c.id
-         ORDER BY revenue DESC`
-      )
-      .all() as DashboardStats['salesByCategory']
+      const salesByChannel = sqlite
+        .prepare(
+          `SELECT
+            s.channel,
+            COALESCE(SUM(s.total_amount), 0)              AS revenue,
+            COALESCE(SUM(s.net_amount - s.total_cost), 0) AS profit,
+            COUNT(s.id)                                    AS count
+           FROM sales s
+           WHERE 1=1${sSoldAtClause}
+           GROUP BY s.channel
+           ORDER BY revenue DESC`
+        )
+        .all(...dateParams) as DashboardStats['salesByChannel']
 
-    const fairDateFilter = fromDate
-      ? `AND s.sold_at >= '${fromDate}'${toDate ? ` AND s.sold_at <= '${toDate}'` : ''}`
-      : ''
+      const salesByCategory = sqlite
+        .prepare(
+          `SELECT
+            c.name                                         AS category,
+            COALESCE(SUM(si.quantity * si.unit_price), 0) AS revenue,
+            COALESCE(SUM(si.quantity), 0)                  AS quantity,
+            COUNT(DISTINCT s.id)                           AS count
+           FROM sale_items si
+           JOIN sales s ON s.id = si.sale_id
+           JOIN product_variations pv ON pv.id = si.variation_id
+           JOIN products p ON p.id = pv.product_id
+           JOIN categories c ON c.id = p.category_id
+           WHERE 1=1${sSoldAtClause}
+           GROUP BY c.id
+           ORDER BY revenue DESC`
+        )
+        .all(...dateParams) as DashboardStats['salesByCategory']
 
-    const salesByFairRaw = sqlite
-      .prepare(
-        `SELECT
-          f.id                                           AS fairId,
-          f.name                                         AS fairName,
-          f.date,
-          f.end_date                                     AS endDate,
-          f.enrollment_cost                              AS enrollmentCost,
-          COALESCE((SELECT SUM(fac.amount) FROM fair_additional_costs fac WHERE fac.fair_id = f.id), 0) AS additionalCosts,
-          COALESCE(SUM(s.total_amount), 0)              AS revenue,
-          COALESCE(SUM(s.net_amount - s.total_cost), 0) AS profit,
-          COALESCE(SUM(s.net_amount - s.total_cost), 0)
-            - f.enrollment_cost
-            - COALESCE((SELECT SUM(fac.amount) FROM fair_additional_costs fac WHERE fac.fair_id = f.id), 0) AS netProfit
-         FROM fairs f
-         LEFT JOIN sales s ON s.fair_id = f.id ${fairDateFilter}
-         GROUP BY f.id
-         ORDER BY f.date DESC`
-      )
-      .all() as Array<{
-        fairId: number
-        fairName: string
-        date: string
-        endDate: string | null
-        revenue: number
-        profit: number
-        enrollmentCost: number
-        additionalCosts: number
-        netProfit: number
-      }>
+      // fairDateClause usa s.sold_at dentro do LEFT JOIN
+      const fairJoinClause = fromDate
+        ? ` AND s.sold_at >= ?${toDate ? ' AND s.sold_at <= ?' : ''}`
+        : ''
 
-    const fairDailyRaw = sqlite
-      .prepare(
-        `SELECT
-          fair_id                          AS fairId,
-          date(sold_at)                    AS day,
-          COALESCE(SUM(total_amount), 0)   AS revenue,
-          COUNT(id)                        AS salesCount
-         FROM sales
-         WHERE fair_id IS NOT NULL${fromDate ? ` AND sold_at >= '${fromDate}'${toDate ? ` AND sold_at <= '${toDate}'` : ''}` : ''}
-         GROUP BY fair_id, day
-         ORDER BY fair_id, day ASC`
-      )
-      .all() as Array<{ fairId: number; day: string; revenue: number; salesCount: number }>
-
-    const salesByFair: DashboardStats['salesByFair'] = salesByFairRaw.map((fair) => ({
-      fairName: fair.fairName,
-      date: fair.date,
-      endDate: fair.endDate,
-      revenue: fair.revenue,
-      profit: fair.profit,
-      enrollmentCost: fair.enrollmentCost,
-      additionalCosts: fair.additionalCosts,
-      netProfit: fair.netProfit,
-      dailyBreakdown: fairDailyRaw
-        .filter((d) => d.fairId === fair.fairId)
-        .map((d) => ({ day: d.day, revenue: d.revenue, salesCount: d.salesCount }))
-    }))
-
-    const topVariations = sqlite
-      .prepare(
-        `SELECT
-          p.name                                         AS productName,
-          pv.identifier,
-          COALESCE(SUM(si.quantity), 0)                  AS quantity,
-          COALESCE(SUM(si.quantity * si.unit_price), 0)  AS revenue
-         FROM sale_items si
-         JOIN sales s ON s.id = si.sale_id
-         JOIN product_variations pv ON pv.id = si.variation_id
-         JOIN products p ON p.id = pv.product_id
-         WHERE 1=1 ${dateFilter}
-         GROUP BY si.variation_id
-         ORDER BY quantity DESC
-         LIMIT 8`
-      )
-      .all() as DashboardStats['topVariations']
-
-    const outOfStock = sqlite
-      .prepare(
-        `SELECT
-          pv.id,
-          p.name    AS productName,
-          c.name    AS categoryName,
-          pv.identifier,
-          pv.stock_quantity  AS stockQuantity,
-          pv.minimum_stock   AS minimumStock
-         FROM product_variations pv
-         JOIN products p ON p.id = pv.product_id
-         JOIN categories c ON c.id = p.category_id
-         WHERE pv.stock_quantity = 0
-         ORDER BY p.name, pv.identifier`
-      )
-      .all() as DashboardStats['outOfStock']
-
-    const lowStock = sqlite
-      .prepare(
-        `SELECT
-          pv.id,
-          p.name    AS productName,
-          c.name    AS categoryName,
-          pv.identifier,
-          pv.stock_quantity  AS stockQuantity,
-          pv.minimum_stock   AS minimumStock
-         FROM product_variations pv
-         JOIN products p ON p.id = pv.product_id
-         JOIN categories c ON c.id = p.category_id
-         WHERE pv.stock_quantity > 0 AND pv.stock_quantity < pv.minimum_stock
-         ORDER BY (pv.stock_quantity - pv.minimum_stock) ASC`
-      )
-      .all() as DashboardStats['lowStock']
-
-    const outOfInsumos = sqlite
-      .prepare(
-        `SELECT id, name, unit,
-          stock_quantity AS stockQuantity,
-          minimum_stock  AS minimumStock
-         FROM insumos
-         WHERE minimum_stock > 0 AND stock_quantity = 0
-         ORDER BY name`
-      )
-      .all() as DashboardStats['outOfInsumos']
-
-    const lowInsumos = sqlite
-      .prepare(
-        `SELECT id, name, unit,
-          stock_quantity AS stockQuantity,
-          minimum_stock  AS minimumStock
-         FROM insumos
-         WHERE minimum_stock > 0 AND stock_quantity > 0 AND stock_quantity < minimum_stock
-         ORDER BY (stock_quantity - minimum_stock) ASC`
-      )
-      .all() as DashboardStats['lowInsumos']
-
-    const salesDateFilter = fromDate
-      ? `AND sold_at >= '${fromDate}'${toDate ? ` AND sold_at <= '${toDate}'` : ''}`
-      : ''
-    const expenseDateFilter = fromDate
-      ? `AND expense_date >= '${fromDate}'${toDate ? ` AND expense_date <= '${toDate}'` : ''}`
-      : ''
-    const fairCostDateFilter = fromDate
-      ? `AND f.date >= '${fromDate}'${toDate ? ` AND f.date <= '${toDate}'` : ''}`
-      : ''
-
-    const cashFlow = sqlite
-      .prepare(
-        `SELECT
-          month,
-          COALESCE(SUM(income), 0)   AS income,
-          COALESCE(SUM(expenses), 0) AS expenses
-         FROM (
-           SELECT strftime('%Y-%m', sold_at) AS month, net_amount AS income, 0 AS expenses
-           FROM sales WHERE 1=1 ${salesDateFilter}
-           UNION ALL
-           SELECT strftime('%Y-%m', expense_date) AS month, 0 AS income, amount AS expenses
-           FROM cash_expenses WHERE 1=1 ${expenseDateFilter}
-           UNION ALL
-           SELECT strftime('%Y-%m', f.date) AS month, 0 AS income,
-             f.enrollment_cost + COALESCE((SELECT SUM(fac.amount) FROM fair_additional_costs fac WHERE fac.fair_id = f.id), 0) AS expenses
+      const salesByFairRaw = sqlite
+        .prepare(
+          `SELECT
+            f.id                                           AS fairId,
+            f.name                                         AS fairName,
+            f.date,
+            f.end_date                                     AS endDate,
+            f.enrollment_cost                              AS enrollmentCost,
+            COALESCE((SELECT SUM(fac.amount) FROM fair_additional_costs fac WHERE fac.fair_id = f.id), 0) AS additionalCosts,
+            COALESCE(SUM(s.total_amount), 0)              AS revenue,
+            COALESCE(SUM(s.net_amount - s.total_cost), 0) AS profit,
+            COALESCE(SUM(s.net_amount - s.total_cost), 0)
+              - f.enrollment_cost
+              - COALESCE((SELECT SUM(fac.amount) FROM fair_additional_costs fac WHERE fac.fair_id = f.id), 0) AS netProfit
            FROM fairs f
-           WHERE (f.enrollment_cost > 0 OR EXISTS (SELECT 1 FROM fair_additional_costs fac WHERE fac.fair_id = f.id)) ${fairCostDateFilter}
-         )
-         GROUP BY month
-         ORDER BY month ASC`
-      )
-      .all() as DashboardStats['cashFlow']
+           LEFT JOIN sales s ON s.fair_id = f.id${fairJoinClause}
+           GROUP BY f.id
+           ORDER BY f.date DESC`
+        )
+        .all(...dateParams) as Array<{
+          fairId: number
+          fairName: string
+          date: string
+          endDate: string | null
+          revenue: number
+          profit: number
+          enrollmentCost: number
+          additionalCosts: number
+          netProfit: number
+        }>
 
-    const cashSettings = sqlite
-      .prepare('SELECT opening_balance FROM cash_settings WHERE id = 1')
-      .get() as { opening_balance: number } | undefined
+      const fairDailyRaw = sqlite
+        .prepare(
+          `SELECT
+            fair_id                          AS fairId,
+            date(sold_at)                    AS day,
+            COALESCE(SUM(total_amount), 0)   AS revenue,
+            COUNT(id)                        AS salesCount
+           FROM sales
+           WHERE fair_id IS NOT NULL${soldAtClause}
+           GROUP BY fair_id, day
+           ORDER BY fair_id, day ASC`
+        )
+        .all(...dateParams) as Array<{ fairId: number; day: string; revenue: number; salesCount: number }>
 
-    const cashIncomeTotal = sqlite
-      .prepare(`SELECT COALESCE(SUM(net_amount), 0) AS total FROM sales WHERE 1=1 ${salesDateFilter}`)
-      .get() as { total: number }
+      const salesByFair: DashboardStats['salesByFair'] = salesByFairRaw.map((fair) => ({
+        fairName: fair.fairName,
+        date: fair.date,
+        endDate: fair.endDate,
+        revenue: fair.revenue,
+        profit: fair.profit,
+        enrollmentCost: fair.enrollmentCost,
+        additionalCosts: fair.additionalCosts,
+        netProfit: fair.netProfit,
+        dailyBreakdown: fairDailyRaw
+          .filter((d) => d.fairId === fair.fairId)
+          .map((d) => ({ day: d.day, revenue: d.revenue, salesCount: d.salesCount }))
+      }))
 
-    const cashExpensesTotal = sqlite
-      .prepare(
-        `SELECT COALESCE(SUM(amount), 0) AS total FROM cash_expenses WHERE 1=1 ${expenseDateFilter}`
-      )
-      .get() as { total: number }
+      const topVariations = sqlite
+        .prepare(
+          `SELECT
+            p.name                                         AS productName,
+            pv.identifier,
+            COALESCE(SUM(si.quantity), 0)                  AS quantity,
+            COALESCE(SUM(si.quantity * si.unit_price), 0)  AS revenue
+           FROM sale_items si
+           JOIN sales s ON s.id = si.sale_id
+           JOIN product_variations pv ON pv.id = si.variation_id
+           JOIN products p ON p.id = pv.product_id
+           WHERE 1=1${sSoldAtClause}
+           GROUP BY si.variation_id
+           ORDER BY quantity DESC
+           LIMIT 8`
+        )
+        .all(...dateParams) as DashboardStats['topVariations']
 
-    const fairCostsTotal = sqlite
-      .prepare(
-        `SELECT COALESCE(SUM(f.enrollment_cost + COALESCE((SELECT SUM(fac.amount) FROM fair_additional_costs fac WHERE fac.fair_id = f.id), 0)), 0) AS total
-         FROM fairs f WHERE 1=1 ${fairCostDateFilter}`
-      )
-      .get() as { total: number }
+      const outOfStock = sqlite
+        .prepare(
+          `SELECT
+            pv.id,
+            p.name    AS productName,
+            c.name    AS categoryName,
+            pv.identifier,
+            pv.stock_quantity  AS stockQuantity,
+            pv.minimum_stock   AS minimumStock
+           FROM product_variations pv
+           JOIN products p ON p.id = pv.product_id
+           JOIN categories c ON c.id = p.category_id
+           WHERE pv.stock_quantity = 0
+           ORDER BY p.name, pv.identifier`
+        )
+        .all() as DashboardStats['outOfStock']
 
-    const totalExpenses = cashExpensesTotal.total + fairCostsTotal.total
-    const openingBalance = cashSettings?.opening_balance ?? 0
-    const cashSummary = {
-      openingBalance,
-      totalIncome: cashIncomeTotal.total,
-      totalExpenses,
-      currentBalance: openingBalance + cashIncomeTotal.total - totalExpenses
-    }
+      const lowStock = sqlite
+        .prepare(
+          `SELECT
+            pv.id,
+            p.name    AS productName,
+            c.name    AS categoryName,
+            pv.identifier,
+            pv.stock_quantity  AS stockQuantity,
+            pv.minimum_stock   AS minimumStock
+           FROM product_variations pv
+           JOIN products p ON p.id = pv.product_id
+           JOIN categories c ON c.id = p.category_id
+           WHERE pv.stock_quantity > 0 AND pv.stock_quantity < pv.minimum_stock
+           ORDER BY (pv.stock_quantity - pv.minimum_stock) ASC`
+        )
+        .all() as DashboardStats['lowStock']
 
-    return {
-      overview,
-      previousOverview,
-      revenueByMonth,
-      salesByChannel,
-      salesByCategory,
-      salesByFair,
-      topVariations,
-      outOfStock,
-      lowStock,
-      outOfInsumos,
-      lowInsumos,
-      cashFlow,
-      cashSummary
+      const outOfInsumos = sqlite
+        .prepare(
+          `SELECT id, name, unit,
+            stock_quantity AS stockQuantity,
+            minimum_stock  AS minimumStock
+           FROM insumos
+           WHERE minimum_stock > 0 AND stock_quantity = 0
+           ORDER BY name`
+        )
+        .all() as DashboardStats['outOfInsumos']
+
+      const lowInsumos = sqlite
+        .prepare(
+          `SELECT id, name, unit,
+            stock_quantity AS stockQuantity,
+            minimum_stock  AS minimumStock
+           FROM insumos
+           WHERE minimum_stock > 0 AND stock_quantity > 0 AND stock_quantity < minimum_stock
+           ORDER BY (stock_quantity - minimum_stock) ASC`
+        )
+        .all() as DashboardStats['lowInsumos']
+
+      // cashFlow UNION: parâmetros na ordem sales, cash_expenses, fairs
+      const cashFlowParams: string[] = [...dateParams, ...dateParams, ...dateParams]
+
+      const cashFlow = sqlite
+        .prepare(
+          `SELECT
+            month,
+            COALESCE(SUM(income), 0)   AS income,
+            COALESCE(SUM(expenses), 0) AS expenses
+           FROM (
+             SELECT strftime('%Y-%m', sold_at) AS month, net_amount AS income, 0 AS expenses
+             FROM sales WHERE 1=1${soldAtClause}
+             UNION ALL
+             SELECT strftime('%Y-%m', expense_date) AS month, 0 AS income, amount AS expenses
+             FROM cash_expenses WHERE 1=1${expenseDateClause}
+             UNION ALL
+             SELECT strftime('%Y-%m', f.date) AS month, 0 AS income,
+               f.enrollment_cost + COALESCE((SELECT SUM(fac.amount) FROM fair_additional_costs fac WHERE fac.fair_id = f.id), 0) AS expenses
+             FROM fairs f
+             WHERE (f.enrollment_cost > 0 OR EXISTS (SELECT 1 FROM fair_additional_costs fac WHERE fac.fair_id = f.id))${fDateClause}
+           )
+           GROUP BY month
+           ORDER BY month ASC`
+        )
+        .all(...cashFlowParams) as DashboardStats['cashFlow']
+
+      const cashSettings = sqlite
+        .prepare('SELECT opening_balance FROM cash_settings WHERE id = 1')
+        .get() as { opening_balance: number } | undefined
+
+      const cashIncomeTotal = sqlite
+        .prepare(`SELECT COALESCE(SUM(net_amount), 0) AS total FROM sales WHERE 1=1${soldAtClause}`)
+        .get(...dateParams) as { total: number }
+
+      const cashExpensesTotal = sqlite
+        .prepare(
+          `SELECT COALESCE(SUM(amount), 0) AS total FROM cash_expenses WHERE 1=1${expenseDateClause}`
+        )
+        .get(...dateParams) as { total: number }
+
+      const fairCostsTotal = sqlite
+        .prepare(
+          `SELECT COALESCE(SUM(f.enrollment_cost + COALESCE((SELECT SUM(fac.amount) FROM fair_additional_costs fac WHERE fac.fair_id = f.id), 0)), 0) AS total
+           FROM fairs f WHERE 1=1${fDateClause}`
+        )
+        .get(...dateParams) as { total: number }
+
+      const totalExpenses = cashExpensesTotal.total + fairCostsTotal.total
+      const openingBalance = cashSettings?.opening_balance ?? 0
+      const cashSummary = {
+        openingBalance,
+        totalIncome: cashIncomeTotal.total,
+        totalExpenses,
+        currentBalance: openingBalance + cashIncomeTotal.total - totalExpenses
+      }
+
+      return {
+        overview,
+        previousOverview,
+        revenueByMonth,
+        salesByChannel,
+        salesByCategory,
+        salesByFair,
+        topVariations,
+        outOfStock,
+        lowStock,
+        outOfInsumos,
+        lowInsumos,
+        cashFlow,
+        cashSummary
+      }
+    } catch (err) {
+      console.error('[dashboard:getStats]', err)
+      return { success: false, error: String(err) }
     }
   })
 }

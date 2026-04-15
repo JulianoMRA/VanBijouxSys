@@ -3,6 +3,7 @@ import FairForm from '../components/fairs/FairForm'
 import ConfirmDialog from '../components/ui/ConfirmDialog'
 import Toast from '../components/ui/Toast'
 import { useToast } from '../hooks/useToast'
+import { formatCurrency, formatDate, formatDateRange } from '../utils/format'
 import type { Fair, Sale } from '../types'
 
 type Modal =
@@ -10,22 +11,9 @@ type Modal =
   | { type: 'edit'; fair: Fair }
   | { type: 'delete'; fair: Fair }
 
-function formatDate(dateStr: string): string {
-  const [year, month, day] = dateStr.split('-')
-  return `${day}/${month}/${year}`
-}
-
 function isFuture(fair: Fair): boolean {
   const lastDay = fair.endDate ?? fair.date
   return lastDay >= new Date().toISOString().slice(0, 10)
-}
-
-function formatDateRange(startDate: string, endDate: string | null): string {
-  if (!endDate || endDate === startDate) return formatDate(startDate)
-  const [sy, sm, sd] = startDate.split('-')
-  const [ey, em, ed] = endDate.split('-')
-  if (sy === ey && sm === em) return `${sd} a ${ed}/${em}/${sy}`
-  return `${formatDate(startDate)} a ${formatDate(endDate)}`
 }
 
 export default function Fairs(): JSX.Element {
@@ -37,13 +25,19 @@ export default function Fairs(): JSX.Element {
   const [toastMsg, showToast, dismissToast] = useToast()
 
   async function loadFairs(): Promise<void> {
-    const [data, allSales] = await Promise.all([
-      window.api.fairs.getAll(),
-      window.api.sales.getAll()
-    ])
-    setFairs(data.slice().reverse())
-    setSales(allSales)
-    setLoading(false)
+    try {
+      const [data, allSales] = await Promise.all([
+        window.api.fairs.getAll(),
+        window.api.sales.getAll()
+      ])
+      setFairs(data.slice().reverse())
+      setSales(allSales)
+    } catch (err) {
+      setErrorMessage('Erro ao carregar feiras.')
+      console.error(err)
+    } finally {
+      setLoading(false)
+    }
   }
 
   useEffect(() => {
@@ -176,10 +170,6 @@ function FairCard({
   onDelete: () => void
 }): JSX.Element {
   const [expanded, setExpanded] = useState(false)
-
-  function formatCurrency(value: number): string {
-    return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
-  }
 
   const additionalTotal = fair.additionalCosts.reduce((s, c) => s + c.amount, 0)
   const totalFairCost = fair.enrollmentCost + additionalTotal

@@ -1,4 +1,5 @@
 import { useEffect, useState, useMemo, useRef } from 'react'
+import { formatCurrency } from '../utils/format'
 import InsumoForm from '../components/insumos/InsumoForm'
 import AddInsumoStockForm from '../components/insumos/AddInsumoStockForm'
 import ConfirmDialog from '../components/ui/ConfirmDialog'
@@ -14,10 +15,6 @@ type Modal =
 
 type StatusFilter = 'todos' | 'low' | 'out'
 type SortOption = 'recente' | 'nome-az' | 'nome-za' | 'estoque-asc' | 'estoque-desc' | 'custo-asc' | 'custo-desc'
-
-function formatCurrency(value: number): string {
-  return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
-}
 
 function stockStatus(insumo: Insumo): 'ok' | 'low' | 'out' {
   if (insumo.stockQuantity <= 0) return 'out'
@@ -39,9 +36,15 @@ export default function Stock(): JSX.Element {
   const exportMenuRef = useRef<HTMLDivElement>(null)
 
   async function loadInsumos(): Promise<void> {
-    const data = await window.api.insumos.getAll()
-    setInsumos(data)
-    setLoading(false)
+    try {
+      const data = await window.api.insumos.getAll()
+      setInsumos(data)
+    } catch (err) {
+      setErrorMessage('Erro ao carregar estoque.')
+      console.error(err)
+    } finally {
+      setLoading(false)
+    }
   }
 
   useEffect(() => {

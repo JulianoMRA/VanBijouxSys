@@ -4,6 +4,7 @@ import ConfirmDialog from '../components/ui/ConfirmDialog'
 import Badge from '../components/ui/Badge'
 import Toast from '../components/ui/Toast'
 import { useToast } from '../hooks/useToast'
+import { formatCurrency, formatDate } from '../utils/format'
 import type { Sale, SaleChannel, PaymentMethod } from '../types'
 
 type Modal =
@@ -18,15 +19,6 @@ const CHANNEL_FILTERS: { label: string; value: SaleChannel | 'Todos' }[] = [
   { label: 'Instagram', value: 'Instagram' },
   { label: 'Outro', value: 'Outro' }
 ]
-
-function formatCurrency(value: number): string {
-  return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
-}
-
-function formatDate(dateStr: string): string {
-  const [year, month, day] = dateStr.slice(0, 10).split('-')
-  return `${day}/${month}/${year}`
-}
 
 function channelVariant(channel: SaleChannel): 'category' | 'success' | 'default' | 'warning' {
   if (channel === 'Feira') return 'category'
@@ -52,9 +44,15 @@ export default function Sales(): JSX.Element {
   const [toastMsg, showToast, dismissToast] = useToast()
 
   async function loadSales(): Promise<void> {
-    const data = await window.api.sales.getAll()
-    setSales(data)
-    setLoading(false)
+    try {
+      const data = await window.api.sales.getAll()
+      setSales(data)
+    } catch (err) {
+      setErrorMessage('Erro ao carregar vendas.')
+      console.error(err)
+    } finally {
+      setLoading(false)
+    }
   }
 
   useEffect(() => {

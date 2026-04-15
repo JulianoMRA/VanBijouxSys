@@ -15,6 +15,7 @@ import {
   Legend
 } from 'recharts'
 import { ChevronDown, ChevronUp, AlertTriangle, XCircle, Trophy, Gem, Star, TrendingUp } from 'lucide-react'
+import { formatCurrency } from '../utils/format'
 import type { DashboardStats } from '../types'
 
 type Period = 'month' | 'quarter' | 'halfyear' | 'year' | 'all' | 'custom'
@@ -44,10 +45,6 @@ const CATEGORY_COLORS: Record<string, string> = {
 }
 
 const CATEGORY_FALLBACK_COLORS = ['#e44d8a', '#f59e0b', '#10b981', '#8b5cf6', '#3b82f6', '#94a3b8']
-
-function formatCurrency(value: number): string {
-  return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
-}
 
 function formatMonth(ym: string): string {
   const [year, month] = ym.split('-')

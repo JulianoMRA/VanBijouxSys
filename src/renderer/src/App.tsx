@@ -7,19 +7,22 @@ import Sales from './pages/Sales'
 import Fairs from './pages/Fairs'
 import PriceCalculator from './pages/PriceCalculator'
 import Cash from './pages/Cash'
+import ErrorBoundary from './components/ui/ErrorBoundary'
 
 export default function App(): JSX.Element {
   return (
-    <Routes>
-      <Route path="/" element={<Layout />}>
-        <Route index element={<Dashboard />} />
-        <Route path="products" element={<Products />} />
-        <Route path="stock" element={<Stock />} />
-        <Route path="sales" element={<Sales />} />
-        <Route path="fairs" element={<Fairs />} />
-        <Route path="price-calculator" element={<PriceCalculator />} />
-        <Route path="cash" element={<Cash />} />
-      </Route>
-    </Routes>
+    <ErrorBoundary>
+      <Routes>
+        <Route path="/" element={<Layout />}>
+          <Route index element={<Dashboard />} />
+          <Route path="products" element={<Products />} />
+          <Route path="stock" element={<Stock />} />
+          <Route path="sales" element={<Sales />} />
+          <Route path="fairs" element={<Fairs />} />
+          <Route path="price-calculator" element={<PriceCalculator />} />
+          <Route path="cash" element={<Cash />} />
+        </Route>
+      </Routes>
+    </ErrorBoundary>
   )
 }

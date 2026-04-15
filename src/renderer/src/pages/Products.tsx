@@ -1,4 +1,5 @@
 import { useEffect, useState, useMemo } from 'react'
+import { formatCurrency } from '../utils/format'
 import Badge from '../components/ui/Badge'
 import ConfirmDialog from '../components/ui/ConfirmDialog'
 import ProductForm from '../components/products/ProductForm'
@@ -22,10 +23,6 @@ type Modal =
   | { type: 'deleteVariation'; product: Product; variation: ProductVariation }
   | { type: 'addStock'; product: Product; variation: ProductVariation }
   | { type: 'detailsVariation'; product: Product; variation: ProductVariation }
-
-function formatCurrency(value: number): string {
-  return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
-}
 
 function stockVariant(v: ProductVariation): 'success' | 'warning' | 'danger' {
   if (v.stockQuantity === 0) return 'danger'
@@ -57,13 +54,19 @@ export default function Products(): JSX.Element {
   const [toastMsg, showToast, dismissToast] = useToast()
 
   async function loadData(): Promise<void> {
-    const [prods, cats] = await Promise.all([
-      window.api.products.getAll(),
-      window.api.categories.getAll()
-    ])
-    setProducts(prods)
-    setCategories(cats)
-    setLoading(false)
+    try {
+      const [prods, cats] = await Promise.all([
+        window.api.products.getAll(),
+        window.api.categories.getAll()
+      ])
+      setProducts(prods)
+      setCategories(cats)
+    } catch (err) {
+      setErrorMessage('Erro ao carregar produtos.')
+      console.error(err)
+    } finally {
+      setLoading(false)
+    }
   }
 
   useEffect(() => {

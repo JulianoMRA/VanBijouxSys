@@ -24,8 +24,9 @@ export async function createTestDb(): Promise<Database> {
       identifier TEXT NOT NULL,
       cost_price REAL NOT NULL DEFAULT 0,
       sale_price REAL NOT NULL DEFAULT 0,
-      stock_quantity REAL NOT NULL DEFAULT 0,
-      minimum_stock REAL NOT NULL DEFAULT 1,
+      stock_quantity INTEGER NOT NULL DEFAULT 0,
+      minimum_stock INTEGER NOT NULL DEFAULT 1,
+      labor_cost REAL NOT NULL DEFAULT 0,
       created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
     );
     CREATE TABLE insumos (
@@ -53,12 +54,22 @@ export async function createTestDb(): Promise<Database> {
       enrollment_cost REAL NOT NULL DEFAULT 0,
       created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
     );
+    CREATE TABLE fair_additional_costs (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      fair_id INTEGER NOT NULL REFERENCES fairs(id) ON DELETE CASCADE,
+      description TEXT NOT NULL,
+      amount REAL NOT NULL DEFAULT 0
+    );
     CREATE TABLE sales (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       channel TEXT NOT NULL,
       fair_id INTEGER REFERENCES fairs(id),
       total_amount REAL NOT NULL,
       total_cost REAL NOT NULL,
+      payment_method TEXT NOT NULL DEFAULT 'dinheiro',
+      fee_percentage REAL NOT NULL DEFAULT 0,
+      fee_amount REAL NOT NULL DEFAULT 0,
+      net_amount REAL NOT NULL DEFAULT 0,
       sold_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
     );
     CREATE TABLE sale_items (
@@ -69,6 +80,26 @@ export async function createTestDb(): Promise<Database> {
       unit_price REAL NOT NULL,
       unit_cost REAL NOT NULL
     );
+    CREATE TABLE expense_categories (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL UNIQUE,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+    CREATE TABLE cash_expenses (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      category_id INTEGER NOT NULL REFERENCES expense_categories(id),
+      description TEXT NOT NULL,
+      amount REAL NOT NULL,
+      expense_date TEXT NOT NULL,
+      notes TEXT,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+    CREATE TABLE cash_settings (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      opening_balance REAL NOT NULL DEFAULT 0,
+      updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+    INSERT OR IGNORE INTO cash_settings (id, opening_balance, updated_at) VALUES (1, 0, CURRENT_TIMESTAMP);
     INSERT INTO categories (name) VALUES ('Colar'), ('Pulseira'), ('Brinco');
   `)
 

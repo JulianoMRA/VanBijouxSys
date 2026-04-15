@@ -1,6 +1,6 @@
 # Van Bijoux Sys
 
-> **v1.5.0** — corrige inconsistências de valores entre Caixa e Dashboard (saídas incluem custos de feira, lucro por feira e ticket médio usam valor líquido) e adiciona filtro de período personalizado no Dashboard com range fechado em todas as consultas.
+> **v1.5.1** — corrige vulnerabilidades de segurança e qualidade: SQL parametrizado no Dashboard (elimina interpolação de datas em queries), stack trace oculto em produção no ErrorBoundary, try/catch em todos os IPC handlers e funções de carregamento do renderer, ErrorBoundary envolvendo as rotas, schema de testes sincronizado com produção e funções utilitárias centralizadas.
 
 Sistema desktop de gestão para negócios de bijuterias. Controla produtos, estoque, insumos, vendas, feiras e fluxo de caixa, com dashboard analítico e calculadora de precificação.
 

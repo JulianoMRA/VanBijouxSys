@@ -16,6 +16,19 @@ type Modal =
 type StatusFilter = 'todos' | 'low' | 'out'
 type SortOption = 'recente' | 'nome-az' | 'nome-za' | 'estoque-asc' | 'estoque-desc' | 'custo-asc' | 'custo-desc'
 
+const SELECT_STYLE: React.CSSProperties = {
+  height: 36,
+  padding: '0 12px',
+  borderRadius: 'var(--radius-sm)',
+  background: 'var(--surface)',
+  border: '1px solid var(--hairline)',
+  fontSize: 12,
+  color: 'var(--ink-2)',
+  outline: 'none',
+  fontFamily: 'var(--font-ui)',
+  cursor: 'pointer'
+}
+
 function stockStatus(insumo: Insumo): 'ok' | 'low' | 'out' {
   if (insumo.stockQuantity <= 0) return 'out'
   if (insumo.minimumStock > 0 && insumo.stockQuantity < insumo.minimumStock) return 'low'
@@ -47,9 +60,7 @@ export default function Stock(): JSX.Element {
     }
   }
 
-  useEffect(() => {
-    loadInsumos()
-  }, [])
+  useEffect(() => { loadInsumos() }, [])
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent): void {
@@ -73,13 +84,7 @@ export default function Stock(): JSX.Element {
         i.minimumStock > 0 && i.stockQuantity < i.minimumStock
           ? `${(i.minimumStock - i.stockQuantity).toLocaleString('pt-BR')} ${ul}`
           : '—'
-      return [
-        `"${i.name}"`,
-        ul,
-        `${i.stockQuantity.toLocaleString('pt-BR')} ${ul}`,
-        i.minimumStock > 0 ? `${i.minimumStock.toLocaleString('pt-BR')} ${ul}` : '—',
-        deficit
-      ].join(';')
+      return [`"${i.name}"`, ul, `${i.stockQuantity.toLocaleString('pt-BR')} ${ul}`, i.minimumStock > 0 ? `${i.minimumStock.toLocaleString('pt-BR')} ${ul}` : '—', deficit].join(';')
     })
     return [headers.join(';'), ...lines].join('\r\n')
   }
@@ -88,20 +93,10 @@ export default function Stock(): JSX.Element {
     setExportMenuOpen(false)
     let rows: Insumo[]
     let fileName: string
-    if (mode === 'todos') {
-      rows = insumos
-      fileName = 'insumos_todos.csv'
-    } else if (mode === 'baixo') {
-      rows = lowStock
-      fileName = 'insumos_estoque_baixo.csv'
-    } else {
-      rows = displayedInsumos
-      fileName = 'insumos_filtro_atual.csv'
-    }
-    if (rows.length === 0) {
-      showToast('Nenhum insumo para exportar.')
-      return
-    }
+    if (mode === 'todos') { rows = insumos; fileName = 'insumos_todos.csv' }
+    else if (mode === 'baixo') { rows = lowStock; fileName = 'insumos_estoque_baixo.csv' }
+    else { rows = displayedInsumos; fileName = 'insumos_filtro_atual.csv' }
+    if (rows.length === 0) { showToast('Nenhum insumo para exportar.'); return }
     const result = await window.api.insumos.exportCsv(buildCsv(rows), fileName)
     if (result.success) showToast('Arquivo exportado com sucesso!')
   }
@@ -120,17 +115,12 @@ export default function Stock(): JSX.Element {
 
   const displayedInsumos = useMemo(() => {
     let result = insumos
-
     if (search.trim()) {
       const q = search.trim().toLowerCase()
       result = result.filter((i) => i.name.toLowerCase().includes(q))
     }
-
-    if (statusFilter !== 'todos') {
-      result = result.filter((i) => stockStatus(i) === statusFilter)
-    }
-
-    result = [...result].sort((a, b) => {
+    if (statusFilter !== 'todos') result = result.filter((i) => stockStatus(i) === statusFilter)
+    return [...result].sort((a, b) => {
       switch (sortBy) {
         case 'nome-az': return a.name.localeCompare(b.name, 'pt-BR')
         case 'nome-za': return b.name.localeCompare(a.name, 'pt-BR')
@@ -142,179 +132,158 @@ export default function Stock(): JSX.Element {
         default: return 0
       }
     })
-
-    return result
   }, [insumos, search, statusFilter, sortBy])
 
   const isFiltering = search.trim() !== '' || statusFilter !== 'todos'
 
+  const subtitleText = insumos.length === 0
+    ? 'Nenhum insumo cadastrado'
+    : isFiltering
+      ? `${displayedInsumos.length} de ${insumos.length} insumo${insumos.length !== 1 ? 's' : ''}`
+      : `${insumos.length} insumo${insumos.length !== 1 ? 's' : ''} cadastrado${insumos.length !== 1 ? 's' : ''}`
+
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h2 className="font-display text-2xl font-semibold text-gray-800">Estoque de Insumos</h2>
-          <p className="text-sm text-gray-400 mt-0.5">
-            {insumos.length === 0
-              ? 'Nenhum insumo cadastrado'
-              : isFiltering
-                ? `${displayedInsumos.length} de ${insumos.length} insumo${insumos.length !== 1 ? 's' : ''}`
-                : `${insumos.length} insumo${insumos.length !== 1 ? 's' : ''} cadastrado${insumos.length !== 1 ? 's' : ''}`}
-          </p>
+      {/* Page header */}
+      <div className="page-head">
+        <div className="page-title-block">
+          <div className="page-kicker">Matéria-prima</div>
+          <h1 className="page-title">Estoque</h1>
+          <div className="page-subtitle">{subtitleText}</div>
         </div>
         <div className="flex items-center gap-2">
           {insumos.length > 0 && (
-            <div className="relative" ref={exportMenuRef}>
-              <button
-                className="btn-secondary"
-                onClick={() => setExportMenuOpen((v) => !v)}
-              >
+            <div style={{ position: 'relative' }} ref={exportMenuRef}>
+              <button className="btn btn-ghost" onClick={() => setExportMenuOpen((v) => !v)}>
                 Exportar ↓
               </button>
               {exportMenuOpen && (
-                <div className="absolute right-0 mt-1 w-52 bg-white border border-cream-200 rounded-xl shadow-lg z-10 overflow-hidden">
-                  <button
-                    className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-cream-50 transition-colors"
-                    onClick={() => handleExport('todos')}
-                  >
-                    Todos os insumos
-                  </button>
-                  <button
-                    className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-cream-50 transition-colors disabled:opacity-40"
-                    onClick={() => handleExport('baixo')}
-                    disabled={lowStock.length === 0}
-                  >
-                    Estoque baixo / esgotado
-                    {lowStock.length > 0 && (
-                      <span className="ml-1.5 text-xs text-amber-600">({lowStock.length})</span>
-                    )}
-                  </button>
-                  <button
-                    className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-cream-50 transition-colors"
-                    onClick={() => handleExport('atual')}
-                  >
-                    Visão atual da tela
-                    <span className="ml-1.5 text-xs text-gray-400">({displayedInsumos.length})</span>
-                  </button>
+                <div style={{
+                  position: 'absolute', right: 0, top: 'calc(100% + 6px)',
+                  width: 210, background: 'var(--surface)',
+                  border: '1px solid var(--hairline)', borderRadius: 'var(--radius-md)',
+                  boxShadow: 'var(--shadow-raise)', zIndex: 50, overflow: 'hidden'
+                }}>
+                  {[
+                    { label: 'Todos os insumos', mode: 'todos' as const, count: null, disabled: false },
+                    { label: 'Estoque baixo / esgotado', mode: 'baixo' as const, count: lowStock.length, disabled: lowStock.length === 0 },
+                    { label: 'Visão atual da tela', mode: 'atual' as const, count: displayedInsumos.length, disabled: false },
+                  ].map(({ label, mode, count, disabled }) => (
+                    <button
+                      key={mode}
+                      disabled={disabled}
+                      onClick={() => handleExport(mode)}
+                      style={{
+                        width: '100%', textAlign: 'left', padding: '10px 14px',
+                        fontSize: 13, color: disabled ? 'var(--ink-5)' : 'var(--ink-2)',
+                        background: 'none', border: 'none', cursor: disabled ? 'not-allowed' : 'pointer',
+                        fontFamily: 'var(--font-ui)', borderBottom: '1px solid var(--hairline-soft)',
+                        display: 'flex', justifyContent: 'space-between', alignItems: 'center'
+                      }}
+                    >
+                      {label}
+                      {count !== null && count > 0 && (
+                        <span style={{ fontSize: 11, color: 'var(--warn)', fontWeight: 500 }}>({count})</span>
+                      )}
+                    </button>
+                  ))}
                 </div>
               )}
             </div>
           )}
-          <button className="btn-primary" onClick={() => setModal({ type: 'new' })}>
+          <button className="btn btn-primary" onClick={() => setModal({ type: 'new' })}>
             + Novo insumo
           </button>
         </div>
       </div>
 
       {errorMessage && (
-        <div className="bg-rose-50 border border-rose-200 rounded-2xl px-5 py-3 mb-4 flex items-start justify-between gap-3">
-          <p className="text-sm text-rose-700">{errorMessage}</p>
-          <button onClick={() => setErrorMessage('')} className="text-rose-400 hover:text-rose-600 shrink-0 text-lg leading-none">×</button>
+        <div className="alert-bar" style={{ marginBottom: 16 }}>
+          <span style={{ flex: 1 }}>{errorMessage}</span>
+          <button className="icon-btn" onClick={() => setErrorMessage('')} style={{ fontSize: 18 }}>×</button>
         </div>
       )}
 
       {loading ? (
-        <div className="card flex items-center justify-center h-40">
-          <p className="text-gray-400 text-sm">Carregando…</p>
+        <div className="card flex items-center justify-center" style={{ height: 160 }}>
+          <span style={{ color: 'var(--ink-4)', fontSize: 13 }}>Carregando…</span>
         </div>
       ) : insumos.length === 0 ? (
-        <div className="card flex flex-col items-center justify-center h-48 text-center">
-          <p className="text-gray-500 text-sm">Nenhum insumo cadastrado ainda.</p>
-          <p className="text-xs text-gray-400 mt-1">Cadastre os materiais que você usa para fazer suas peças.</p>
-          <button className="btn-primary mt-3" onClick={() => setModal({ type: 'new' })}>
+        <div className="empty-state">
+          <h3>Nenhum insumo cadastrado</h3>
+          <p>Cadastre os materiais que você usa para fazer suas peças.</p>
+          <button className="btn btn-primary mt-4" onClick={() => setModal({ type: 'new' })}>
             Cadastrar primeiro insumo
           </button>
         </div>
       ) : (
         <>
-          {/* Stats */}
-          <div className="grid grid-cols-3 gap-4 mb-5">
-            <div className="card py-4">
-              <p className="text-xs text-gray-400 uppercase tracking-widest mb-1">Valor em estoque</p>
-              <p className="font-display text-xl font-bold text-blush-600">{formatCurrency(totalStockValue)}</p>
-              <p className="text-xs text-gray-400 mt-0.5">custo total dos insumos</p>
+          {/* KPIs */}
+          <div className="grid-3 mb-5">
+            <div className="kpi">
+              <div className="kpi-label">Valor em estoque</div>
+              <div className="kpi-value kpi-value-accent">{formatCurrency(totalStockValue)}</div>
+              <div className="kpi-sub">custo total dos insumos</div>
             </div>
-            <div className="card py-4">
-              <p className="text-xs text-gray-400 uppercase tracking-widest mb-1">Insumos em falta/baixo</p>
-              <p className={`font-display text-xl font-bold ${lowStock.length > 0 ? 'text-amber-500' : 'text-emerald-500'}`}>
+            <div className="kpi">
+              <div className="kpi-label">Insumos em falta / baixo</div>
+              <div className={`kpi-value ${lowStock.length > 0 ? 'kpi-value-bad' : 'kpi-value-good'}`}>
                 {lowStock.length}
-              </p>
-              <p className="text-xs text-gray-400 mt-0.5">precisam de reposição</p>
+              </div>
+              <div className="kpi-sub">precisam de reposição</div>
             </div>
-            <div className="card py-4">
-              <p className="text-xs text-gray-400 uppercase tracking-widest mb-1">Total de insumos</p>
-              <p className="font-display text-xl font-bold text-gray-700">{insumos.length}</p>
-              <p className="text-xs text-gray-400 mt-0.5">materiais cadastrados</p>
+            <div className="kpi">
+              <div className="kpi-label">Total de insumos</div>
+              <div className="kpi-value">{insumos.length}</div>
+              <div className="kpi-sub">materiais cadastrados</div>
             </div>
           </div>
 
-          {/* Alertas */}
+          {/* Alertas de estoque baixo */}
           {lowStock.length > 0 && (
-            <div className="bg-amber-50 border border-amber-200 rounded-2xl px-5 py-4 mb-4">
-              <button
-                onClick={() => setLowStockExpanded((v) => !v)}
-                className="flex items-center justify-between w-full text-left"
-              >
-                <p className="text-sm font-semibold text-amber-800">
-                  ⚠ {lowStock.length} insumo{lowStock.length !== 1 ? 's' : ''} com estoque baixo ou esgotado
-                </p>
-                <span className="text-amber-500 text-xs font-medium ml-3 shrink-0">
+            <div className="alerts-panel">
+              <button className="alerts-head" onClick={() => setLowStockExpanded((v) => !v)}>
+                <span className="flex items-center gap-3">
+                  <span className="alert-tag warn">
+                    ⚠ {lowStock.length} insumo{lowStock.length !== 1 ? 's' : ''} com estoque baixo ou esgotado
+                  </span>
+                </span>
+                <span style={{ fontSize: 11, color: 'var(--warn)', fontWeight: 500 }}>
                   {lowStockExpanded ? '▲ Recolher' : '▼ Expandir'}
                 </span>
               </button>
               {lowStockExpanded && (
-                <div className="flex flex-wrap gap-2 mt-2">
-                  {lowStock.map((i) => (
-                    <span
-                      key={i.id}
-                      className={`text-xs px-2.5 py-1 rounded-full ${
-                        stockStatus(i) === 'out'
-                          ? 'bg-rose-100 text-rose-700'
-                          : 'bg-amber-100 text-amber-700'
-                      }`}
-                    >
-                      {i.name} — {i.stockQuantity.toLocaleString('pt-BR')} {i.unit === 'unidade' ? 'un.' : i.unit}
-                    </span>
-                  ))}
+                <div className="alerts-body">
+                  <div className="chips mt-2">
+                    {lowStock.map((i) => (
+                      <span key={i.id} className={`chip-alert ${stockStatus(i) === 'out' ? 'bad' : 'warn'}`}>
+                        {i.name} <em>— {i.stockQuantity.toLocaleString('pt-BR')} {i.unit === 'unidade' ? 'un.' : i.unit}</em>
+                      </span>
+                    ))}
+                  </div>
                 </div>
               )}
             </div>
           )}
 
-          {/* Barra de pesquisa, filtro e ordenação */}
+          {/* Filtros */}
           <div className="flex flex-wrap items-center gap-3 mb-4">
             <input
               type="text"
               placeholder="Pesquisar insumo…"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="flex-1 min-w-48 px-4 py-2 rounded-xl border border-cream-200 bg-white text-sm text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blush-300"
+              className="input"
+              style={{ flex: 1, minWidth: 180 }}
             />
-
-            <div className="flex rounded-xl border border-cream-200 bg-white overflow-hidden text-xs font-semibold">
-              {([
-                ['todos', 'Todos'],
-                ['low', 'Baixo'],
-                ['out', 'Esgotado'],
-              ] as [StatusFilter, string][]).map(([value, label]) => (
-                <button
-                  key={value}
-                  onClick={() => setStatusFilter(value)}
-                  className={`px-3 py-2 transition-colors ${
-                    statusFilter === value
-                      ? 'bg-blush-500 text-white'
-                      : 'text-gray-500 hover:bg-cream-50'
-                  }`}
-                >
+            <div className="segmented">
+              {([['todos', 'Todos'], ['low', 'Baixo'], ['out', 'Esgotado']] as [StatusFilter, string][]).map(([value, label]) => (
+                <button key={value} className={statusFilter === value ? 'active' : ''} onClick={() => setStatusFilter(value)}>
                   {label}
                 </button>
               ))}
             </div>
-
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as SortOption)}
-              className="px-3 py-2 rounded-xl border border-cream-200 bg-white text-xs text-gray-600 focus:outline-none focus:ring-2 focus:ring-blush-300"
-            >
+            <select value={sortBy} onChange={(e) => setSortBy(e.target.value as SortOption)} style={SELECT_STYLE}>
               <option value="recente">Último adicionado</option>
               <option value="nome-az">Nome A→Z</option>
               <option value="nome-za">Nome Z→A</option>
@@ -325,73 +294,73 @@ export default function Stock(): JSX.Element {
             </select>
           </div>
 
-          {/* Lista */}
-          <div className="bg-white rounded-2xl border border-cream-200 shadow-card overflow-hidden">
-            <table className="w-full text-sm">
+          {/* Tabela */}
+          <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+            <table className="table" style={{ margin: 0 }}>
               <thead>
-                <tr className="border-b border-cream-100">
-                  <th className="text-left px-5 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">Insumo</th>
-                  <th className="text-right px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">Custo/un.</th>
-                  <th className="text-right px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">Estoque</th>
-                  <th className="text-right px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">Mínimo</th>
-                  <th className="text-right px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">Val. estoque</th>
-                  <th className="px-4 py-3" />
+                <tr>
+                  <th style={{ paddingLeft: 20 }}>Insumo</th>
+                  <th className="num">Custo/un.</th>
+                  <th className="num">Estoque</th>
+                  <th className="num">Mínimo</th>
+                  <th className="num">Val. estoque</th>
+                  <th />
                 </tr>
               </thead>
-              <tbody className="divide-y divide-cream-100">
+              <tbody>
                 {displayedInsumos.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="px-5 py-10 text-center text-sm text-gray-400">
+                    <td colSpan={6} style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--ink-4)', fontSize: 13 }}>
                       Nenhum insumo encontrado para esta pesquisa.
                     </td>
                   </tr>
                 ) : displayedInsumos.map((insumo) => {
                   const status = stockStatus(insumo)
-                  const unitLabel = insumo.unit === 'unidade' ? 'un.' : insumo.unit
+                  const ul = insumo.unit === 'unidade' ? 'un.' : insumo.unit
                   return (
-                    <tr key={insumo.id} className="hover:bg-cream-50 transition-colors">
-                      <td className="px-5 py-3">
+                    <tr key={insumo.id}>
+                      <td style={{ paddingLeft: 20 }}>
                         <div className="flex items-center gap-2">
-                          <span className="font-medium text-gray-800">{insumo.name}</span>
-                          {status === 'out' && (
-                            <span className="text-xs bg-rose-100 text-rose-600 px-2 py-0.5 rounded-full">Esgotado</span>
-                          )}
-                          {status === 'low' && (
-                            <span className="text-xs bg-amber-100 text-amber-600 px-2 py-0.5 rounded-full">Baixo</span>
-                          )}
+                          <span style={{ fontWeight: 500, color: 'var(--ink)' }}>{insumo.name}</span>
+                          {status === 'out' && <span className="badge bad">Esgotado</span>}
+                          {status === 'low' && <span className="badge warn">Baixo</span>}
                         </div>
-                        <p className="text-xs text-gray-400 mt-0.5">{insumo.unit === 'unidade' ? 'Por unidade' : `Por ${insumo.unit}`}</p>
+                        <div style={{ fontSize: 11, color: 'var(--ink-4)', marginTop: 2 }}>
+                          {insumo.unit === 'unidade' ? 'Por unidade' : `Por ${insumo.unit}`}
+                        </div>
                       </td>
-                      <td className="px-4 py-3 text-right text-gray-600">
-                        {formatCurrency(insumo.costPerUnit)}/{unitLabel}
+                      <td className="num">
+                        <span className="price-sub">{formatCurrency(insumo.costPerUnit)}/{ul}</span>
                       </td>
-                      <td className={`px-4 py-3 text-right font-medium ${
-                        status === 'out' ? 'text-rose-600' : status === 'low' ? 'text-amber-600' : 'text-gray-700'
-                      }`}>
-                        {insumo.stockQuantity.toLocaleString('pt-BR')} {unitLabel}
+                      <td className="num">
+                        <span style={{
+                          fontWeight: 500,
+                          color: status === 'out' ? 'var(--bad)' : status === 'low' ? 'var(--warn)' : 'var(--ink)'
+                        }}>
+                          {insumo.stockQuantity.toLocaleString('pt-BR')} {ul}
+                        </span>
                       </td>
-                      <td className="px-4 py-3 text-right text-gray-400">
-                        {insumo.minimumStock > 0 ? `${insumo.minimumStock.toLocaleString('pt-BR')} ${unitLabel}` : '—'}
+                      <td className="num" style={{ color: 'var(--ink-4)' }}>
+                        {insumo.minimumStock > 0 ? `${insumo.minimumStock.toLocaleString('pt-BR')} ${ul}` : '—'}
                       </td>
-                      <td className="px-4 py-3 text-right text-gray-600">
-                        {formatCurrency(insumo.stockQuantity * insumo.costPerUnit)}
+                      <td className="num">
+                        <span className="price-sub">{formatCurrency(insumo.stockQuantity * insumo.costPerUnit)}</span>
                       </td>
-                      <td className="px-4 py-3">
+                      <td style={{ paddingRight: 16 }}>
                         <div className="flex justify-end gap-1">
                           <button
-                            className="text-xs text-emerald-600 hover:text-emerald-800 px-2 py-1 rounded-lg hover:bg-emerald-50 transition-colors whitespace-nowrap"
+                            className="btn btn-xs btn-ghost"
+                            style={{ color: 'var(--good)', borderColor: 'transparent' }}
                             onClick={() => setModal({ type: 'addStock', insumo })}
                           >
                             + Estoque
                           </button>
-                          <button
-                            className="text-xs text-blush-600 hover:text-blush-800 px-2 py-1 rounded-lg hover:bg-blush-50 transition-colors"
-                            onClick={() => setModal({ type: 'edit', insumo })}
-                          >
+                          <button className="btn btn-xs btn-ghost" onClick={() => setModal({ type: 'edit', insumo })}>
                             Editar
                           </button>
                           <button
-                            className="text-xs text-rose-500 hover:text-rose-700 px-2 py-1 rounded-lg hover:bg-rose-50 transition-colors"
+                            className="btn btn-xs btn-ghost"
+                            style={{ color: 'var(--bad)', borderColor: 'transparent' }}
                             onClick={() => setModal({ type: 'delete', insumo })}
                           >
                             Excluir

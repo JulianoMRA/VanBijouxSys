@@ -55,9 +55,7 @@ export default function Sales(): JSX.Element {
     }
   }
 
-  useEffect(() => {
-    loadSales()
-  }, [])
+  useEffect(() => { loadSales() }, [])
 
   async function handleDelete(sale: Sale): Promise<void> {
     try {
@@ -73,38 +71,43 @@ export default function Sales(): JSX.Element {
     ? sales
     : sales.filter((s) => s.channel === channelFilter)
 
-  const totalRevenue = filtered.reduce((s, sale) => s + sale.totalAmount, 0)
+  const totalRevenue    = filtered.reduce((s, sale) => s + sale.totalAmount, 0)
   const totalNetRevenue = filtered.reduce((s, sale) => s + sale.netAmount, 0)
-  const totalProfit = filtered.reduce((s, sale) => s + (sale.netAmount - sale.totalCost), 0)
-  const avgTicket = filtered.length > 0 ? totalRevenue / filtered.length : 0
+  const totalProfit     = filtered.reduce((s, sale) => s + (sale.netAmount - sale.totalCost), 0)
+  const avgTicket       = filtered.length > 0 ? totalRevenue / filtered.length : 0
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
-        <h2 className="font-display text-2xl font-semibold text-gray-800">Vendas</h2>
-        <button className="btn-primary" onClick={() => setModal({ type: 'new' })}>
+      {/* Cabeçalho */}
+      <div className="page-head">
+        <div className="page-title-block">
+          <div className="page-kicker">Histórico</div>
+          <h1 className="page-title">Vendas</h1>
+          {sales.length > 0 && (
+            <div className="page-subtitle">
+              {filtered.length} venda{filtered.length !== 1 ? 's' : ''} encontrada{filtered.length !== 1 ? 's' : ''}
+            </div>
+          )}
+        </div>
+        <button className="btn btn-primary" onClick={() => setModal({ type: 'new' })}>
           + Registrar venda
         </button>
       </div>
 
       {errorMessage && (
-        <div className="bg-rose-50 border border-rose-200 rounded-2xl px-5 py-3 mb-4 flex items-start justify-between gap-3">
-          <p className="text-sm text-rose-700">{errorMessage}</p>
-          <button onClick={() => setErrorMessage('')} className="text-rose-400 hover:text-rose-600 shrink-0 text-lg leading-none">×</button>
+        <div className="alert-bar" style={{ marginBottom: 16 }}>
+          <span style={{ flex: 1 }}>{errorMessage}</span>
+          <button className="icon-btn" onClick={() => setErrorMessage('')} style={{ fontSize: 18, lineHeight: 1 }}>×</button>
         </div>
       )}
 
       {/* Filtro de canal */}
-      <div className="flex gap-2 mb-4 flex-wrap">
+      <div className="chips" style={{ marginBottom: 16 }}>
         {CHANNEL_FILTERS.map((f) => (
           <button
             key={f.value}
             onClick={() => setChannelFilter(f.value)}
-            className={`px-3 py-2 rounded-xl text-sm font-medium transition-all ${
-              channelFilter === f.value
-                ? 'bg-blush-500 text-white'
-                : 'bg-white border border-cream-300 text-gray-600 hover:bg-cream-100'
-            }`}
+            className={`chip${channelFilter === f.value ? ' active' : ''}`}
           >
             {f.label}
           </button>
@@ -113,148 +116,156 @@ export default function Sales(): JSX.Element {
 
       {/* Cards de resumo */}
       {filtered.length > 0 && (
-        <div className="grid grid-cols-3 gap-4 mb-5">
-          <div className="card py-4">
-            <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">Faturamento bruto</p>
-            <p className="font-display text-xl font-semibold text-gray-800">{formatCurrency(totalRevenue)}</p>
-            <p className="text-xs text-gray-400 mt-0.5">
+        <div className="grid-3" style={{ marginBottom: 20 }}>
+          <div className="kpi">
+            <div className="kpi-label">Faturamento bruto</div>
+            <div className="kpi-value">{formatCurrency(totalRevenue)}</div>
+            <div className="kpi-sub">
               {filtered.length} venda{filtered.length !== 1 ? 's' : ''} · líquido {formatCurrency(totalNetRevenue)}
-            </p>
+            </div>
           </div>
-          <div className="card py-4">
-            <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">Lucro</p>
-            <p className="font-display text-xl font-semibold text-emerald-600">{formatCurrency(totalProfit)}</p>
-            <p className="text-xs text-gray-400 mt-0.5">
+          <div className="kpi">
+            <div className="kpi-label">Lucro</div>
+            <div className="kpi-value kpi-value-good">{formatCurrency(totalProfit)}</div>
+            <div className="kpi-sub">
               {totalNetRevenue > 0 ? `${((totalProfit / totalNetRevenue) * 100).toFixed(1)}% de margem` : '—'}
-            </p>
+            </div>
           </div>
-          <div className="card py-4">
-            <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">Ticket médio</p>
-            <p className="font-display text-xl font-semibold text-gray-800">{formatCurrency(avgTicket)}</p>
-            <p className="text-xs text-gray-400 mt-0.5">por venda</p>
+          <div className="kpi">
+            <div className="kpi-label">Ticket médio</div>
+            <div className="kpi-value">{formatCurrency(avgTicket)}</div>
+            <div className="kpi-sub">por venda</div>
           </div>
         </div>
       )}
 
       {/* Lista */}
       {loading ? (
-        <div className="card flex items-center justify-center h-40">
-          <p className="text-gray-400 text-sm">Carregando…</p>
+        <div className="card flex items-center justify-center" style={{ height: 160 }}>
+          <span style={{ color: 'var(--ink-4)', fontSize: 13 }}>Carregando…</span>
         </div>
       ) : filtered.length === 0 ? (
-        <div className="card flex flex-col items-center justify-center h-48 text-center">
-          <p className="text-gray-500 text-sm">Nenhuma venda encontrada.</p>
+        <div className="empty-state">
+          <h3>Nenhuma venda encontrada</h3>
           {channelFilter === 'Todos' && (
-            <button className="btn-primary mt-3" onClick={() => setModal({ type: 'new' })}>
+            <button className="btn btn-primary" style={{ marginTop: 16 }} onClick={() => setModal({ type: 'new' })}>
               Registrar primeira venda
             </button>
           )}
         </div>
       ) : (
-        <div className="space-y-2">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {filtered.map((sale) => {
             const isExpanded = expandedSale === sale.id
             const profit = sale.netAmount - sale.totalCost
 
             return (
-              <div
-                key={sale.id}
-                className="bg-white rounded-2xl border border-cream-200 shadow-card overflow-hidden"
-              >
+              <div key={sale.id} className="product-row" style={{ cursor: 'default' }}>
                 <div
-                  className="flex items-center gap-4 px-5 py-4 cursor-pointer hover:bg-cream-50 transition-colors"
+                  className="product-row-head"
                   onClick={() => setExpandedSale(isExpanded ? null : sale.id)}
                 >
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                       <Badge label={sale.channel} variant={channelVariant(sale.channel as SaleChannel)} />
                       {sale.fairName && (
-                        <span className="text-xs text-gray-400">{sale.fairName}</span>
+                        <span style={{ fontSize: 11, color: 'var(--ink-4)' }}>{sale.fairName}</span>
                       )}
-                      <span className="text-xs text-gray-400 bg-cream-100 px-2 py-0.5 rounded-lg">
+                      <span className="badge">
                         {PAYMENT_LABELS[sale.paymentMethod]}
                         {sale.feePercentage > 0 ? ` (${sale.feePercentage}%)` : ''}
                       </span>
                     </div>
-                    <p className="text-xs text-gray-400 mt-1">{formatDate(sale.soldAt)}</p>
+                    <div style={{ fontSize: 11, color: 'var(--ink-4)', marginTop: 4 }}>
+                      {formatDate(sale.soldAt)}
+                    </div>
                   </div>
 
-                  <div className="text-right shrink-0">
-                    <p className="text-sm font-semibold text-gray-800">{formatCurrency(sale.totalAmount)}</p>
+                  <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                    <div className="price-main">{formatCurrency(sale.totalAmount)}</div>
                     {sale.feeAmount > 0 && (
-                      <p className="text-xs text-gray-400">líq. {formatCurrency(sale.netAmount)}</p>
+                      <div style={{ fontSize: 11, color: 'var(--ink-4)' }}>líq. {formatCurrency(sale.netAmount)}</div>
                     )}
-                    <p className="text-xs text-emerald-600">+{formatCurrency(profit)}</p>
+                    <div style={{ fontSize: 11, color: 'var(--good)', fontWeight: 500 }}>
+                      +{formatCurrency(profit)}
+                    </div>
                   </div>
 
-                  <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
-                    <button
-                      className="text-xs text-blush-600 hover:text-blush-800 px-2 py-1 rounded-lg hover:bg-blush-50 transition-colors"
-                      onClick={() => setModal({ type: 'edit', sale })}
-                    >
+                  <div
+                    style={{ display: 'flex', alignItems: 'center', gap: 4 }}
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <button className="btn btn-xs btn-ghost" onClick={() => setModal({ type: 'edit', sale })}>
                       Editar
                     </button>
                     <button
-                      className="text-xs text-rose-500 hover:text-rose-700 px-2 py-1 rounded-lg hover:bg-rose-50 transition-colors"
+                      className="btn btn-xs btn-ghost"
+                      style={{ color: 'var(--bad)', borderColor: 'transparent' }}
                       onClick={() => setModal({ type: 'delete', sale })}
                     >
                       Excluir
                     </button>
                   </div>
 
-                  <span className="text-gray-300 text-sm ml-1">{isExpanded ? '▲' : '▼'}</span>
+                  <span style={{ color: 'var(--ink-5)', fontSize: 12, marginLeft: 4 }}>
+                    {isExpanded ? '▲' : '▼'}
+                  </span>
                 </div>
 
                 {isExpanded && (
-                  <div className="border-t border-cream-100 bg-cream-50 px-5 py-4">
-                    <table className="w-full text-sm">
+                  <div className="product-row-body">
+                    <table className="table">
                       <thead>
-                        <tr className="text-xs text-gray-400 uppercase tracking-wide">
-                          <th className="text-left pb-2 font-medium">Produto / Variação</th>
-                          <th className="text-center pb-2 font-medium">Qtd.</th>
-                          <th className="text-right pb-2 font-medium">Preço unit.</th>
-                          <th className="text-right pb-2 font-medium">Subtotal</th>
+                        <tr>
+                          <th>Produto / Variação</th>
+                          <th className="num">Qtd.</th>
+                          <th className="num">Preço unit.</th>
+                          <th className="num">Subtotal</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-cream-200">
+                      <tbody>
                         {sale.items.map((item) => (
                           <tr key={item.id}>
-                            <td className="py-2 text-gray-700">
-                              <span className="font-medium">{item.productName}</span>
-                              <span className="text-gray-400 ml-1">— {item.variationIdentifier}</span>
+                            <td>
+                              <span style={{ fontWeight: 500 }}>{item.productName}</span>
+                              <span style={{ color: 'var(--ink-4)', marginLeft: 4 }}>— {item.variationIdentifier}</span>
                             </td>
-                            <td className="py-2 text-center text-gray-500">{item.quantity}</td>
-                            <td className="py-2 text-right text-gray-500">{formatCurrency(item.unitPrice)}</td>
-                            <td className="py-2 text-right font-medium text-gray-800">
+                            <td className="num">{item.quantity}</td>
+                            <td className="num">{formatCurrency(item.unitPrice)}</td>
+                            <td className="num" style={{ fontWeight: 500 }}>
                               {formatCurrency(item.quantity * item.unitPrice)}
                             </td>
                           </tr>
                         ))}
                       </tbody>
                       <tfoot>
-                        <tr className="border-t border-cream-300">
-                          <td colSpan={3} className="pt-2 text-xs text-gray-400">Custo total: {formatCurrency(sale.totalCost)}</td>
-                          <td className="pt-2 text-right font-semibold text-blush-700">
+                        <tr>
+                          <td colSpan={3} style={{ paddingTop: 10, fontSize: 11, color: 'var(--ink-4)' }}>
+                            Custo total: {formatCurrency(sale.totalCost)}
+                          </td>
+                          <td className="num" style={{ paddingTop: 10, fontWeight: 600, color: 'var(--accent)' }}>
                             {formatCurrency(sale.totalAmount)}
                           </td>
                         </tr>
                         {sale.feeAmount > 0 && (
-                          <tr>
-                            <td colSpan={3} className="pt-1 text-xs text-rose-500">
-                              Taxa {PAYMENT_LABELS[sale.paymentMethod]} ({sale.feePercentage}%)
-                            </td>
-                            <td className="pt-1 text-right text-xs text-rose-500">
-                              − {formatCurrency(sale.feeAmount)}
-                            </td>
-                          </tr>
-                        )}
-                        {sale.feeAmount > 0 && (
-                          <tr>
-                            <td colSpan={3} className="text-xs text-gray-500 font-medium">Valor líquido recebido</td>
-                            <td className="text-right text-xs font-semibold text-emerald-700">
-                              {formatCurrency(sale.netAmount)}
-                            </td>
-                          </tr>
+                          <>
+                            <tr>
+                              <td colSpan={3} style={{ fontSize: 11, color: 'var(--bad)' }}>
+                                Taxa {PAYMENT_LABELS[sale.paymentMethod]} ({sale.feePercentage}%)
+                              </td>
+                              <td className="num" style={{ fontSize: 11, color: 'var(--bad)' }}>
+                                − {formatCurrency(sale.feeAmount)}
+                              </td>
+                            </tr>
+                            <tr>
+                              <td colSpan={3} style={{ fontSize: 11, color: 'var(--ink-2)', fontWeight: 500 }}>
+                                Valor líquido recebido
+                              </td>
+                              <td className="num" style={{ fontSize: 11, fontWeight: 600, color: 'var(--good)' }}>
+                                {formatCurrency(sale.netAmount)}
+                              </td>
+                            </tr>
+                          </>
                         )}
                       </tfoot>
                     </table>

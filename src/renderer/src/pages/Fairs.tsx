@@ -40,9 +40,7 @@ export default function Fairs(): JSX.Element {
     }
   }
 
-  useEffect(() => {
-    loadFairs()
-  }, [])
+  useEffect(() => { loadFairs() }, [])
 
   async function handleDelete(fair: Fair): Promise<void> {
     try {
@@ -54,50 +52,50 @@ export default function Fairs(): JSX.Element {
   }
 
   const upcoming = fairs.filter((f) => isFuture(f))
-  const past = fairs.filter((f) => !isFuture(f))
+  const past     = fairs.filter((f) => !isFuture(f))
+
+  const subtitleText = fairs.length === 0
+    ? 'Nenhuma feira cadastrada'
+    : `${upcoming.length} próxima${upcoming.length !== 1 ? 's' : ''} · ${past.length} realizada${past.length !== 1 ? 's' : ''}`
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h2 className="font-display text-2xl font-semibold text-gray-800">Feiras</h2>
-          <p className="text-sm text-gray-400 mt-0.5">
-            {fairs.length > 0
-              ? `${upcoming.length} próxima${upcoming.length !== 1 ? 's' : ''} · ${past.length} realizada${past.length !== 1 ? 's' : ''}`
-              : 'Nenhuma feira cadastrada'}
-          </p>
+      {/* Cabeçalho */}
+      <div className="page-head">
+        <div className="page-title-block">
+          <div className="page-kicker">Eventos</div>
+          <h1 className="page-title">Feiras</h1>
+          <div className="page-subtitle">{subtitleText}</div>
         </div>
-        <button className="btn-primary" onClick={() => setModal({ type: 'new' })}>
+        <button className="btn btn-primary" onClick={() => setModal({ type: 'new' })}>
           + Nova feira
         </button>
       </div>
 
       {errorMessage && (
-        <div className="bg-rose-50 border border-rose-200 rounded-2xl px-5 py-3 mb-4 flex items-start justify-between gap-3">
-          <p className="text-sm text-rose-700">{errorMessage}</p>
-          <button onClick={() => setErrorMessage('')} className="text-rose-400 hover:text-rose-600 shrink-0 text-lg leading-none">×</button>
+        <div className="alert-bar" style={{ marginBottom: 16 }}>
+          <span style={{ flex: 1 }}>{errorMessage}</span>
+          <button className="icon-btn" onClick={() => setErrorMessage('')} style={{ fontSize: 18, lineHeight: 1 }}>×</button>
         </div>
       )}
 
       {loading ? (
-        <div className="card flex items-center justify-center h-40">
-          <p className="text-gray-400 text-sm">Carregando…</p>
+        <div className="card flex items-center justify-center" style={{ height: 160 }}>
+          <span style={{ color: 'var(--ink-4)', fontSize: 13 }}>Carregando…</span>
         </div>
       ) : fairs.length === 0 ? (
-        <div className="card flex flex-col items-center justify-center h-48 text-center">
-          <p className="text-gray-500 text-sm">Nenhuma feira cadastrada ainda.</p>
-          <button className="btn-primary mt-3" onClick={() => setModal({ type: 'new' })}>
+        <div className="empty-state">
+          <h3>Nenhuma feira cadastrada</h3>
+          <button className="btn btn-primary" style={{ marginTop: 16 }} onClick={() => setModal({ type: 'new' })}>
             Cadastrar primeira feira
           </button>
         </div>
       ) : (
-        <div className="space-y-6">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 28 }}>
           {upcoming.length > 0 && (
             <section>
-              <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3">
-                Próximas feiras
-              </h3>
-              <div className="space-y-3">
+              <div className="alerts-section-label">Próximas feiras</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                 {upcoming.map((fair) => (
                   <FairCard
                     key={fair.id}
@@ -114,10 +112,8 @@ export default function Fairs(): JSX.Element {
 
           {past.length > 0 && (
             <section>
-              <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3">
-                Feiras realizadas
-              </h3>
-              <div className="space-y-3">
+              <div className="alerts-section-label">Feiras realizadas</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                 {past.map((fair) => (
                   <FairCard
                     key={fair.id}
@@ -171,80 +167,77 @@ function FairCard({
 }): JSX.Element {
   const [expanded, setExpanded] = useState(false)
 
-  const additionalTotal = fair.additionalCosts.reduce((s, c) => s + c.amount, 0)
-  const totalFairCost = fair.enrollmentCost + additionalTotal
-  const totalRevenue = fairSales.reduce((s, sale) => s + sale.totalAmount, 0)
-  const totalProfit = fairSales.reduce((s, sale) => s + (sale.totalAmount - sale.totalCost), 0)
+  const additionalTotal  = fair.additionalCosts.reduce((s, c) => s + c.amount, 0)
+  const totalFairCost    = fair.enrollmentCost + additionalTotal
+  const totalRevenue     = fairSales.reduce((s, sale) => s + sale.totalAmount, 0)
+  const totalProfit      = fairSales.reduce((s, sale) => s + (sale.totalAmount - sale.totalCost), 0)
 
   return (
-    <div className="bg-white rounded-2xl border border-cream-200 shadow-card overflow-hidden">
-      <div className="flex items-start gap-4 px-5 py-4">
-        <div className="flex gap-4 items-start flex-1 min-w-0">
-          {/* Data */}
-          <div
-            className={`shrink-0 w-14 rounded-xl text-center py-2 ${
-              upcoming ? 'bg-blush-50 text-blush-700' : 'bg-cream-100 text-gray-400'
-            }`}
-          >
-            <p className="text-xs font-medium leading-none">
-              {fair.date.slice(5, 7)}/{fair.date.slice(0, 4)}
-            </p>
-            <p className="text-2xl font-bold font-display leading-tight mt-0.5">
-              {fair.date.slice(8, 10)}
-            </p>
-            {fair.endDate && fair.endDate !== fair.date && (
-              <p className="text-xs font-medium leading-none mt-0.5">
-                – {fair.endDate.slice(8, 10)}
-              </p>
-            )}
+    <div className="product-row">
+      <div className="product-row-head" style={{ cursor: 'default', alignItems: 'flex-start' }}>
+        {/* Badge de data */}
+        <div
+          style={{
+            flexShrink: 0,
+            width: 52,
+            borderRadius: 'var(--radius-sm)',
+            textAlign: 'center',
+            padding: '8px 0',
+            background: upcoming ? 'var(--accent-wash)' : 'var(--surface-alt)',
+            color: upcoming ? 'var(--accent-2)' : 'var(--ink-4)'
+          }}
+        >
+          <div style={{ fontSize: 10, fontWeight: 500, lineHeight: 1 }}>
+            {fair.date.slice(5, 7)}/{fair.date.slice(0, 4)}
           </div>
-
-          {/* Info */}
-          <div className="min-w-0">
-            <p className="font-medium text-gray-800 text-sm">{fair.name}</p>
-            <p className="text-xs text-gray-500 mt-0.5">{fair.location}</p>
-            {fair.organizer && (
-              <p className="text-xs text-gray-400 mt-0.5">Org: {fair.organizer}</p>
-            )}
-            <div className="flex items-center gap-3 mt-2 flex-wrap">
-              <span className="text-xs text-gray-500">
-                Custo total:{' '}
-                <span className="font-medium text-gray-700">
-                  {totalFairCost > 0 ? formatCurrency(totalFairCost) : 'Gratuita'}
-                </span>
-              </span>
-              <span className="text-xs text-gray-300">·</span>
-              <span className="text-xs text-gray-400">{formatDateRange(fair.date, fair.endDate)}</span>
-              {!upcoming && fairSales.length > 0 && (
-                <>
-                  <span className="text-xs text-gray-300">·</span>
-                  <span className="text-xs font-medium text-emerald-600">
-                    {formatCurrency(totalRevenue)} faturado
-                  </span>
-                </>
-              )}
+          <div style={{ fontFamily: 'var(--font-display)', fontSize: 24, fontWeight: 700, lineHeight: 1.1, marginTop: 2 }}>
+            {fair.date.slice(8, 10)}
+          </div>
+          {fair.endDate && fair.endDate !== fair.date && (
+            <div style={{ fontSize: 10, fontWeight: 500, lineHeight: 1, marginTop: 2 }}>
+              – {fair.endDate.slice(8, 10)}
             </div>
+          )}
+        </div>
+
+        {/* Info */}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div className="product-name">{fair.name}</div>
+          <div className="product-desc">{fair.location}</div>
+          {fair.organizer && (
+            <div style={{ fontSize: 11, color: 'var(--ink-4)', marginTop: 2 }}>Org: {fair.organizer}</div>
+          )}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 8, flexWrap: 'wrap' }}>
+            <span style={{ fontSize: 11, color: 'var(--ink-3)' }}>
+              Custo:{' '}
+              <span style={{ fontWeight: 500, color: 'var(--ink-2)' }}>
+                {totalFairCost > 0 ? formatCurrency(totalFairCost) : 'Gratuita'}
+              </span>
+            </span>
+            <span style={{ color: 'var(--hairline)', fontSize: 11 }}>·</span>
+            <span style={{ fontSize: 11, color: 'var(--ink-4)' }}>{formatDateRange(fair.date, fair.endDate)}</span>
+            {!upcoming && fairSales.length > 0 && (
+              <>
+                <span style={{ color: 'var(--hairline)', fontSize: 11 }}>·</span>
+                <span style={{ fontSize: 11, fontWeight: 500, color: 'var(--good)' }}>
+                  {formatCurrency(totalRevenue)} faturado
+                </span>
+              </>
+            )}
           </div>
         </div>
 
         {/* Ações */}
-        <div className="flex gap-1 shrink-0 items-center">
+        <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
           {!upcoming && fairSales.length > 0 && (
-            <button
-              className="text-xs text-gray-500 hover:text-gray-700 px-2 py-1 rounded-lg hover:bg-cream-100 transition-colors"
-              onClick={() => setExpanded((v) => !v)}
-            >
+            <button className="btn btn-xs btn-ghost" onClick={() => setExpanded((v) => !v)}>
               Vendas ({fairSales.length}) {expanded ? '▲' : '▼'}
             </button>
           )}
+          <button className="btn btn-xs btn-ghost" onClick={onEdit}>Editar</button>
           <button
-            className="text-xs text-blush-600 hover:text-blush-800 px-2 py-1 rounded-lg hover:bg-blush-50 transition-colors"
-            onClick={onEdit}
-          >
-            Editar
-          </button>
-          <button
-            className="text-xs text-rose-500 hover:text-rose-700 px-2 py-1 rounded-lg hover:bg-rose-50 transition-colors"
+            className="btn btn-xs btn-ghost"
+            style={{ color: 'var(--bad)', borderColor: 'transparent' }}
             onClick={onDelete}
           >
             Excluir
@@ -253,35 +246,44 @@ function FairCard({
       </div>
 
       {expanded && (
-        <div className="border-t border-cream-100 bg-cream-50 px-5 py-4">
-          <table className="w-full text-sm">
+        <div className="product-row-body">
+          <table className="table">
             <thead>
-              <tr className="text-xs text-gray-400 uppercase tracking-wide">
-                <th className="text-left pb-2 font-medium">Data</th>
-                <th className="text-left pb-2 font-medium">Itens</th>
-                <th className="text-right pb-2 font-medium">Total</th>
-                <th className="text-right pb-2 font-medium">Lucro</th>
+              <tr>
+                <th>Data</th>
+                <th>Itens</th>
+                <th className="num">Total</th>
+                <th className="num">Lucro</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-cream-200">
+            <tbody>
               {fairSales.map((sale) => (
                 <tr key={sale.id}>
-                  <td className="py-2 text-gray-500">{formatDate(sale.soldAt)}</td>
-                  <td className="py-2 text-gray-500">
+                  <td>{formatDate(sale.soldAt)}</td>
+                  <td>
                     {sale.items.map((i) => `${i.productName} — ${i.variationIdentifier} (${i.quantity}x)`).join(', ')}
                   </td>
-                  <td className="py-2 text-right font-medium text-gray-800">{formatCurrency(sale.totalAmount)}</td>
-                  <td className="py-2 text-right text-emerald-600">{formatCurrency(sale.totalAmount - sale.totalCost)}</td>
+                  <td className="num" style={{ fontWeight: 500 }}>{formatCurrency(sale.totalAmount)}</td>
+                  <td className="num" style={{ color: 'var(--good)', fontWeight: 500 }}>
+                    {formatCurrency(sale.totalAmount - sale.totalCost)}
+                  </td>
                 </tr>
               ))}
             </tbody>
             <tfoot>
-              <tr className="border-t border-cream-300">
-                <td colSpan={2} className="pt-2 text-xs text-gray-400">
-                  Lucro bruto: {formatCurrency(totalProfit)} · Custo da feira: {formatCurrency(totalFairCost)} · Lucro líquido: {formatCurrency(totalProfit - totalFairCost)}
+              <tr>
+                <td colSpan={2} style={{ paddingTop: 10, fontSize: 11, color: 'var(--ink-4)' }}>
+                  Lucro bruto: {formatCurrency(totalProfit)} · Custo da feira: {formatCurrency(totalFairCost)} · Lucro líquido:{' '}
+                  <span style={{ fontWeight: 600, color: totalProfit - totalFairCost >= 0 ? 'var(--good)' : 'var(--bad)' }}>
+                    {formatCurrency(totalProfit - totalFairCost)}
+                  </span>
                 </td>
-                <td className="pt-2 text-right font-semibold text-blush-700">{formatCurrency(totalRevenue)}</td>
-                <td className="pt-2 text-right font-semibold text-emerald-600">{formatCurrency(totalProfit)}</td>
+                <td className="num" style={{ paddingTop: 10, fontWeight: 600, color: 'var(--accent)' }}>
+                  {formatCurrency(totalRevenue)}
+                </td>
+                <td className="num" style={{ paddingTop: 10, fontWeight: 600, color: 'var(--good)' }}>
+                  {formatCurrency(totalProfit)}
+                </td>
               </tr>
             </tfoot>
           </table>

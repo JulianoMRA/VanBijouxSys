@@ -925,3 +925,61 @@ table { border-collapse: collapse; }
 [data-density="compact"] .kpi-value  { font-size: 26px; }
 [data-density="roomy"]   .main-inner { padding: 44px 52px 80px; }
 [data-density="roomy"]   .kpi        { padding: 28px; }
+
+/* ============================================================
+   Controles de formulário
+   ============================================================ */
+.input {
+  display: block;
+  width: 100%;
+  height: 36px;
+  padding: 0 11px;
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  font-size: 13px;
+  color: var(--ink);
+  outline: none;
+  font-family: var(--font-ui);
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.input:focus {
+  border-color: var(--ink-4);
+  box-shadow: 0 0 0 3px rgba(27, 21, 18, 0.06);
+}
+.input::placeholder { color: var(--ink-5); }
+.input:disabled { opacity: 0.55; background: var(--surface-alt); cursor: not-allowed; }
+textarea.input { height: auto; padding: 8px 11px; }
+
+.label {
+  display: block;
+  font-size: 10.5px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink-4);
+  margin-bottom: 7px;
+  font-weight: 500;
+}
+
+/* Secondary / ghost button (backwards-compat standalone) */
+.btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 36px;
+  padding: 0 16px;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1;
+  transition: all 0.15s;
+  white-space: nowrap;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  border: 1px solid var(--hairline);
+  font-family: var(--font-ui);
+  background: transparent;
+  color: var(--ink-2);
+}
+.btn-secondary:hover { background: var(--surface); border-color: var(--ink-5); }
+.btn-secondary:disabled { opacity: 0.55; cursor: not-allowed; }

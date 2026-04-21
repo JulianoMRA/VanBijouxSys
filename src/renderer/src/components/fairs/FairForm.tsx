@@ -189,7 +189,7 @@ export default function FairForm({ fair, onSave, onClose }: FairFormProps): JSX.
         </div>
 
         {duration > 1 && startDate && (
-          <p className="text-xs text-blush-600 -mt-2">
+          <p style={{ fontSize: 11, color: 'var(--accent)', marginTop: -4 }}>
             Término: <span className="font-medium">{formatDate(endDate)}</span>
           </p>
         )}
@@ -221,7 +221,7 @@ export default function FairForm({ fair, onSave, onClose }: FairFormProps): JSX.
             <button
               type="button"
               onClick={addCost}
-              className="text-xs text-blush-600 hover:text-blush-800 font-medium transition-colors"
+              style={{ fontSize: 12, color: 'var(--accent)', fontWeight: 500, background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontFamily: 'inherit' }}
             >
               + Adicionar custo
             </button>
@@ -258,7 +258,7 @@ export default function FairForm({ fair, onSave, onClose }: FairFormProps): JSX.
                   <button
                     type="button"
                     onClick={() => removeCost(cost.key)}
-                    className="text-gray-300 hover:text-rose-400 transition-colors text-lg leading-none shrink-0"
+                    className="icon-btn" style={{ color: 'var(--bad)', flexShrink: 0 }}
                   >
                     ×
                   </button>
@@ -270,9 +270,9 @@ export default function FairForm({ fair, onSave, onClose }: FairFormProps): JSX.
 
         {/* Total de custos */}
         {(enrollmentValue > 0 || additionalTotal > 0) && (
-          <div className="bg-cream-50 rounded-xl px-4 py-3 text-sm space-y-1">
+          <div style={{ background: 'var(--surface-alt)', borderRadius: 'var(--radius-sm)', padding: '10px 14px', fontSize: 13, display: 'flex', flexDirection: 'column', gap: 4 }}>
             {enrollmentValue > 0 && (
-              <div className="flex justify-between text-gray-500">
+              <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--ink-3)' }}>
                 <span>Inscrição</span>
                 <span>{enrollmentValue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
               </div>
@@ -281,26 +281,26 @@ export default function FairForm({ fair, onSave, onClose }: FairFormProps): JSX.
               const val = parseFloat(c.amount)
               if (!c.description || isNaN(val)) return null
               return (
-                <div key={c.key} className="flex justify-between text-gray-500">
+                <div key={c.key} style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--ink-3)' }}>
                   <span>{c.description}</span>
                   <span>{val.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
                 </div>
               )
             })}
-            <div className="flex justify-between font-semibold text-gray-700 pt-1 border-t border-cream-200">
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 600, color: 'var(--ink-2)', paddingTop: 6, borderTop: '1px solid var(--hairline)' }}>
               <span>Custo total da feira</span>
               <span>{totalFairCost.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
             </div>
           </div>
         )}
 
-        {error && <p className="text-sm text-rose-500">{error}</p>}
+        {error && <p style={{ fontSize: 13, color: 'var(--bad)', margin: 0 }}>{error}</p>}
 
         <div className="flex justify-end gap-3 pt-2">
-          <button type="button" className="btn-secondary" onClick={onClose}>
+          <button type="button" className="btn btn-ghost" onClick={onClose}>
             Cancelar
           </button>
-          <button type="submit" className="btn-primary" disabled={saving}>
+          <button type="submit" className="btn btn-primary" disabled={saving}>
             {saving ? 'Salvando…' : isEditing ? 'Salvar alterações' : 'Cadastrar feira'}
           </button>
         </div>

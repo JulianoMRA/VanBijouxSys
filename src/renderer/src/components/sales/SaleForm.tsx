@@ -216,11 +216,7 @@ export default function SaleForm({ sale, onSave, onClose }: SaleFormProps): JSX.
                   key={ch}
                   type="button"
                   onClick={() => { setChannel(ch); setFairId('') }}
-                  className={`px-3 py-1.5 rounded-xl text-sm font-medium transition-all ${
-                    channel === ch
-                      ? 'bg-blush-500 text-white'
-                      : 'bg-cream-100 text-gray-600 hover:bg-cream-200'
-                  }`}
+                  className={`chip${channel === ch ? ' active' : ''}`}
                 >
                   {ch}
                 </button>
@@ -287,11 +283,7 @@ export default function SaleForm({ sale, onSave, onClose }: SaleFormProps): JSX.
                   key={value}
                   type="button"
                   onClick={() => handlePaymentMethodChange(value)}
-                  className={`px-3 py-1.5 rounded-xl text-sm font-medium transition-all ${
-                    paymentMethod === value
-                      ? 'bg-blush-500 text-white'
-                      : 'bg-cream-100 text-gray-600 hover:bg-cream-200'
-                  }`}
+                  className={`chip${paymentMethod === value ? ' active' : ''}`}
                 >
                   {label}
                 </button>
@@ -332,7 +324,7 @@ export default function SaleForm({ sale, onSave, onClose }: SaleFormProps): JSX.
             <button
               type="button"
               onClick={addItem}
-              className="text-xs text-blush-600 hover:text-blush-800 font-medium transition-colors"
+              style={{ fontSize: 12, color: 'var(--accent)', fontWeight: 500, background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontFamily: 'inherit' }}
             >
               + Adicionar item
             </button>
@@ -347,7 +339,7 @@ export default function SaleForm({ sale, onSave, onClose }: SaleFormProps): JSX.
                   : undefined
 
               return (
-                <div key={item.key} className="bg-cream-50 rounded-xl p-3 space-y-2">
+                <div key={item.key} style={{ background: 'var(--surface-alt)', borderRadius: 'var(--radius-sm)', padding: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
                   <div className="grid grid-cols-2 gap-2">
                     <div>
                       <label className="label">Produto</label>
@@ -452,34 +444,34 @@ export default function SaleForm({ sale, onSave, onClose }: SaleFormProps): JSX.
 
         {/* Resumo */}
         {saleItems && saleItems.length > 0 && (
-          <div className="bg-blush-50 rounded-xl p-4 space-y-1.5 text-sm">
-            <div className="flex justify-between text-gray-600">
+          <div style={{ background: 'var(--accent-wash)', borderRadius: 'var(--radius-sm)', padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 6, fontSize: 13 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--ink-3)' }}>
               <span>Total de itens</span>
-              <span className="font-medium">{saleItems.reduce((s, i) => s + i.quantity, 0)}</span>
+              <span style={{ fontWeight: 500 }}>{saleItems.reduce((s, i) => s + i.quantity, 0)}</span>
             </div>
-            <div className="flex justify-between text-gray-600">
+            <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--ink-3)' }}>
               <span>Custo total</span>
-              <span className="font-medium">{formatCurrency(totalCost)}</span>
+              <span style={{ fontWeight: 500 }}>{formatCurrency(totalCost)}</span>
             </div>
-            <div className="flex justify-between font-semibold text-gray-800 pt-1 border-t border-blush-200">
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 600, color: 'var(--ink)', paddingTop: 6, borderTop: '1px solid var(--accent-soft)' }}>
               <span>Total da venda</span>
-              <span className="text-blush-700 text-base">{formatCurrency(totalAmount)}</span>
+              <span style={{ color: 'var(--accent)', fontSize: 14 }}>{formatCurrency(totalAmount)}</span>
             </div>
             {paymentMethod !== 'dinheiro' && feePercent > 0 && (
-              <div className="flex justify-between text-rose-600 text-xs">
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--bad)' }}>
                 <span>Taxa ({feePercent}%)</span>
-                <span className="font-medium">− {formatCurrency(feeAmount)}</span>
+                <span style={{ fontWeight: 500 }}>− {formatCurrency(feeAmount)}</span>
               </div>
             )}
             {paymentMethod !== 'dinheiro' && feePercent > 0 && (
-              <div className="flex justify-between text-emerald-800 text-xs font-semibold">
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, fontWeight: 600, color: 'var(--good)' }}>
                 <span>Valor líquido recebido</span>
                 <span>{formatCurrency(netAmount)}</span>
               </div>
             )}
-            <div className="flex justify-between text-emerald-700 text-xs">
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--good)' }}>
               <span>Lucro estimado</span>
-              <span className="font-medium">{formatCurrency(profit - feeAmount)}</span>
+              <span style={{ fontWeight: 500 }}>{formatCurrency(profit - feeAmount)}</span>
             </div>
           </div>
         )}
@@ -487,10 +479,10 @@ export default function SaleForm({ sale, onSave, onClose }: SaleFormProps): JSX.
         {error && <p className="text-sm text-rose-500">{error}</p>}
 
         <div className="flex justify-end gap-3 pt-1">
-          <button type="button" className="btn-secondary" onClick={onClose}>
+          <button type="button" className="btn btn-ghost" onClick={onClose}>
             Cancelar
           </button>
-          <button type="submit" className="btn-primary" disabled={saving}>
+          <button type="submit" className="btn btn-primary" disabled={saving}>
             {saving ? (sale ? 'Salvando…' : 'Registrando…') : (sale ? 'Salvar alterações' : 'Registrar venda')}
           </button>
         </div>

@@ -100,8 +100,8 @@ export default function InsumoForm({ insumo, initialName = '', onSave, onClose }
                 onClick={() => setUnit(u.value)}
                 className={`flex-1 py-2 rounded-xl text-sm font-medium transition-all ${
                   unit === u.value
-                    ? 'bg-blush-500 text-white'
-                    : 'bg-cream-100 text-gray-600 hover:bg-cream-200'
+                    ? 'bg-[var(--accent)] text-white'
+                    : 'bg-[var(--surface-alt)] text-[var(--ink-3)] hover:bg-[var(--hairline-soft)]'
                 }`}
               >
                 {u.value === 'unidade' ? 'Un.' : u.value}
@@ -157,10 +157,10 @@ export default function InsumoForm({ insumo, initialName = '', onSave, onClose }
         {error && <p className="text-sm text-rose-500">{error}</p>}
 
         <div className="flex justify-end gap-3 pt-2">
-          <button type="button" className="btn-secondary" onClick={onClose}>
+          <button type="button" className="btn btn-ghost" onClick={onClose}>
             Cancelar
           </button>
-          <button type="submit" className="btn-primary" disabled={saving}>
+          <button type="submit" className="btn btn-primary" disabled={saving}>
             {saving ? 'Salvando…' : isEditing ? 'Salvar alterações' : 'Cadastrar insumo'}
           </button>
         </div>

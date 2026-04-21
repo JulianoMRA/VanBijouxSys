@@ -97,10 +97,10 @@ export default function ProductForm({
         {error && <p className="text-sm text-rose-500">{error}</p>}
 
         <div className="flex justify-end gap-3 pt-2">
-          <button type="button" className="btn-secondary" onClick={onClose}>
+          <button type="button" className="btn btn-ghost" onClick={onClose}>
             Cancelar
           </button>
-          <button type="submit" className="btn-primary" disabled={saving}>
+          <button type="submit" className="btn btn-primary" disabled={saving}>
             {saving ? 'Salvando…' : isEditing ? 'Salvar alterações' : 'Cadastrar produto'}
           </button>
         </div>

@@ -34,7 +34,7 @@ export default class ErrorBoundary extends Component<Props, State> {
               : 'Ocorreu um erro inesperado. Feche e reabra a aplicação.'}
           </pre>
           <button
-            className="btn-primary mt-4"
+            className="btn btn-primary mt-4"
             onClick={() => this.setState({ error: null })}
           >
             Tentar novamente

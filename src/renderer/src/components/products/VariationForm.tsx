@@ -219,7 +219,7 @@ export default function VariationForm({
                 placeholder="0,00"
               />
               {hasInsumos && (
-                <p className="text-xs text-blush-500 mt-1 cursor-pointer hover:underline" onClick={useInsumosCost}>
+                <p className="text-xs text-[var(--accent)] mt-1 cursor-pointer hover:underline" onClick={useInsumosCost}>
                   Calculado pelos insumos: R$ {insumosCost.toFixed(2)} — clique para usar
                 </p>
               )}
@@ -239,13 +239,13 @@ export default function VariationForm({
           </div>
 
           {/* Insumos utilizados */}
-          <div className="border border-cream-200 rounded-xl overflow-hidden">
-            <div className="flex items-center justify-between px-4 py-2.5 bg-cream-50">
+          <div className="border border-[var(--hairline)] rounded-xl overflow-hidden">
+            <div className="flex items-center justify-between px-4 py-2.5 bg-[var(--surface-alt)]">
               <span className="text-sm font-medium text-gray-700">Insumos utilizados</span>
               <button
                 type="button"
                 onClick={addInsumoRow}
-                className="text-xs text-blush-600 hover:text-blush-800 font-medium transition-colors"
+                className="text-xs text-[var(--accent)] hover:text-[var(--accent-2)] font-medium transition-colors"
               >
                 + Adicionar insumo
               </button>
@@ -314,7 +314,7 @@ export default function VariationForm({
                 })}
 
                 {hasInsumos && (
-                  <div className="flex justify-between text-xs font-medium text-blush-700 pt-1 border-t border-cream-200">
+                  <div className="flex justify-between text-xs font-medium text-[var(--accent-2)] pt-1 border-t border-[var(--hairline)]">
                     <span>Custo total de materiais</span>
                     <span>R$ {insumosCost.toFixed(2)}</span>
                   </div>
@@ -324,11 +324,11 @@ export default function VariationForm({
           </div>
 
           {/* Calculadora de preço */}
-          <div className="border border-cream-200 rounded-xl overflow-hidden">
+          <div className="border border-[var(--hairline)] rounded-xl overflow-hidden">
             <button
               type="button"
               onClick={() => setShowCalc((v) => !v)}
-              className="w-full flex items-center justify-between px-4 py-2.5 bg-cream-50 hover:bg-cream-100 transition-colors text-sm"
+              className="w-full flex items-center justify-between px-4 py-2.5 bg-[var(--surface-alt)] hover:bg-[var(--hairline-soft)] transition-colors text-sm"
             >
               <span className="font-medium text-gray-700">Calculadora de preço</span>
               <span className="text-gray-400 text-xs">{showCalc ? '▲ Fechar' : '▼ Abrir'}</span>
@@ -337,7 +337,7 @@ export default function VariationForm({
             {showCalc && (
               <div className="px-4 py-3 space-y-3">
                 {hasInsumos && (
-                  <p className="text-xs text-blush-600">
+                  <p className="text-xs text-[var(--accent)]">
                     Usando custo calculado pelos insumos (R$ {insumosCost.toFixed(2)}) como base de materiais.
                   </p>
                 )}
@@ -348,7 +348,7 @@ export default function VariationForm({
                     <button
                       type="button"
                       onClick={saveDefaultLaborCost}
-                      className="text-xs text-blush-600 hover:text-blush-800 transition-colors"
+                      className="text-xs text-[var(--accent)] hover:text-[var(--accent-2)] transition-colors"
                     >
                       Salvar como padrão
                     </button>
@@ -368,7 +368,7 @@ export default function VariationForm({
                 </div>
 
                 {hasCalcResult && (
-                  <div className="bg-blush-50 rounded-xl p-3 space-y-1 text-xs text-gray-500">
+                  <div className="bg-[var(--accent-wash)] rounded-xl p-3 space-y-1 text-xs text-[var(--ink-3)]">
                     <div className="flex justify-between">
                       <span>Materiais × 3</span>
                       <span>{(materialsForCalc * 3).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
@@ -385,7 +385,7 @@ export default function VariationForm({
                       <span>+ Embalagem</span>
                       <span>R$ 1,00</span>
                     </div>
-                    <div className="flex justify-between font-semibold text-blush-700 pt-1 border-t border-blush-200">
+                    <div className="flex justify-between font-semibold text-[var(--accent-2)] pt-1 border-t border-[var(--accent-soft)]">
                       <span>Preço sugerido</span>
                       <span>{suggestedPrice.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
                     </div>
@@ -393,7 +393,7 @@ export default function VariationForm({
                 )}
 
                 {hasCalcResult && (
-                  <button type="button" onClick={useSuggestedPrice} className="btn-secondary w-full text-sm">
+                  <button type="button" onClick={useSuggestedPrice} className="btn btn-ghost w-full text-sm">
                     Usar R$ {suggestedPrice},00 como preço de venda
                   </button>
                 )}
@@ -430,10 +430,10 @@ export default function VariationForm({
           {error && <p className="text-sm text-rose-500">{error}</p>}
 
           <div className="flex justify-end gap-3 pt-2">
-            <button type="button" className="btn-secondary" onClick={onClose}>
+            <button type="button" className="btn btn-ghost" onClick={onClose}>
               Cancelar
             </button>
-            <button type="submit" className="btn-primary" disabled={saving}>
+            <button type="submit" className="btn btn-primary" disabled={saving}>
               {saving ? 'Salvando…' : isEditing ? 'Salvar alterações' : 'Cadastrar variação'}
             </button>
           </div>

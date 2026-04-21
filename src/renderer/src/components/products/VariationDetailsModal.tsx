@@ -38,19 +38,19 @@ export default function VariationDetailsModal({
           {variation.insumos.length === 0 ? (
             <p className="text-sm text-gray-400">Nenhum insumo vinculado a esta variação.</p>
           ) : (
-            <div className="border border-cream-200 rounded-xl overflow-hidden">
+            <div className="border border-[var(--hairline)] rounded-xl overflow-hidden">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="text-xs text-gray-400 uppercase tracking-wide bg-cream-50">
+                  <tr className="text-xs text-[var(--ink-4)] uppercase tracking-wide bg-[var(--surface-alt)]">
                     <th className="text-left px-4 py-2 font-medium">Insumo</th>
                     <th className="text-right px-4 py-2 font-medium">Qtd.</th>
                     <th className="text-right px-4 py-2 font-medium">Custo/un.</th>
                     <th className="text-right px-4 py-2 font-medium">Subtotal</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-cream-100">
+                <tbody className="divide-y divide-[var(--hairline-soft)]">
                   {variation.insumos.map((i) => (
-                    <tr key={i.id} className="hover:bg-cream-50 transition-colors">
+                    <tr key={i.id} className="hover:bg-[var(--surface-alt)] transition-colors">
                       <td className="px-4 py-2.5 text-gray-700 font-medium">{i.insumoName}</td>
                       <td className="px-4 py-2.5 text-right text-gray-500">
                         {i.quantity} {i.unit === 'unidade' ? 'un.' : i.unit}
@@ -65,11 +65,11 @@ export default function VariationDetailsModal({
                   ))}
                 </tbody>
                 <tfoot>
-                  <tr className="bg-cream-50 border-t border-cream-200">
-                    <td colSpan={3} className="px-4 py-2.5 text-xs font-semibold text-blush-700 uppercase tracking-wide">
+                  <tr className="bg-[var(--surface-alt)] border-t border-[var(--hairline)]">
+                    <td colSpan={3} className="px-4 py-2.5 text-xs font-semibold text-[var(--accent-2)] uppercase tracking-wide">
                       Total materiais
                     </td>
-                    <td className="px-4 py-2.5 text-right text-sm font-semibold text-blush-700">
+                    <td className="px-4 py-2.5 text-right text-sm font-semibold text-[var(--accent-2)]">
                       {fmt(insumosCost)}
                     </td>
                   </tr>
@@ -82,7 +82,7 @@ export default function VariationDetailsModal({
         {/* Precificação */}
         <section>
           <h3 className="label mb-2">Precificação</h3>
-          <div className="bg-blush-50 rounded-xl p-4 space-y-2 text-sm">
+          <div className="bg-[var(--accent-wash)] rounded-xl p-4 space-y-2 text-sm">
             <div className="flex justify-between text-gray-600">
               <span>Materiais {hasMaterials ? '(insumos)' : '(custo manual)'}</span>
               <span>{fmt(materialsForCalc)}</span>
@@ -108,7 +108,7 @@ export default function VariationDetailsModal({
               <span>+ Embalagem</span>
               <span>R$ 1,00</span>
             </div>
-            <div className="flex justify-between font-semibold text-blush-700 pt-2 border-t border-blush-200 text-base">
+            <div className="flex justify-between font-semibold text-[var(--accent-2)] pt-2 border-t border-[var(--accent-soft)] text-base">
               <span>Preço sugerido</span>
               <span>{fmt(suggestedPrice)}</span>
             </div>
@@ -119,11 +119,11 @@ export default function VariationDetailsModal({
         <section>
           <h3 className="label mb-2">Resumo financeiro</h3>
           <div className="grid grid-cols-3 gap-3">
-            <div className="bg-cream-50 rounded-xl p-3 text-center">
+            <div className="bg-[var(--surface-alt)] rounded-xl p-3 text-center">
               <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">Custo</p>
               <p className="text-lg font-semibold text-gray-700">{fmt(variation.costPrice)}</p>
             </div>
-            <div className="bg-cream-50 rounded-xl p-3 text-center">
+            <div className="bg-[var(--surface-alt)] rounded-xl p-3 text-center">
               <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">Venda</p>
               <p className="text-lg font-semibold text-gray-800">{fmt(variation.salePrice)}</p>
             </div>

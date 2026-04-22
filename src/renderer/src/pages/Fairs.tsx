@@ -174,7 +174,7 @@ function FairCard({
 
   return (
     <div className="product-row">
-      <div className="product-row-head" style={{ cursor: 'default', alignItems: 'flex-start' }}>
+      <div className="product-row-head" style={{ cursor: 'default', alignItems: 'flex-start', background: 'transparent' }}>
         {/* Badge de data */}
         <div
           style={{

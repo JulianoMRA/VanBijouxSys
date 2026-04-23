@@ -91,19 +91,25 @@ export default function Cash(): JSX.Element {
   const [balanceInput, setBalanceInput]           = useState('')
 
   async function loadAll(): Promise<void> {
-    const [allSales, allExpenses, allCategories, settings, allFairs] = await Promise.all([
-      window.api.sales.getAll(),
-      window.api.cashExpenses.getAll(),
-      window.api.expenseCategories.getAll(),
-      window.api.cashSettings.get(),
-      window.api.fairs.getAll()
-    ])
-    setSales(allSales)
-    setExpenses(allExpenses)
-    setCategories(allCategories)
-    setFairs(allFairs)
-    setOpeningBalance(settings?.openingBalance ?? 0)
-    setLoading(false)
+    try {
+      const [allSales, allExpenses, allCategories, settings, allFairs] = await Promise.all([
+        window.api.sales.getAll(),
+        window.api.cashExpenses.getAll(),
+        window.api.expenseCategories.getAll(),
+        window.api.cashSettings.get(),
+        window.api.fairs.getAll()
+      ])
+      setSales(allSales)
+      setExpenses(allExpenses)
+      setCategories(allCategories)
+      setFairs(allFairs)
+      setOpeningBalance(settings?.openingBalance ?? 0)
+    } catch (err) {
+      setErrorMessage('Erro ao carregar movimentações do caixa.')
+      console.error(err)
+    } finally {
+      setLoading(false)
+    }
   }
 
   useEffect(() => { loadAll() }, [])

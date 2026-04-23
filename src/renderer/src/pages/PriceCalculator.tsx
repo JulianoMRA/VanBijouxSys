@@ -122,15 +122,21 @@ export default function PriceCalculator(): JSX.Element {
   const [insumos, setInsumos]       = useState<Insumo[]>([])
   const [showApply, setShowApply]   = useState(false)
   const [laborSaved, setLaborSaved] = useState(false)
+  const [errorMessage, setErrorMessage] = useState('')
 
   useEffect(() => {
     async function loadData(): Promise<void> {
-      const [prods, insms] = await Promise.all([
-        window.api.products.getAll(),
-        window.api.insumos.getAll()
-      ])
-      setProducts(prods)
-      setInsumos(insms)
+      try {
+        const [prods, insms] = await Promise.all([
+          window.api.products.getAll(),
+          window.api.insumos.getAll()
+        ])
+        setProducts(prods)
+        setInsumos(insms)
+      } catch (err) {
+        setErrorMessage('Erro ao carregar produtos e insumos.')
+        console.error(err)
+      }
     }
     loadData()
   }, [])
@@ -195,6 +201,13 @@ export default function PriceCalculator(): JSX.Element {
           <div className="page-subtitle">Insira os custos e veja o preço de venda sugerido.</div>
         </div>
       </div>
+
+      {errorMessage && (
+        <div className="alert-bar" style={{ marginBottom: 16 }}>
+          <span style={{ flex: 1 }}>{errorMessage}</span>
+          <button className="icon-btn" onClick={() => setErrorMessage('')} style={{ fontSize: 18, lineHeight: 1 }}>×</button>
+        </div>
+      )}
 
       <div className="grid-2" style={{ alignItems: 'start' }}>
         {/* Coluna de entrada */}

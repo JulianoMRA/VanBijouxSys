@@ -274,14 +274,21 @@ export default function Dashboard(): JSX.Element {
   const [customTo, setCustomTo] = useState('')
   const [stats, setStats] = useState<DashboardStats | null>(null)
   const [loading, setLoading] = useState(true)
+  const [errorMessage, setErrorMessage] = useState('')
   const [alertsExpanded, setAlertsExpanded] = useState(true)
 
   async function loadStats(p: Period, from?: string, to?: string): Promise<void> {
     if (p === 'custom' && (!from || !to)) return
     setLoading(true)
-    const data = await window.api.dashboard.getStats({ period: p, customFrom: from, customTo: to })
-    setStats(data)
-    setLoading(false)
+    try {
+      const data = await window.api.dashboard.getStats({ period: p, customFrom: from, customTo: to })
+      setStats(data)
+    } catch (err) {
+      setErrorMessage('Erro ao carregar estatísticas.')
+      console.error(err)
+    } finally {
+      setLoading(false)
+    }
   }
 
   useEffect(() => { loadStats(period) }, [period])
@@ -315,6 +322,13 @@ export default function Dashboard(): JSX.Element {
           ))}
         </div>
       </div>
+
+      {errorMessage && (
+        <div className="alert-bar" style={{ marginBottom: 16 }}>
+          <span style={{ flex: 1 }}>{errorMessage}</span>
+          <button className="icon-btn" onClick={() => setErrorMessage('')} style={{ fontSize: 18, lineHeight: 1 }}>×</button>
+        </div>
+      )}
 
       {period === 'custom' && (
         <div className="flex items-center gap-3 mb-5" style={{ justifyContent: 'flex-end' }}>

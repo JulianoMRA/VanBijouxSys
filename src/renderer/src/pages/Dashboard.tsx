@@ -519,7 +519,7 @@ export default function Dashboard(): JSX.Element {
                       ))}
                     </Pie>
                     <Tooltip formatter={(value: number) => formatCurrency(value)} contentStyle={TOOLTIP_STYLE} />
-                    <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 11, color: 'var(--ink-4)' }} formatter={(value, entry: any) => `${value} (${entry.payload.quantity} un.)`} />
+                    <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 11, color: 'var(--ink-4)' }} formatter={(value, entry) => `${value} (${(entry.payload as { quantity: number } | undefined)?.quantity ?? 0} un.)`} />
                   </PieChart>
                 </ResponsiveContainer>
               )}
@@ -538,7 +538,7 @@ export default function Dashboard(): JSX.Element {
                       ))}
                     </Pie>
                     <Tooltip formatter={(value: number) => formatCurrency(value)} contentStyle={TOOLTIP_STYLE} />
-                    <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 11, color: 'var(--ink-4)' }} formatter={(value, entry: any) => `${value} (${entry.payload.count}x)`} />
+                    <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 11, color: 'var(--ink-4)' }} formatter={(value, entry) => `${value} (${(entry.payload as { count: number } | undefined)?.count ?? 0}x)`} />
                   </PieChart>
                 </ResponsiveContainer>
               )}

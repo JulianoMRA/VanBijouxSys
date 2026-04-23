@@ -226,3 +226,32 @@ semânticas.
 
 Nenhum módulo está quebrado visualmente — são ajustes de polimento e
 consistência que elevam o sistema ao nível de produção do tema.
+
+---
+
+## Status final (2026-04-23)
+
+**Fase 5 concluída em 3 commits:**
+
+1. **`082144f` — fix(robustez):** try/catch em `Dashboard.loadStats`,
+   `Cash.loadAll`, `PriceCalculator.loadData`. Evita tela travada em
+   "Carregando…" se IPC falhar.
+
+2. **`8b65e11` — refactor(visual):** remove 100% das classes Tailwind
+   genéricas (`text-gray-*`, `text-rose-*`, `text-emerald-*`, `text-amber-*`,
+   `bg-emerald-*`, `bg-rose-*`, `rounded-xl`, `rounded-2xl`) em 11 arquivos.
+   Toast reescrito para usar `var(--good)` e `var(--radius-md)`.
+   ErrorBoundary alinhado à paleta Atelier.
+
+3. **`b27b6bf` — refactor(visual):** adiciona 4 classes utilitárias ao
+   `atelier.css` (`.btn-danger`, `.btn-ghost-danger`, `.btn-ghost-good`,
+   `.select`/`.select-sm`) e substitui 8 padrões inline duplicados em
+   Products, Stock, Sales, Fairs, Cash e ConfirmDialog.
+
+**Validações:** 62/62 testes passando, build Vite limpo.
+CSS final: **42.48 kB** (estável, leve redução vs. 43.78 kB inicial).
+
+**Follow-ups anotados (não bloqueantes):** componente `<LoadingCard />`,
+componente `<ErrorBar />`, helper `.input-prefix` para prefixo "R$",
+componente `<DropdownMenu />` para exportar CSV. Todos em item #8 do
+relatório acima — fora de escopo desta revisão.

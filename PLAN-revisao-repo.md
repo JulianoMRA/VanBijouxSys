@@ -312,7 +312,7 @@ Release 1.6.0 disponível. Usuária final pode atualizar.
 - [x] Fase 2: arquivos inúteis removidos
 - [x] Fase 3: CSS consolidado (sem resíduos blush-*/cream-*)
 - [x] Fase 4: dead code removido
-- [ ] Fase 5: módulos revisados um a um
+- [x] Fase 5: módulos revisados um a um
 - [ ] Fase 6: qualidade TS/React
 - [ ] Fase 7: DB/IPC auditados
 - [ ] Fase 8: security review passou

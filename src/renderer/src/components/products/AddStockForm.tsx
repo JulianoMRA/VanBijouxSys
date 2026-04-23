@@ -41,11 +41,11 @@ export default function AddStockForm({
   return (
     <Modal title="Adicionar ao Estoque" onClose={onClose} size="sm">
       <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="bg-[var(--surface-alt)] rounded-xl p-3 text-sm">
-          <p className="font-medium text-gray-700">{productName}</p>
-          <p className="text-gray-500">{variation.identifier}</p>
-          <p className="text-gray-500 mt-1">
-            Estoque atual: <span className="font-medium text-gray-700">{variation.stockQuantity} unidades</span>
+        <div className="bg-[var(--surface-alt)] rounded-[var(--radius-md)] p-3 text-sm">
+          <p className="font-medium" style={{ color: 'var(--ink-2)' }}>{productName}</p>
+          <p style={{ color: 'var(--ink-3)' }}>{variation.identifier}</p>
+          <p className="mt-1" style={{ color: 'var(--ink-3)' }}>
+            Estoque atual: <span className="font-medium" style={{ color: 'var(--ink-2)' }}>{variation.stockQuantity} unidades</span>
           </p>
         </div>
 
@@ -61,7 +61,7 @@ export default function AddStockForm({
           />
         </div>
 
-        {error && <p className="text-sm text-rose-500">{error}</p>}
+        {error && <p className="text-sm" style={{ color: 'var(--bad)' }}>{error}</p>}
 
         <div className="flex justify-end gap-3 pt-2">
           <button type="button" className="btn btn-ghost" onClick={onClose}>

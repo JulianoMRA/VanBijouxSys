@@ -263,7 +263,7 @@ export default function SaleForm({ sale, onSave, onClose }: SaleFormProps): JSX.
               })}
             </select>
             {selectedFair?.endDate && selectedFair.endDate !== selectedFair.date && (
-              <p className="text-xs text-gray-400 mt-1">
+              <p className="text-xs text-dim mt-1">
                 Escolha o dia da venda dentro do período da feira ({selectedFair.date.slice(8, 10)} a {selectedFair.endDate.slice(8, 10)}/{selectedFair.date.slice(5, 7)}).
               </p>
             )}
@@ -303,10 +303,10 @@ export default function SaleForm({ sale, onSave, onClose }: SaleFormProps): JSX.
                   onChange={(e) => setFeePercentage(e.target.value)}
                   placeholder="0,00"
                 />
-                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-400">%</span>
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm" style={{ color: 'var(--ink-4)' }}>%</span>
               </div>
               {feePercent > 0 && totalAmount > 0 && (
-                <p className="text-xs text-gray-500 mt-1">
+                <p className="text-xs mt-1" style={{ color: 'var(--ink-4)' }}>
                   Taxa: {formatCurrency(feeAmount)} · Líquido: {formatCurrency(netAmount)}
                 </p>
               )}
@@ -317,7 +317,7 @@ export default function SaleForm({ sale, onSave, onClose }: SaleFormProps): JSX.
         {/* Itens */}
         <div>
           <div className="flex items-center justify-between mb-2">
-            <label className="text-sm font-medium text-gray-700">Itens vendidos</label>
+            <label className="text-sm font-medium" style={{ color: 'var(--ink-2)' }}>Itens vendidos</label>
             <button
               type="button"
               onClick={addItem}
@@ -407,7 +407,7 @@ export default function SaleForm({ sale, onSave, onClose }: SaleFormProps): JSX.
                     </div>
                     <div className="flex justify-between items-center">
                       {item.unitPrice !== '' && item.quantity !== '' ? (
-                        <span className="text-sm font-medium text-gray-700">
+                        <span className="text-sm font-medium" style={{ color: 'var(--ink-2)' }}>
                           {formatCurrency(parseFloat(item.unitPrice || '0') * parseInt(item.quantity || '0'))}
                         </span>
                       ) : (
@@ -417,7 +417,9 @@ export default function SaleForm({ sale, onSave, onClose }: SaleFormProps): JSX.
                         <button
                           type="button"
                           onClick={() => removeItem(item.key)}
-                          className="text-rose-400 hover:text-rose-600 text-lg leading-none transition-colors"
+                          className="icon-btn"
+                          style={{ color: 'var(--bad)' }}
+                          title="Remover item"
                         >
                           ×
                         </button>
@@ -428,7 +430,7 @@ export default function SaleForm({ sale, onSave, onClose }: SaleFormProps): JSX.
                   {selectedVariation && (() => {
                     const effectiveStock = selectedVariation.stockQuantity + (originalQuantities[selectedVariation.id] ?? 0)
                     return parseInt(item.quantity) > effectiveStock ? (
-                      <p className="text-xs text-amber-600">
+                      <p className="text-xs" style={{ color: 'var(--warn)' }}>
                         ⚠ Quantidade maior que o estoque disponível ({effectiveStock} un.)
                       </p>
                     ) : null
@@ -473,7 +475,7 @@ export default function SaleForm({ sale, onSave, onClose }: SaleFormProps): JSX.
           </div>
         )}
 
-        {error && <p className="text-sm text-rose-500">{error}</p>}
+        {error && <p className="text-sm" style={{ color: 'var(--bad)' }}>{error}</p>}
 
         <div className="flex justify-end gap-3 pt-1">
           <button type="button" className="btn btn-ghost" onClick={onClose}>

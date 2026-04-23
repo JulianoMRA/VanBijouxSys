@@ -151,7 +151,7 @@ export default function FairForm({ fair, onSave, onClose }: FairFormProps): JSX.
             />
           </div>
           <div>
-            <label className="label">Organizador <span className="text-gray-400 font-normal">(opcional)</span></label>
+            <label className="label">Organizador <span className="text-dim font-normal">(opcional)</span></label>
             <input
               className="input"
               value={organizer}
@@ -194,7 +194,7 @@ export default function FairForm({ fair, onSave, onClose }: FairFormProps): JSX.
         <div>
           <label className="label">Custo de inscrição (R$)</label>
           <div className="relative">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm pointer-events-none">
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm pointer-events-none" style={{ color: 'var(--ink-4)' }}>
               R$
             </span>
             <input
@@ -211,8 +211,8 @@ export default function FairForm({ fair, onSave, onClose }: FairFormProps): JSX.
         {/* Custos adicionais */}
         <div>
           <div className="flex items-center justify-between mb-2">
-            <label className="text-sm font-medium text-gray-700">
-              Custos adicionais <span className="text-gray-400 font-normal">(opcional)</span>
+            <label className="text-sm font-medium" style={{ color: 'var(--ink-2)' }}>
+              Custos adicionais <span className="text-dim font-normal">(opcional)</span>
             </label>
             <button
               type="button"
@@ -224,7 +224,7 @@ export default function FairForm({ fair, onSave, onClose }: FairFormProps): JSX.
           </div>
 
           {additionalCosts.length === 0 ? (
-            <p className="text-xs text-gray-400">
+            <p className="text-xs text-dim">
               Ex: combustível, alimentação, estacionamento…
             </p>
           ) : (
@@ -238,7 +238,7 @@ export default function FairForm({ fair, onSave, onClose }: FairFormProps): JSX.
                     onChange={(e) => updateCost(cost.key, 'description', e.target.value)}
                   />
                   <div className="relative w-32 shrink-0">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm pointer-events-none">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm pointer-events-none" style={{ color: 'var(--ink-4)' }}>
                       R$
                     </span>
                     <input

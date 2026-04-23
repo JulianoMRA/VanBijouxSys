@@ -35,9 +35,9 @@ export default function AddInsumoStockForm({ insumo, onSave, onClose }: AddInsum
   return (
     <Modal title={`Adicionar estoque — ${insumo.name}`} onClose={onClose} size="sm">
       <form onSubmit={handleSubmit} className="space-y-4">
-        <p className="text-sm text-gray-500">
+        <p className="text-sm" style={{ color: 'var(--ink-3)' }}>
           Estoque atual:{' '}
-          <span className="font-medium text-gray-700">
+          <span className="font-medium" style={{ color: 'var(--ink-2)' }}>
             {insumo.stockQuantity} {unitLabel}
           </span>
         </p>
@@ -62,7 +62,7 @@ export default function AddInsumoStockForm({ insumo, onSave, onClose }: AddInsum
           </p>
         )}
 
-        {error && <p className="text-sm text-rose-500">{error}</p>}
+        {error && <p className="text-sm" style={{ color: 'var(--bad)' }}>{error}</p>}
 
         <div className="flex justify-end gap-3 pt-2">
           <button type="button" className="btn btn-ghost" onClick={onClose}>

@@ -84,7 +84,7 @@ export default function ProductForm({
         </div>
 
         <div>
-          <label className="label">Descrição <span className="text-gray-400 font-normal">(opcional)</span></label>
+          <label className="label">Descrição <span className="text-dim font-normal">(opcional)</span></label>
           <textarea
             className="input resize-none"
             rows={3}
@@ -94,7 +94,7 @@ export default function ProductForm({
           />
         </div>
 
-        {error && <p className="text-sm text-rose-500">{error}</p>}
+        {error && <p className="text-sm" style={{ color: 'var(--bad)' }}>{error}</p>}
 
         <div className="flex justify-end gap-3 pt-2">
           <button type="button" className="btn btn-ghost" onClick={onClose}>

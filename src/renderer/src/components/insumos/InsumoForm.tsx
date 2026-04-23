@@ -98,7 +98,7 @@ export default function InsumoForm({ insumo, initialName = '', onSave, onClose }
                 key={u.value}
                 type="button"
                 onClick={() => setUnit(u.value)}
-                className={`flex-1 py-2 rounded-xl text-sm font-medium transition-all ${
+                className={`flex-1 py-2 rounded-[var(--radius-md)] text-sm font-medium transition-all ${
                   unit === u.value
                     ? 'bg-[var(--accent)] text-white'
                     : 'bg-[var(--surface-alt)] text-[var(--ink-3)] hover:bg-[var(--hairline-soft)]'
@@ -113,7 +113,7 @@ export default function InsumoForm({ insumo, initialName = '', onSave, onClose }
         <div>
           <label className="label">Custo por {unitLabel}</label>
           <div className="relative">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm pointer-events-none">R$</span>
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm pointer-events-none" style={{ color: 'var(--ink-4)' }}>R$</span>
             <input
               className="input pl-8"
               type="number"
@@ -124,7 +124,7 @@ export default function InsumoForm({ insumo, initialName = '', onSave, onClose }
               onChange={(e) => setCostPerUnit(e.target.value)}
             />
           </div>
-          <p className="text-xs text-gray-400 mt-1">
+          <p className="text-xs text-dim mt-1">
             Ex: se o fio custa R$20,00 por 100cm, o custo por cm é R$0,20.
           </p>
         </div>
@@ -154,7 +154,7 @@ export default function InsumoForm({ insumo, initialName = '', onSave, onClose }
           </div>
         </div>
 
-        {error && <p className="text-sm text-rose-500">{error}</p>}
+        {error && <p className="text-sm" style={{ color: 'var(--bad)' }}>{error}</p>}
 
         <div className="flex justify-end gap-3 pt-2">
           <button type="button" className="btn btn-ghost" onClick={onClose}>

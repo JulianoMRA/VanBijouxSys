@@ -116,7 +116,7 @@ export default function ExpenseForm({ expense, categories, onSave, onClose }: Ex
         </div>
 
         <div>
-          <label className="label">Observações <span className="text-gray-400">(opcional)</span></label>
+          <label className="label">Observações <span className="text-dim">(opcional)</span></label>
           <textarea
             className="input resize-none"
             rows={2}

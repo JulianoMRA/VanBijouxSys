@@ -36,12 +36,12 @@ export default function VariationDetailsModal({
         <section>
           <h3 className="label mb-2">Composição</h3>
           {variation.insumos.length === 0 ? (
-            <p className="text-sm text-gray-400">Nenhum insumo vinculado a esta variação.</p>
+            <p className="text-sm text-dim">Nenhum insumo vinculado a esta variação.</p>
           ) : (
-            <div className="border border-[var(--hairline)] rounded-xl overflow-hidden">
+            <div className="border border-[var(--hairline)] rounded-[var(--radius-md)] overflow-hidden">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="text-xs text-[var(--ink-4)] uppercase tracking-wide bg-[var(--surface-alt)]">
+                  <tr className="text-xs uppercase tracking-wide bg-[var(--surface-alt)]" style={{ color: 'var(--ink-4)' }}>
                     <th className="text-left px-4 py-2 font-medium">Insumo</th>
                     <th className="text-right px-4 py-2 font-medium">Qtd.</th>
                     <th className="text-right px-4 py-2 font-medium">Custo/un.</th>
@@ -51,14 +51,14 @@ export default function VariationDetailsModal({
                 <tbody className="divide-y divide-[var(--hairline-soft)]">
                   {variation.insumos.map((i) => (
                     <tr key={i.id} className="hover:bg-[var(--surface-alt)] transition-colors">
-                      <td className="px-4 py-2.5 text-gray-700 font-medium">{i.insumoName}</td>
-                      <td className="px-4 py-2.5 text-right text-gray-500">
+                      <td className="px-4 py-2.5 font-medium" style={{ color: 'var(--ink-2)' }}>{i.insumoName}</td>
+                      <td className="px-4 py-2.5 text-right" style={{ color: 'var(--ink-3)' }}>
                         {i.quantity} {i.unit === 'unidade' ? 'un.' : i.unit}
                       </td>
-                      <td className="px-4 py-2.5 text-right text-gray-500">
+                      <td className="px-4 py-2.5 text-right" style={{ color: 'var(--ink-3)' }}>
                         {i.costPerUnit.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                       </td>
-                      <td className="px-4 py-2.5 text-right text-gray-700">
+                      <td className="px-4 py-2.5 text-right" style={{ color: 'var(--ink-2)' }}>
                         {fmt(i.costPerUnit * i.quantity)}
                       </td>
                     </tr>
@@ -82,29 +82,29 @@ export default function VariationDetailsModal({
         {/* Precificação */}
         <section>
           <h3 className="label mb-2">Precificação</h3>
-          <div className="bg-[var(--accent-wash)] rounded-xl p-4 space-y-2 text-sm">
-            <div className="flex justify-between text-gray-600">
+          <div className="bg-[var(--accent-wash)] rounded-[var(--radius-md)] p-4 space-y-2 text-sm">
+            <div className="flex justify-between" style={{ color: 'var(--ink-3)' }}>
               <span>Materiais {hasMaterials ? '(insumos)' : '(custo manual)'}</span>
               <span>{fmt(materialsForCalc)}</span>
             </div>
-            <div className="flex justify-between text-gray-600">
+            <div className="flex justify-between" style={{ color: 'var(--ink-3)' }}>
               <span>Materiais × 3</span>
               <span>{fmt(materialsForCalc * 3)}</span>
             </div>
-            <div className="flex justify-between text-gray-600">
+            <div className="flex justify-between" style={{ color: 'var(--ink-3)' }}>
               <span>+ Mão de obra</span>
               <span>
                 {labor > 0
                   ? fmt(labor)
-                  : <span className="text-gray-400 italic">Não informada</span>
+                  : <span className="italic text-dim">Não informada</span>
                 }
               </span>
             </div>
-            <div className="flex justify-between text-gray-600">
+            <div className="flex justify-between" style={{ color: 'var(--ink-3)' }}>
               <span>× 1,10 (margem)</span>
               <span>{fmt((materialsForCalc * 3 + labor) * 1.1)}</span>
             </div>
-            <div className="flex justify-between text-gray-600">
+            <div className="flex justify-between" style={{ color: 'var(--ink-3)' }}>
               <span>+ Embalagem</span>
               <span>R$ 1,00</span>
             </div>
@@ -119,20 +119,29 @@ export default function VariationDetailsModal({
         <section>
           <h3 className="label mb-2">Resumo financeiro</h3>
           <div className="grid grid-cols-3 gap-3">
-            <div className="bg-[var(--surface-alt)] rounded-xl p-3 text-center">
-              <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">Custo</p>
-              <p className="text-lg font-semibold text-gray-700">{fmt(variation.costPrice)}</p>
+            <div className="bg-[var(--surface-alt)] rounded-[var(--radius-md)] p-3 text-center">
+              <p className="text-xs uppercase tracking-wide mb-1" style={{ color: 'var(--ink-4)' }}>Custo</p>
+              <p className="text-lg font-semibold" style={{ color: 'var(--ink-2)' }}>{fmt(variation.costPrice)}</p>
             </div>
-            <div className="bg-[var(--surface-alt)] rounded-xl p-3 text-center">
-              <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">Venda</p>
-              <p className="text-lg font-semibold text-gray-800">{fmt(variation.salePrice)}</p>
+            <div className="bg-[var(--surface-alt)] rounded-[var(--radius-md)] p-3 text-center">
+              <p className="text-xs uppercase tracking-wide mb-1" style={{ color: 'var(--ink-4)' }}>Venda</p>
+              <p className="text-lg font-semibold" style={{ color: 'var(--ink)' }}>{fmt(variation.salePrice)}</p>
             </div>
-            <div className={`rounded-xl p-3 text-center ${profit >= 0 ? 'bg-emerald-50' : 'bg-rose-50'}`}>
-              <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">Lucro/un.</p>
-              <p className={`text-lg font-semibold ${profit >= 0 ? 'text-emerald-700' : 'text-rose-600'}`}>
+            <div
+              className="rounded-[var(--radius-md)] p-3 text-center"
+              style={{ background: profit >= 0 ? 'var(--good-wash)' : 'var(--bad-wash)' }}
+            >
+              <p className="text-xs uppercase tracking-wide mb-1" style={{ color: 'var(--ink-4)' }}>Lucro/un.</p>
+              <p
+                className="text-lg font-semibold"
+                style={{ color: profit >= 0 ? 'var(--good)' : 'var(--bad)' }}
+              >
                 {fmt(profit)}
               </p>
-              <p className={`text-xs mt-0.5 ${profit >= 0 ? 'text-emerald-500' : 'text-rose-400'}`}>
+              <p
+                className="text-xs mt-0.5"
+                style={{ color: profit >= 0 ? 'var(--good)' : 'var(--bad)', opacity: 0.8 }}
+              >
                 {margin.toFixed(1)}% margem
               </p>
             </div>

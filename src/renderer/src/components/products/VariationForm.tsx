@@ -201,7 +201,7 @@ export default function VariationForm({
               placeholder="Ex: Rosa, Dourado, Fimo unicórnio, Cristal azul…"
               autoFocus
             />
-            <p className="text-xs text-gray-400 mt-1">
+            <p className="text-xs text-dim mt-1">
               Pode ser uma cor, material, tipo de fimo, ou qualquer diferencial desta variação.
             </p>
           </div>
@@ -239,9 +239,9 @@ export default function VariationForm({
           </div>
 
           {/* Insumos utilizados */}
-          <div className="border border-[var(--hairline)] rounded-xl overflow-hidden">
+          <div className="border border-[var(--hairline)] rounded-[var(--radius-md)] overflow-hidden">
             <div className="flex items-center justify-between px-4 py-2.5 bg-[var(--surface-alt)]">
-              <span className="text-sm font-medium text-gray-700">Insumos utilizados</span>
+              <span className="text-sm font-medium" style={{ color: 'var(--ink-2)' }}>Insumos utilizados</span>
               <button
                 type="button"
                 onClick={addInsumoRow}
@@ -252,7 +252,7 @@ export default function VariationForm({
             </div>
 
             {insumoRows.length === 0 ? (
-              <p className="text-xs text-gray-400 px-4 py-3">
+              <p className="text-xs text-dim px-4 py-3">
                 Sem insumos vinculados. O custo de materiais será preenchido manualmente acima.
               </p>
             ) : (
@@ -290,14 +290,14 @@ export default function VariationForm({
                           onChange={(e) => updateRow(row.key, { quantity: e.target.value })}
                         />
                         {selectedInsumo && (
-                          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs pointer-events-none">
+                          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-dim text-xs pointer-events-none">
                             {selectedInsumo.unit === 'unidade' ? 'un.' : selectedInsumo.unit}
                           </span>
                         )}
                       </div>
 
                       {rowCost !== null && (
-                        <span className="text-xs text-gray-500 w-16 text-right shrink-0">
+                        <span className="text-xs w-16 text-right shrink-0" style={{ color: 'var(--ink-3)' }}>
                           R$ {rowCost.toFixed(2)}
                         </span>
                       )}
@@ -305,7 +305,9 @@ export default function VariationForm({
                       <button
                         type="button"
                         onClick={() => removeInsumoRow(row.key)}
-                        className="text-gray-300 hover:text-rose-400 transition-colors text-lg leading-none shrink-0"
+                        className="icon-btn shrink-0"
+                        style={{ color: 'var(--bad)' }}
+                        title="Remover"
                       >
                         ×
                       </button>
@@ -324,14 +326,14 @@ export default function VariationForm({
           </div>
 
           {/* Calculadora de preço */}
-          <div className="border border-[var(--hairline)] rounded-xl overflow-hidden">
+          <div className="border border-[var(--hairline)] rounded-[var(--radius-md)] overflow-hidden">
             <button
               type="button"
               onClick={() => setShowCalc((v) => !v)}
               className="w-full flex items-center justify-between px-4 py-2.5 bg-[var(--surface-alt)] hover:bg-[var(--hairline-soft)] transition-colors text-sm"
             >
-              <span className="font-medium text-gray-700">Calculadora de preço</span>
-              <span className="text-gray-400 text-xs">{showCalc ? '▲ Fechar' : '▼ Abrir'}</span>
+              <span className="font-medium" style={{ color: 'var(--ink-2)' }}>Calculadora de preço</span>
+              <span className="text-dim text-xs">{showCalc ? '▲ Fechar' : '▼ Abrir'}</span>
             </button>
 
             {showCalc && (
@@ -354,7 +356,7 @@ export default function VariationForm({
                     </button>
                   </div>
                   <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm pointer-events-none">R$</span>
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-dim text-sm pointer-events-none">R$</span>
                     <input
                       className="input pl-8"
                       type="number"
@@ -368,7 +370,7 @@ export default function VariationForm({
                 </div>
 
                 {hasCalcResult && (
-                  <div className="bg-[var(--accent-wash)] rounded-xl p-3 space-y-1 text-xs text-[var(--ink-3)]">
+                  <div className="bg-[var(--accent-wash)] rounded-[var(--radius-md)] p-3 space-y-1 text-xs text-[var(--ink-3)]">
                     <div className="flex justify-between">
                       <span>Materiais × 3</span>
                       <span>{(materialsForCalc * 3).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
@@ -421,13 +423,13 @@ export default function VariationForm({
                 value={minimumStock}
                 onChange={(e) => setMinimumStock(e.target.value)}
               />
-              <p className="text-xs text-gray-400 mt-1">
+              <p className="text-xs text-dim mt-1">
                 Alerta aparece quando estoque ficar abaixo deste valor.
               </p>
             </div>
           </div>
 
-          {error && <p className="text-sm text-rose-500">{error}</p>}
+          {error && <p className="text-sm" style={{ color: 'var(--bad)' }}>{error}</p>}
 
           <div className="flex justify-end gap-3 pt-2">
             <button type="button" className="btn btn-ghost" onClick={onClose}>

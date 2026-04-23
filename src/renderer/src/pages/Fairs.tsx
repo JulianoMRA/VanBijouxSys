@@ -236,8 +236,7 @@ function FairCard({
           )}
           <button className="btn btn-xs btn-ghost" onClick={onEdit}>Editar</button>
           <button
-            className="btn btn-xs btn-ghost"
-            style={{ color: 'var(--bad)', borderColor: 'transparent' }}
+            className="btn btn-xs btn-ghost-danger"
             onClick={onDelete}
           >
             Excluir

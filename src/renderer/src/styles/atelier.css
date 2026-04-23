@@ -288,6 +288,27 @@ table { border-collapse: collapse; }
 }
 .btn-accent:hover { background: var(--accent-2); }
 
+.btn-danger {
+  background: var(--bad);
+  color: #fff;
+}
+.btn-danger:hover { background: #7a2e20; }
+
+/* Ghost variants com cor semântica — borda transparente até hover */
+.btn-ghost-danger {
+  background: transparent;
+  color: var(--bad);
+  border: 1px solid transparent;
+}
+.btn-ghost-danger:hover { background: var(--bad-wash); }
+
+.btn-ghost-good {
+  background: transparent;
+  color: var(--good);
+  border: 1px solid transparent;
+}
+.btn-ghost-good:hover { background: var(--good-wash); }
+
 .btn-sm { height: 28px; padding: 0 10px; font-size: 12px; }
 .btn-xs { height: 24px; padding: 0 8px;  font-size: 11px; font-weight: 500; }
 
@@ -968,5 +989,27 @@ textarea.input { height: auto; padding: 8px 11px; }
   margin-bottom: 7px;
   font-weight: 500;
 }
+
+.select {
+  display: inline-flex;
+  align-items: center;
+  height: 36px;
+  padding: 0 12px;
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  font-size: 12px;
+  color: var(--ink-2);
+  outline: none;
+  font-family: var(--font-ui);
+  cursor: pointer;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.select:focus {
+  border-color: var(--ink-4);
+  box-shadow: 0 0 0 3px rgba(27, 21, 18, 0.06);
+}
+.select:disabled { opacity: 0.55; cursor: not-allowed; }
+.select-sm { height: 30px; font-size: 11px; padding: 0 10px; }
 
 @tailwind utilities;

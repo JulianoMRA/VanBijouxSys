@@ -37,19 +37,6 @@ function stockLabel(v: ProductVariation): string {
   return `${v.stockQuantity} un.`
 }
 
-const SELECT_STYLE: React.CSSProperties = {
-  height: 36,
-  padding: '0 12px',
-  borderRadius: 'var(--radius-sm)',
-  background: 'var(--surface)',
-  border: '1px solid var(--hairline)',
-  fontSize: 12,
-  color: 'var(--ink-2)',
-  outline: 'none',
-  fontFamily: 'var(--font-ui)',
-  cursor: 'pointer'
-}
-
 export default function Products(): JSX.Element {
   const [products, setProducts] = useState<Product[]>([])
   const [categories, setCategories] = useState<Category[]>([])
@@ -202,7 +189,7 @@ export default function Products(): JSX.Element {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
-        <select value={sortBy} onChange={(e) => setSortBy(e.target.value as SortOption)} style={SELECT_STYLE}>
+        <select className="select" value={sortBy} onChange={(e) => setSortBy(e.target.value as SortOption)}>
           <option value="recente">Último adicionado</option>
           <option value="nome-az">Nome A→Z</option>
           <option value="nome-za">Nome Z→A</option>
@@ -276,8 +263,7 @@ export default function Products(): JSX.Element {
                       Editar
                     </button>
                     <button
-                      className="btn btn-xs btn-ghost"
-                      style={{ color: 'var(--bad)', borderColor: 'transparent' }}
+                      className="btn btn-xs btn-ghost-danger"
                       onClick={() => setModal({ type: 'deleteProduct', product })}
                     >
                       Excluir
@@ -320,7 +306,7 @@ export default function Products(): JSX.Element {
                               value={variationSearch}
                               onChange={(e) => setVariationSearch(e.target.value)}
                             />
-                            <select value={variationSortBy} onChange={(e) => setVariationSortBy(e.target.value as VariationSortOption)} style={{ ...SELECT_STYLE, height: 30, fontSize: 11 }}>
+                            <select className="select select-sm" value={variationSortBy} onChange={(e) => setVariationSortBy(e.target.value as VariationSortOption)}>
                               <option value="recente">Mais recente</option>
                               <option value="nome-az">Nome A→Z</option>
                               <option value="nome-za">Nome Z→A</option>
@@ -329,7 +315,7 @@ export default function Products(): JSX.Element {
                               <option value="estoque-maior">Maior estoque</option>
                               <option value="estoque-menor">Menor estoque</option>
                             </select>
-                            <select value={variationStockFilter} onChange={(e) => setVariationStockFilter(e.target.value as VariationStockFilter)} style={{ ...SELECT_STYLE, height: 30, fontSize: 11 }}>
+                            <select className="select select-sm" value={variationStockFilter} onChange={(e) => setVariationStockFilter(e.target.value as VariationStockFilter)}>
                               <option value="todos">Todos os estoques</option>
                               <option value="sem-estoque">Sem estoque</option>
                               <option value="estoque-baixo">Estoque baixo</option>
@@ -397,8 +383,7 @@ export default function Products(): JSX.Element {
                                           Detalhes
                                         </button>
                                         <button
-                                          className="btn btn-xs btn-ghost"
-                                          style={{ color: 'var(--good)', borderColor: 'transparent' }}
+                                          className="btn btn-xs btn-ghost-good"
                                           onClick={() => setModal({ type: 'addStock', product, variation: v })}
                                         >
                                           + Estoque
@@ -407,8 +392,7 @@ export default function Products(): JSX.Element {
                                           Editar
                                         </button>
                                         <button
-                                          className="btn btn-xs btn-ghost"
-                                          style={{ color: 'var(--bad)', borderColor: 'transparent' }}
+                                          className="btn btn-xs btn-ghost-danger"
                                           onClick={() => setModal({ type: 'deleteVariation', product, variation: v })}
                                         >
                                           Excluir

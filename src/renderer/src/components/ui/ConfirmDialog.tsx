@@ -23,8 +23,7 @@ export default function ConfirmDialog({
       <div className="flex justify-end gap-3">
         <button className="btn btn-ghost" onClick={onClose}>Cancelar</button>
         <button
-          className="btn btn-primary"
-          style={danger ? { background: 'var(--bad)', color: '#fff' } : undefined}
+          className={`btn ${danger ? 'btn-danger' : 'btn-primary'}`}
           onClick={() => { onConfirm(); onClose() }}
         >
           {confirmLabel}

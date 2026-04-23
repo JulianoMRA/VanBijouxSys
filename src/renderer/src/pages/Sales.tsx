@@ -199,8 +199,7 @@ export default function Sales(): JSX.Element {
                       Editar
                     </button>
                     <button
-                      className="btn btn-xs btn-ghost"
-                      style={{ color: 'var(--bad)', borderColor: 'transparent' }}
+                      className="btn btn-xs btn-ghost-danger"
                       onClick={() => setModal({ type: 'delete', sale })}
                     >
                       Excluir

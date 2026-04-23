@@ -16,19 +16,6 @@ type Modal =
 type StatusFilter = 'todos' | 'low' | 'out'
 type SortOption = 'recente' | 'nome-az' | 'nome-za' | 'estoque-asc' | 'estoque-desc' | 'custo-asc' | 'custo-desc'
 
-const SELECT_STYLE: React.CSSProperties = {
-  height: 36,
-  padding: '0 12px',
-  borderRadius: 'var(--radius-sm)',
-  background: 'var(--surface)',
-  border: '1px solid var(--hairline)',
-  fontSize: 12,
-  color: 'var(--ink-2)',
-  outline: 'none',
-  fontFamily: 'var(--font-ui)',
-  cursor: 'pointer'
-}
-
 function stockStatus(insumo: Insumo): 'ok' | 'low' | 'out' {
   if (insumo.stockQuantity <= 0) return 'out'
   if (insumo.minimumStock > 0 && insumo.stockQuantity < insumo.minimumStock) return 'low'
@@ -283,7 +270,7 @@ export default function Stock(): JSX.Element {
                 </button>
               ))}
             </div>
-            <select value={sortBy} onChange={(e) => setSortBy(e.target.value as SortOption)} style={SELECT_STYLE}>
+            <select className="select" value={sortBy} onChange={(e) => setSortBy(e.target.value as SortOption)}>
               <option value="recente">Último adicionado</option>
               <option value="nome-az">Nome A→Z</option>
               <option value="nome-za">Nome Z→A</option>
@@ -349,8 +336,7 @@ export default function Stock(): JSX.Element {
                       <td style={{ paddingRight: 16 }}>
                         <div className="flex justify-end gap-1">
                           <button
-                            className="btn btn-xs btn-ghost"
-                            style={{ color: 'var(--good)', borderColor: 'transparent' }}
+                            className="btn btn-xs btn-ghost-good"
                             onClick={() => setModal({ type: 'addStock', insumo })}
                           >
                             + Estoque
@@ -359,8 +345,7 @@ export default function Stock(): JSX.Element {
                             Editar
                           </button>
                           <button
-                            className="btn btn-xs btn-ghost"
-                            style={{ color: 'var(--bad)', borderColor: 'transparent' }}
+                            className="btn btn-xs btn-ghost-danger"
                             onClick={() => setModal({ type: 'delete', insumo })}
                           >
                             Excluir

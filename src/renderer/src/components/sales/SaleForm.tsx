@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import Modal from '../ui/Modal'
+import { formatCurrency } from '../../utils/format'
 import type { Fair, Product, ProductVariation, Sale, SaleChannel, PaymentMethod, CreateSaleItemInput } from '../../types'
 
 interface SaleFormProps {
@@ -26,10 +27,6 @@ const PAYMENT_METHODS: { value: PaymentMethod; label: string }[] = [
 ]
 
 const FEE_STORAGE_KEY = (method: PaymentMethod) => `lastFee_${method}`
-
-function formatCurrency(value: number): string {
-  return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
-}
 
 function loadLastFee(method: PaymentMethod): string {
   if (method === 'dinheiro') return '0'

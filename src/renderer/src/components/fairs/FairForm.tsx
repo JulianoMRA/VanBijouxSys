@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import Modal from '../ui/Modal'
+import { formatDate } from '../../utils/format'
 import type { Fair } from '../../types'
 
 interface FairFormProps {
@@ -26,11 +27,6 @@ function getDurationDays(startDate: string, endDate: string | null | undefined):
   const end = new Date(endDate + 'T12:00:00')
   const diff = Math.round((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1
   return Math.max(diff, 1)
-}
-
-function formatDate(dateStr: string): string {
-  const [year, month, day] = dateStr.split('-')
-  return `${day}/${month}/${year}`
 }
 
 let costKeyCounter = 0

@@ -118,46 +118,6 @@ export function registerCashHandlers(): void {
     return { success: true }
   })
 
-  ipcMain.handle('cash-expenses:getStats', async (_event, filters?: { startDate?: string; endDate?: string }) => {
-    const sqlite = getSqlite()
-
-    let expenseQuery = 'SELECT COALESCE(SUM(amount), 0) as total FROM cash_expenses WHERE 1=1'
-    const params: string[] = []
-
-    if (filters?.startDate) {
-      expenseQuery += ' AND expense_date >= ?'
-      params.push(filters.startDate)
-    }
-    if (filters?.endDate) {
-      expenseQuery += ' AND expense_date <= ?'
-      params.push(filters.endDate)
-    }
-
-    const expenseResult = sqlite.prepare(expenseQuery).get(...params) as { total: number }
-
-    let incomeQuery = 'SELECT COALESCE(SUM(net_amount), 0) as total FROM sales WHERE 1=1'
-    const incomeParams: string[] = []
-
-    if (filters?.startDate) {
-      incomeQuery += ' AND sold_at >= ?'
-      incomeParams.push(filters.startDate)
-    }
-    if (filters?.endDate) {
-      incomeQuery += ' AND sold_at <= ?'
-      incomeParams.push(filters.endDate)
-    }
-
-    const incomeResult = sqlite.prepare(incomeQuery).get(...incomeParams) as { total: number }
-
-    const settings = sqlite.prepare('SELECT opening_balance FROM cash_settings WHERE id = 1').get() as { opening_balance: number }
-
-    return {
-      totalExpenses: expenseResult.total,
-      totalIncome: incomeResult.total,
-      openingBalance: settings?.opening_balance ?? 0
-    }
-  })
-
   // ── Configurações do caixa ───────────────────────────────────────────────
 
   ipcMain.handle('cash-settings:get', async () => {

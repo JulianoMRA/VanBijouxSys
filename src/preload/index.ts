@@ -70,9 +70,7 @@ const api = {
       ipcRenderer.invoke('cash-expenses:getAll', filters),
     create: (data: CreateCashExpenseInput) => ipcRenderer.invoke('cash-expenses:create', data),
     update: (data: UpdateCashExpenseInput) => ipcRenderer.invoke('cash-expenses:update', data),
-    delete: (id: number) => ipcRenderer.invoke('cash-expenses:delete', id),
-    getStats: (filters?: { startDate?: string; endDate?: string }) =>
-      ipcRenderer.invoke('cash-expenses:getStats', filters)
+    delete: (id: number) => ipcRenderer.invoke('cash-expenses:delete', id)
   },
   cashSettings: {
     get: () => ipcRenderer.invoke('cash-settings:get'),

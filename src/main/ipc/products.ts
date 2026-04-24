@@ -1,6 +1,6 @@
 import { ipcMain } from 'electron'
 import { eq } from 'drizzle-orm'
-import { getDb } from '../database'
+import { getDb, getSqlite } from '../database'
 import { products, productVariations, categories, variationInsumos, insumos } from '../database/schema'
 import { sql } from 'drizzle-orm'
 import type {
@@ -120,31 +120,35 @@ export function registerProductHandlers(): void {
   ipcMain.handle('variations:create', async (_event, data: CreateVariationInput) => {
     try {
       const db = getDb()
-      const result = db
-        .insert(productVariations)
-        .values({
-          productId: data.productId,
-          identifier: data.identifier,
-          costPrice: data.costPrice,
-          salePrice: data.salePrice,
-          stockQuantity: data.stockQuantity,
-          minimumStock: data.minimumStock,
-          laborCost: data.laborCost
-        })
-        .run()
-      const variationId = Number(result.lastInsertRowid)
-      for (const item of data.insumos ?? []) {
-        db.insert(variationInsumos).values({ variationId, insumoId: item.insumoId, quantity: item.quantity }).run()
-      }
-      if (data.stockQuantity > 0 && (data.insumos ?? []).length > 0) {
-        for (const item of data.insumos!) {
-          db.update(insumos)
-            .set({ stockQuantity: sql`MAX(0, stock_quantity - ${item.quantity * data.stockQuantity})` })
-            .where(eq(insumos.id, item.insumoId))
-            .run()
+      const sqlite = getSqlite()
+      const tx = sqlite.transaction(() => {
+        const result = db
+          .insert(productVariations)
+          .values({
+            productId: data.productId,
+            identifier: data.identifier,
+            costPrice: data.costPrice,
+            salePrice: data.salePrice,
+            stockQuantity: data.stockQuantity,
+            minimumStock: data.minimumStock,
+            laborCost: data.laborCost
+          })
+          .run()
+        const variationId = Number(result.lastInsertRowid)
+        for (const item of data.insumos ?? []) {
+          db.insert(variationInsumos).values({ variationId, insumoId: item.insumoId, quantity: item.quantity }).run()
         }
-      }
-      return { id: variationId }
+        if (data.stockQuantity > 0 && (data.insumos ?? []).length > 0) {
+          for (const item of data.insumos!) {
+            db.update(insumos)
+              .set({ stockQuantity: sql`MAX(0, stock_quantity - ${item.quantity * data.stockQuantity})` })
+              .where(eq(insumos.id, item.insumoId))
+              .run()
+          }
+        }
+        return variationId
+      })
+      return { id: tx() }
     } catch (err) {
       console.error('[variations:create]', err)
       return { success: false, error: String(err) }
@@ -154,21 +158,25 @@ export function registerProductHandlers(): void {
   ipcMain.handle('variations:update', async (_event, data: UpdateVariationInput) => {
     try {
       const db = getDb()
-      db.update(productVariations)
-        .set({
-          identifier: data.identifier,
-          costPrice: data.costPrice,
-          salePrice: data.salePrice,
-          stockQuantity: data.stockQuantity,
-          minimumStock: data.minimumStock,
-          laborCost: data.laborCost
-        })
-        .where(eq(productVariations.id, data.id))
-        .run()
-      db.delete(variationInsumos).where(eq(variationInsumos.variationId, data.id)).run()
-      for (const item of data.insumos ?? []) {
-        db.insert(variationInsumos).values({ variationId: data.id, insumoId: item.insumoId, quantity: item.quantity }).run()
-      }
+      const sqlite = getSqlite()
+      const tx = sqlite.transaction(() => {
+        db.update(productVariations)
+          .set({
+            identifier: data.identifier,
+            costPrice: data.costPrice,
+            salePrice: data.salePrice,
+            stockQuantity: data.stockQuantity,
+            minimumStock: data.minimumStock,
+            laborCost: data.laborCost
+          })
+          .where(eq(productVariations.id, data.id))
+          .run()
+        db.delete(variationInsumos).where(eq(variationInsumos.variationId, data.id)).run()
+        for (const item of data.insumos ?? []) {
+          db.insert(variationInsumos).values({ variationId: data.id, insumoId: item.insumoId, quantity: item.quantity }).run()
+        }
+      })
+      tx()
       return { success: true }
     } catch (err) {
       console.error('[variations:update]', err)
@@ -190,23 +198,26 @@ export function registerProductHandlers(): void {
   ipcMain.handle('variations:addStock', async (_event, id: number, quantity: number) => {
     try {
       const db = getDb()
-      const variation = db.select().from(productVariations).where(eq(productVariations.id, id)).get()
-      if (!variation) return { success: false }
+      const sqlite = getSqlite()
+      const tx = sqlite.transaction(() => {
+        const variation = db.select().from(productVariations).where(eq(productVariations.id, id)).get()
+        if (!variation) return false
 
-      db.update(productVariations)
-        .set({ stockQuantity: variation.stockQuantity + quantity })
-        .where(eq(productVariations.id, id))
-        .run()
-
-      const recipe = db.select().from(variationInsumos).where(eq(variationInsumos.variationId, id)).all()
-      for (const item of recipe) {
-        db.update(insumos)
-          .set({ stockQuantity: sql`MAX(0, stock_quantity - ${item.quantity * quantity})` })
-          .where(eq(insumos.id, item.insumoId))
+        db.update(productVariations)
+          .set({ stockQuantity: sql`stock_quantity + ${quantity}` })
+          .where(eq(productVariations.id, id))
           .run()
-      }
 
-      return { success: true }
+        const recipe = db.select().from(variationInsumos).where(eq(variationInsumos.variationId, id)).all()
+        for (const item of recipe) {
+          db.update(insumos)
+            .set({ stockQuantity: sql`MAX(0, stock_quantity - ${item.quantity * quantity})` })
+            .where(eq(insumos.id, item.insumoId))
+            .run()
+        }
+        return true
+      })
+      return { success: tx() }
     } catch (err) {
       console.error('[variations:addStock]', err)
       return { success: false, error: String(err) }

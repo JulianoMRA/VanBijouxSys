@@ -1,6 +1,6 @@
 import { ipcMain } from 'electron'
 import { eq } from 'drizzle-orm'
-import { getDb } from '../database'
+import { getDb, getSqlite } from '../database'
 import { fairs, fairAdditionalCosts } from '../database/schema'
 
 export interface CreateFairInput {
@@ -39,24 +39,28 @@ export function registerFairHandlers(): void {
   ipcMain.handle('fairs:create', async (_event, data: CreateFairInput) => {
     try {
       const db = getDb()
-      const result = db
-        .insert(fairs)
-        .values({
-          name: data.name,
-          location: data.location,
-          organizer: data.organizer ?? null,
-          date: data.date,
-          endDate: data.endDate ?? null,
-          enrollmentCost: data.enrollmentCost
-        })
-        .run()
-      const fairId = Number(result.lastInsertRowid)
-      for (const cost of data.additionalCosts ?? []) {
-        db.insert(fairAdditionalCosts)
-          .values({ fairId, description: cost.description, amount: cost.amount })
+      const sqlite = getSqlite()
+      const tx = sqlite.transaction(() => {
+        const result = db
+          .insert(fairs)
+          .values({
+            name: data.name,
+            location: data.location,
+            organizer: data.organizer ?? null,
+            date: data.date,
+            endDate: data.endDate ?? null,
+            enrollmentCost: data.enrollmentCost
+          })
           .run()
-      }
-      return { id: fairId }
+        const fairId = Number(result.lastInsertRowid)
+        for (const cost of data.additionalCosts ?? []) {
+          db.insert(fairAdditionalCosts)
+            .values({ fairId, description: cost.description, amount: cost.amount })
+            .run()
+        }
+        return fairId
+      })
+      return { id: tx() }
     } catch (err) {
       console.error('[fairs:create]', err)
       return { success: false, error: String(err) }
@@ -66,23 +70,27 @@ export function registerFairHandlers(): void {
   ipcMain.handle('fairs:update', async (_event, data: UpdateFairInput) => {
     try {
       const db = getDb()
-      db.update(fairs)
-        .set({
-          name: data.name,
-          location: data.location,
-          organizer: data.organizer ?? null,
-          date: data.date,
-          endDate: data.endDate ?? null,
-          enrollmentCost: data.enrollmentCost
-        })
-        .where(eq(fairs.id, data.id))
-        .run()
-      db.delete(fairAdditionalCosts).where(eq(fairAdditionalCosts.fairId, data.id)).run()
-      for (const cost of data.additionalCosts ?? []) {
-        db.insert(fairAdditionalCosts)
-          .values({ fairId: data.id, description: cost.description, amount: cost.amount })
+      const sqlite = getSqlite()
+      const tx = sqlite.transaction(() => {
+        db.update(fairs)
+          .set({
+            name: data.name,
+            location: data.location,
+            organizer: data.organizer ?? null,
+            date: data.date,
+            endDate: data.endDate ?? null,
+            enrollmentCost: data.enrollmentCost
+          })
+          .where(eq(fairs.id, data.id))
           .run()
-      }
+        db.delete(fairAdditionalCosts).where(eq(fairAdditionalCosts.fairId, data.id)).run()
+        for (const cost of data.additionalCosts ?? []) {
+          db.insert(fairAdditionalCosts)
+            .values({ fairId: data.id, description: cost.description, amount: cost.amount })
+            .run()
+        }
+      })
+      tx()
       return { success: true }
     } catch (err) {
       console.error('[fairs:update]', err)

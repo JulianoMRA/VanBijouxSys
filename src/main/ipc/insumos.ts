@@ -1,6 +1,6 @@
 import { ipcMain, dialog } from 'electron'
 import { writeFileSync } from 'fs'
-import { eq } from 'drizzle-orm'
+import { eq, sql } from 'drizzle-orm'
 import { getDb } from '../database'
 import { insumos } from '../database/schema'
 import type { CreateInsumoInput, UpdateInsumoInput } from '../../renderer/src/types'
@@ -42,14 +42,18 @@ export function registerInsumoHandlers(): void {
   })
 
   ipcMain.handle('insumos:addStock', async (_event, id: number, quantity: number) => {
-    const db = getDb()
-    const insumo = db.select().from(insumos).where(eq(insumos.id, id)).get()
-    if (!insumo) return { success: false }
-    db.update(insumos)
-      .set({ stockQuantity: insumo.stockQuantity + quantity })
-      .where(eq(insumos.id, id))
-      .run()
-    return { success: true }
+    try {
+      const db = getDb()
+      const result = db
+        .update(insumos)
+        .set({ stockQuantity: sql`stock_quantity + ${quantity}` })
+        .where(eq(insumos.id, id))
+        .run()
+      return { success: result.changes > 0 }
+    } catch (err) {
+      console.error('[insumos:addStock]', err)
+      return { success: false, error: String(err) }
+    }
   })
 
   ipcMain.handle('insumos:delete', async (_event, id: number) => {

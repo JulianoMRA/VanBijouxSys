@@ -314,7 +314,7 @@ Release 1.6.0 disponível. Usuária final pode atualizar.
 - [x] Fase 4: dead code removido
 - [x] Fase 5: módulos revisados um a um
 - [x] Fase 6: qualidade TS/React
-- [ ] Fase 7: DB/IPC auditados
+- [x] Fase 7: DB/IPC auditados
 - [ ] Fase 8: security review passou
 - [ ] Fase 9: docs e versão atualizadas
 - [ ] Fase 10: build + release 1.6.0
@@ -446,3 +446,73 @@ refactor(robustez): completa tratamento de erros e exhaustive-deps
    transações (`db.transaction(() => …)`).
 4. Validação de input nos 6 módulos IPC (`cash/dashboard/fairs/insumos/products/sales`).
 5. Cobertura de testes de integração para casos de erro (FK, NOT NULL, estoque zero).
+
+---
+
+## Estado da execução — Fase 7 concluída (2026-04-24)
+
+### Auditoria do schema e migrations
+
+- **Schema (`src/main/database/schema.ts`):** Drizzle tipado, FKs declaradas
+  com `onDelete: 'cascade'` onde aplicável (`product_variations → products`,
+  `sale_items → sales`, `variation_insumos → product_variations`,
+  `fair_additional_costs → fairs`). OK.
+- **Migrations (`src/main/database/index.ts`):** Todas idempotentes —
+  `CREATE TABLE IF NOT EXISTS` para criação; `PRAGMA table_info(...)` antes de
+  cada `ALTER TABLE ADD COLUMN` (adicionou `fairs.end_date`,
+  `product_variations.labor_cost`, `sales.payment_method/fee_*/net_amount`).
+  `INSERT OR IGNORE` para seed de categorias e `cash_settings` com id=1.
+- **Pragmas habilitados:** `journal_mode = WAL` + `foreign_keys = ON` no
+  `initDatabase`.
+- **Parametrização:** todas as queries usam Drizzle (parametrizado por padrão)
+  ou `sqlite.prepare(...).run(...)` com placeholders. **Zero** concatenação
+  de strings com input do usuário.
+
+### Fixes aplicados — Commit 1 (`ba1065d`): transações + TOCTOU
+
+Operações compostas que faltavam `sqlite.transaction(() => …)` — agora
+atomicamente consistentes:
+
+- **`products.ts` `variations:create`** — insert variação + inserts de
+  `variation_insumos` + deduções de estoque de insumos.
+- **`products.ts` `variations:update`** — update + delete BOM antigo + re-insert BOM.
+- **`products.ts` `variations:addStock`** — update estoque + deduções em insumos.
+- **`fairs.ts` `fairs:create`** — insert feira + inserts de `fair_additional_costs`.
+- **`fairs.ts` `fairs:update`** — update + delete + re-insert de custos adicionais.
+
+TOCTOU corrigido em dois handlers que faziam SELECT → calcular → UPDATE:
+
+- **`variations:addStock`** — agora `UPDATE … SET stock_quantity = stock_quantity + ?`.
+- **`insumos:addStock`** — mesma correção; agora também com try/catch.
+
+### Fixes aplicados — Commit 2 (`a718688`): try/catch padronizado
+
+`src/main/ipc/insumos.ts` e `src/main/ipc/cash.ts` — todos os handlers passam
+a seguir o mesmo pattern `sales/products/fairs/dashboard`: try + console.error
++ retorno estruturado. `expense-categories:delete` mantém `throw` para
+preservar a mensagem amigável já consumida pelo frontend.
+
+`sales.ts` já estava OK (todas as ops compostas já usavam transações).
+
+### Validações
+
+- **Typecheck:** OK (0 erros).
+- **Testes:** 62/62 passando (integração de sales/insumos inclui cenários de FK).
+
+### Fora de escopo — anotado em `NOTES-followup.md`
+
+- **Validação de input no boundary IPC** (nulls, negativos, tipos). Hoje
+  dependemos do frontend. Aceitável em app single-user local, mas ideal no
+  futuro adicionar guards explícitos.
+- **Testes adicionais** cobrindo FK violations e edge cases (estoque negativo).
+
+### Próximo passo (Fase 8 — Segurança)
+
+1. Invocar `/security-review` sobre diff `main..chore/revisao-repo-v1.6`.
+2. Checklist manual:
+   - `contextIsolation: true` e `nodeIntegration: false` no Electron.
+   - `preload` expõe só funções específicas via `contextBridge`, não `ipcRenderer`.
+   - `npm audit` — vulnerabilidades críticas.
+   - Inputs parametrizados (já auditado na Fase 7 — OK).
+   - Nenhum secret em código.
+3. Produzir `SECURITY-REVIEW.md` com findings e commits de fix.

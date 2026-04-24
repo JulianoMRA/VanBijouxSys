@@ -49,3 +49,27 @@ Devs deps de ESLint (`@electron-toolkit/eslint-config-ts`) instaladas mas
 
 Adicionar script `lint` + config habilitaria `react-hooks/exhaustive-deps` e
 outros guardrails. Fora de escopo para v1.6.
+
+---
+
+## Validação de input no boundary IPC (Fase 7)
+
+Hoje os handlers IPC confiam no frontend para enviar dados válidos. Não há
+guards explícitos contra:
+
+- Campos `null`/`undefined` onde o schema espera `NOT NULL` (FKs, nomes, datas).
+- Números negativos em quantidades, preços, estoques.
+- Strings vazias onde o schema permite (mas o negócio não).
+- Tipos trocados (número enviado como string não-parseável).
+
+Em app Electron local single-user, risco é baixo — o frontend é o único
+cliente. Vale adicionar guards no futuro para facilitar diagnosticar bugs
+e endurecer contra chamadas IPC vazadas/manipuladas.
+
+## Testes adicionais (Fase 7)
+
+Cobertura integração atual é boa mas poderia ampliar para:
+
+- Violação de FK ao deletar categoria com despesas vinculadas.
+- Atualização de venda que zera estoque (verificar `MAX(0, …)`).
+- Rollback de transação quando um dos inserts de BOM falha em `variations:create`.

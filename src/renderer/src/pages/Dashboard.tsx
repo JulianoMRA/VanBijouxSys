@@ -295,7 +295,7 @@ export default function Dashboard(): JSX.Element {
 
   useEffect(() => {
     if (period === 'custom' && customFrom && customTo) loadStats('custom', customFrom, customTo)
-  }, [customFrom, customTo])
+  }, [period, customFrom, customTo])
 
   const empty = !stats || stats.overview.totalSales === 0
   const prev = stats?.previousOverview

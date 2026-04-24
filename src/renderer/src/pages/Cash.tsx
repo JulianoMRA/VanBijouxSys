@@ -240,10 +240,16 @@ export default function Cash(): JSX.Element {
   async function handleSaveOpeningBalance(): Promise<void> {
     const value = parseFloat(balanceInput.replace(',', '.'))
     if (isNaN(value) || value < 0) return
-    await window.api.cashSettings.setOpeningBalance(value)
-    setOpeningBalance(value)
-    setShowOpeningBalance(false)
-    showToast('Saldo de abertura atualizado.')
+    try {
+      await window.api.cashSettings.setOpeningBalance(value)
+      setOpeningBalance(value)
+      setShowOpeningBalance(false)
+      showToast('Saldo de abertura atualizado.')
+    } catch (err) {
+      console.error(err)
+      setErrorMessage('Erro ao atualizar saldo de abertura.')
+      setShowOpeningBalance(false)
+    }
   }
 
   return (

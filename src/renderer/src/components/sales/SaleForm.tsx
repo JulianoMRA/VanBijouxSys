@@ -58,25 +58,30 @@ export default function SaleForm({ sale, onSave, onClose }: SaleFormProps): JSX.
 
   useEffect(() => {
     async function load(): Promise<void> {
-      const [prods, frs] = await Promise.all([
-        window.api.products.getAll(),
-        window.api.fairs.getAll()
-      ])
-      setProducts(prods)
-      setFairs(frs)
+      try {
+        const [prods, frs] = await Promise.all([
+          window.api.products.getAll(),
+          window.api.fairs.getAll()
+        ])
+        setProducts(prods)
+        setFairs(frs)
 
-      if (sale) {
-        const itemRows: ItemRow[] = sale.items.map((item) => {
-          const product = prods.find((p) => p.variations.some((v) => v.id === item.variationId))
-          return {
-            key: item.id,
-            productId: product?.id ?? '',
-            variationId: item.variationId as number | '',
-            quantity: String(item.quantity),
-            unitPrice: String(item.unitPrice)
-          }
-        })
-        setItems(itemRows)
+        if (sale) {
+          const itemRows: ItemRow[] = sale.items.map((item) => {
+            const product = prods.find((p) => p.variations.some((v) => v.id === item.variationId))
+            return {
+              key: item.id,
+              productId: product?.id ?? '',
+              variationId: item.variationId as number | '',
+              quantity: String(item.quantity),
+              unitPrice: String(item.unitPrice)
+            }
+          })
+          setItems(itemRows)
+        }
+      } catch (err) {
+        console.error(err)
+        setError('Erro ao carregar dados. Feche e tente novamente.')
       }
     }
     load()

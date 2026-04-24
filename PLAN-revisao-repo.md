@@ -313,7 +313,7 @@ Release 1.6.0 disponível. Usuária final pode atualizar.
 - [x] Fase 3: CSS consolidado (sem resíduos blush-*/cream-*)
 - [x] Fase 4: dead code removido
 - [x] Fase 5: módulos revisados um a um
-- [ ] Fase 6: qualidade TS/React
+- [x] Fase 6: qualidade TS/React
 - [ ] Fase 7: DB/IPC auditados
 - [ ] Fase 8: security review passou
 - [ ] Fase 9: docs e versão atualizadas
@@ -385,3 +385,64 @@ Quando retomar:
 - `src/renderer/src/styles/atelier.css` — único CSS do projeto, tokens + classes + diretivas `@tailwind`.
 - `tailwind.config.js` — 8 linhas, só `content` + `plugins`.
 - `src/renderer/src/main.tsx` — importa apenas `./styles/atelier.css`.
+
+---
+
+## Estado da execução — Fase 6 concluída (2026-04-24)
+
+### O que foi feito antes desta sessão (commit `cc5bf7b`)
+
+- Script `typecheck` adicionado ao `package.json`.
+- `"types": ["vite/client"]` em `tsconfig.web.json` — resolve o erro
+  `import.meta.env` em `ErrorBoundary.tsx`.
+- `src/renderer/src/types` incluído em `tsconfig.node.json` — resolve TS6307 nos handlers IPC.
+- Removidos `any` nos callbacks de Legend do Dashboard (Recharts).
+
+### Varredura nesta sessão
+
+1. **`: any` / `as any`** — zero ocorrências. ✅
+2. **`TODO`/`FIXME`/`HACK`/`XXX`** — zero ocorrências. ✅
+3. **`console.*`** — 27 ocorrências triadas. **Todas** são `console.error` em
+   blocos catch (6 no renderer, 20 em handlers IPC do main, 1 em ErrorBoundary,
+   1 no preload). **Mantidas** — valor operacional em produção Electron.
+4. **`useEffect` com deps suspeitas:**
+   - `Dashboard.tsx:296` — deps `[customFrom, customTo]` não incluía `period`.
+     Incluído `period` para explicitar a intenção.
+   - `SaleForm.tsx:59` — usa prop `sale` mas deps é `[]`. Funciona porque
+     modal remonta a cada abertura. Anotado em `NOTES-followup.md` (não mexer
+     sem revisar padrão de montagem).
+5. **Handlers IPC sem try/catch no frontend:**
+   - `SaleForm.tsx` `load()` no useEffect — SEM try/catch. Adicionado.
+   - `VariationForm.tsx` `load()` no useEffect — SEM try/catch. Adicionado.
+   - `Cash.tsx` `handleSaveOpeningBalance` — SEM try/catch. Adicionado.
+   Completa o trabalho iniciado na Fase 5 (Dashboard/Cash.loadAll/PriceCalculator).
+6. **Componentes > 300 linhas (8 arquivos: Dashboard 612, Cash 596, SaleForm 491,
+   VariationForm 453, Products 447, PriceCalculator 447, Stock 387, FairForm 306).**
+   **Não refatorados** — só mapeados em `NOTES-followup.md` com sugestões de split.
+
+### Validações
+
+- **Typecheck:** OK (0 erros).
+- **Testes:** 62/62 passando.
+
+### Commit sugerido
+
+```
+refactor(robustez): completa tratamento de erros e exhaustive-deps
+
+- SaleForm.load, VariationForm.load, Cash.handleSaveOpeningBalance: try/catch
+  com feedback via error state.
+- Dashboard custom-period effect: inclui `period` nas deps.
+- Cria NOTES-followup.md com componentes >300 linhas (candidatos a split) e
+  demais oportunidades fora do escopo v1.6.
+```
+
+### Próximo passo (Fase 7 — Banco, migrations, IPC)
+
+1. Ler `src/main/database/schema.ts` e verificar migrations idempotentes.
+2. Confirmar que todas as queries usam Drizzle/better-sqlite3 prepared (sem
+   concatenação de strings).
+3. Operações compostas (venda → baixa estoque, exclusão → reversão) em
+   transações (`db.transaction(() => …)`).
+4. Validação de input nos 6 módulos IPC (`cash/dashboard/fairs/insumos/products/sales`).
+5. Cobertura de testes de integração para casos de erro (FK, NOT NULL, estoque zero).

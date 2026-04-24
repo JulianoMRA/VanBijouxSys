@@ -60,7 +60,12 @@ export default function VariationForm({
 
   useEffect(() => {
     async function load(): Promise<void> {
-      setAllInsumos(await window.api.insumos.getAll())
+      try {
+        setAllInsumos(await window.api.insumos.getAll())
+      } catch (err) {
+        console.error(err)
+        setError('Erro ao carregar insumos.')
+      }
     }
     load()
   }, [])

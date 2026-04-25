@@ -78,16 +78,15 @@ const api = {
   }
 }
 
-if (process.contextIsolated) {
-  try {
-    contextBridge.exposeInMainWorld('electron', electronAPI)
-    contextBridge.exposeInMainWorld('api', api)
-  } catch (error) {
-    console.error(error)
-  }
-} else {
-  // @ts-expect-error — window.electron não está no tipo global; acesso apenas fora do contextBridge (dev/test)
-  window.electron = electronAPI
-  // @ts-expect-error — window.api não está no tipo global; acesso apenas fora do contextBridge (dev/test)
-  window.api = api
+if (!process.contextIsolated) {
+  throw new Error(
+    'contextIsolation deve estar habilitado. Verifique BrowserWindow.webPreferences em main/index.ts.'
+  )
+}
+
+try {
+  contextBridge.exposeInMainWorld('electron', electronAPI)
+  contextBridge.exposeInMainWorld('api', api)
+} catch (error) {
+  console.error(error)
 }

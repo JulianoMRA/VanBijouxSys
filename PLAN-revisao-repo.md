@@ -317,7 +317,7 @@ Release 1.6.0 disponível. Usuária final pode atualizar.
 - [x] Fase 7: DB/IPC auditados
 - [x] Fase 8: security review passou
 - [x] Fase 9: docs e versão atualizadas
-- [ ] Fase 10: build + release 1.6.0
+- [x] Fase 10: build + release 1.6.0
 
 ---
 
@@ -620,3 +620,33 @@ preservar a mensagem amigável já consumida pelo frontend.
 5. (Opcional) Criar release no GitHub com `.exe` anexado.
 
 **Observação:** a tag e o push final dependem de confirmação explícita.
+
+---
+
+## Estado da execução — Fase 10 concluída (2026-04-25)
+
+### Build
+
+- `npm run build:win` — instalador gerado: `dist/Van Bijoux Sys Setup 1.6.0.exe`.
+- Electron 41.3.0, `better-sqlite3` recompilado para x64, NSIS one-click.
+
+### Tag e push
+
+- `git tag v1.6.0` criada localmente e enviada para `origin`.
+
+### Observações pós-build
+
+- Avisos não-bloqueantes do electron-builder:
+  - `author` ausente em `package.json` (cosmético — anotado em `NOTES-followup.md`).
+  - `@electron/rebuild` declarado como devDep duplicado (electron-builder já usa).
+  - Referências duplicadas de dependências transitivas (recharts/react) — normal.
+- Teste de instalação manual (banco preservado, 7 seções) deve ser feito pela usuária
+  antes de distribuir o instalador.
+- Release no GitHub com `.exe` anexado: **pendente** — criar manualmente via
+  `gh release create v1.6.0 "dist/Van Bijoux Sys Setup 1.6.0.exe"` ou pela
+  interface web, se desejado.
+
+### Plano de revisão v1.6 — CONCLUÍDO
+
+Todas as 10 fases executadas. Branch `chore/revisao-repo-v1.6` pronta para
+merge em `main` via PR.

@@ -316,7 +316,7 @@ Release 1.6.0 disponível. Usuária final pode atualizar.
 - [x] Fase 6: qualidade TS/React
 - [x] Fase 7: DB/IPC auditados
 - [x] Fase 8: security review passou
-- [ ] Fase 9: docs e versão atualizadas
+- [x] Fase 9: docs e versão atualizadas
 - [ ] Fase 10: build + release 1.6.0
 
 ---
@@ -585,3 +585,38 @@ preservar a mensagem amigável já consumida pelo frontend.
 6. Commit final: `chore: bump versão 1.6.0 e atualiza docs`.
 7. Criar tag `v1.6.0` (apenas após confirmação do usuário; PLAN diz "não
    executar ações irreversíveis sem confirmação").
+
+---
+
+## Estado da execução — Fase 9 concluída (2026-04-25)
+
+### Commit `986eb41`
+
+- **`package.json`** — `1.5.1` → `1.6.0`.
+- **`Sidebar.tsx`** — badge `v1.5.1` → `v1.6.0`.
+- **`README.md`** — nova seção "Design System" descrevendo tema Atelier
+  (paleta de tokens, classes de componente, relação Tailwind × CSS vars);
+  script `typecheck` adicionado à tabela de Scripts.
+- **`CHANGELOG.md`** — entrada `[1.6.0] - 2026-04-25` com resumo do
+  refactor visual + revisão v1.6.
+
+### Validações
+
+- **Typecheck:** OK (0 erros) — note que `package.json` já mostra `1.6.0`
+  no output do script.
+- **Testes:** 62/62 passando.
+
+### Próximo passo (Fase 10 — Build e distribuição)
+
+1. `npm run build:win` — gera instalador `.exe` em `dist/`.
+2. Testar instalação por cima da versão atual — banco preservado?
+3. Validar funcionamento completo (todas as 7 seções).
+4. Push + tag:
+   ```
+   git push origin chore/revisao-repo-v1.6
+   git tag v1.6.0
+   git push origin v1.6.0
+   ```
+5. (Opcional) Criar release no GitHub com `.exe` anexado.
+
+**Observação:** a tag e o push final dependem de confirmação explícita.

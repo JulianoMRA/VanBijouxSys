@@ -315,7 +315,7 @@ Release 1.6.0 disponível. Usuária final pode atualizar.
 - [x] Fase 5: módulos revisados um a um
 - [x] Fase 6: qualidade TS/React
 - [x] Fase 7: DB/IPC auditados
-- [ ] Fase 8: security review passou
+- [x] Fase 8: security review passou
 - [ ] Fase 9: docs e versão atualizadas
 - [ ] Fase 10: build + release 1.6.0
 
@@ -516,3 +516,72 @@ preservar a mensagem amigável já consumida pelo frontend.
    - Inputs parametrizados (já auditado na Fase 7 — OK).
    - Nenhum secret em código.
 3. Produzir `SECURITY-REVIEW.md` com findings e commits de fix.
+
+---
+
+## Estado da execução — Fase 8 concluída (2026-04-25)
+
+### O que foi feito antes desta sessão
+
+- **Commit `2175d59`** — `npm audit fix` semver-safe: resolveu 7 de 12
+  vulnerabilidades (lodash, picomatch, postcss, vite e transitivas). 5
+  restantes em `drizzle-kit`/`drizzle-orm` exigem major breaking.
+- Duas mudanças ficaram **uncommitted** (sessão acabou os tokens) e foram
+  recuperadas nesta sessão.
+
+### Fixes aplicados — Commit `ae54351`: hardening preload + CSP
+
+- **`src/preload/index.ts`** — substituído o fallback dev (`else { window.electron = …; window.api = … }`)
+  por `throw new Error('contextIsolation deve estar habilitado')`. Com
+  `sandbox: true` em `main/index.ts:17`, contextIsolation é sempre
+  obrigatório; o código agora reflete o invariante.
+- **`src/renderer/index.html`** — adicionada meta CSP:
+  - `default-src 'self'`, `script-src 'self'` (sem `unsafe-inline/eval`),
+  - `style-src 'self' 'unsafe-inline' https://fonts.googleapis.com`
+    (Tailwind/inline styles + Google Fonts),
+  - `font-src 'self' https://fonts.gstatic.com`,
+  - `img-src 'self' data:`, `object-src 'none'`, `base-uri 'self'`,
+  - `frame-ancestors 'none'` (anti-clickjacking),
+  - `connect-src 'self' ws://localhost:* http://localhost:*` (HMR Vite dev).
+
+### Documentação — Commit `cd2b2d2`
+
+- **`SECURITY-REVIEW.md`** — auditoria completa da Fase 8:
+  - Checklist Electron (sandbox, contextIsolation, preload, setWindowOpenHandler).
+  - Tabela detalhada da CSP com justificativa por diretiva.
+  - DB & IPC: queries parametrizadas, transações, TOCTOU, FKs, pragmas
+    (já validado na Fase 7).
+  - `grep` confirmando zero secrets (`API_KEY|SECRET|PASSWORD|PRIVATE_KEY|BEARER`).
+  - 5 vulns drizzle restantes documentadas como **debt v1.7** com
+    justificativa (esbuild GHSA é dev-only; drizzle-kit é devDep; drizzle-orm
+    seria exploitable só com raw SQL — auditado e não usado).
+
+### Validações
+
+- **Typecheck:** OK (0 erros).
+- **Testes:** 62/62 passando.
+- **Build Vite:** limpo.
+- **`npm audit`:** 5 (4 moderate, 1 high) — todas dev-only ou breaking-only.
+
+### Decisões registradas
+
+- **NÃO** rodar `npm audit fix --force` para drizzle — fora de escopo da
+  revisão v1.6 (breaking change exige re-validação completa). Adiado para
+  uma fase dedicada na v1.7.
+- **NÃO** invocar o skill `/security-review` (review com IA externa) — a
+  superfície é pequena e a auditoria manual cobriu o checklist completo.
+
+### Próximo passo (Fase 9 — Documentação e metadados)
+
+1. Atualizar `package.json` versão: 1.5.1 → **1.6.0**.
+2. Atualizar `src/renderer/src/components/Sidebar.tsx` badge de versão.
+3. Atualizar `README.md`:
+   - Seção "Design System" — descrever tema Atelier.
+   - Versão atual.
+4. Atualizar `CHANGELOG.md` com entrada `## [1.6.0] — 2026-04-25` listando
+   refactor visual (fases 1-9 do refactor anterior) + revisão v1.6 (fases
+   1-8 deste plano).
+5. Atualizar memory `project_vanbijouxsys.md`: nova versão + estado pós-Fase 8.
+6. Commit final: `chore: bump versão 1.6.0 e atualiza docs`.
+7. Criar tag `v1.6.0` (apenas após confirmação do usuário; PLAN diz "não
+   executar ações irreversíveis sem confirmação").

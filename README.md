@@ -64,7 +64,35 @@ O `postinstall` recompila o `better-sqlite3` para o Electron automaticamente. O 
 | `npm run build:win` | Gera instalador `.exe` (NSIS) em `dist/` |
 | `npm test` | Roda a suíte Vitest uma vez |
 | `npm run test:watch` | Vitest em modo watch |
+| `npm run typecheck` | Checa tipos TS (main + renderer) sem emitir arquivos |
 | `npm run postinstall` | Recompila `better-sqlite3` para o Electron (automático) |
+
+## Design System
+
+O app usa um tema próprio chamado **Atelier**, definido inteiramente em variáveis CSS em `src/renderer/src/styles/atelier.css`. O arquivo é a única folha de estilos do projeto — importa as diretivas `@tailwind base/components/utilities` e define todos os tokens de cor, tipografia e componentes sobre elas.
+
+**Paleta principal** (variáveis `:root`):
+
+| Token | Papel |
+|-------|-------|
+| `--bg` | Fundo da janela (off-white quente) |
+| `--surface` | Cards e painéis |
+| `--accent` | Cor de destaque (blush rosado) |
+| `--accent-2` | Secundária (vinho/mauve) |
+| `--fg` | Texto principal |
+| `--fg-dim` | Texto secundário/placeholder |
+| `--hairline` | Bordas e divisores |
+
+**Classes de componente** definidas no arquivo (sem Tailwind custom):
+
+- `.btn .btn-primary` / `.btn-ghost` / `.btn-danger` / `.btn-ghost-danger` / `.btn-ghost-good`
+- `.page-head`, `.page-kicker`, `.page-title`, `.page-subtitle`
+- `.table`, `.num` (alinhamento de colunas numéricas)
+- `.empty-state`, `.alert-bar`
+- `.modal-overlay`, `.modal`
+- `.cash-strip`
+
+O `tailwind.config.js` tem apenas 8 linhas (`content` + `plugins`): nenhuma cor ou fonte custom — todos os tokens vivem no `:root` do `atelier.css`. Classes de layout (`flex`, `gap-*`, `p-*`, `grid-cols-*`) ainda vêm do Tailwind.
 
 ## Banco de dados
 

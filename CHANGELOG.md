@@ -1,5 +1,25 @@
 # Changelog
 
+## [1.6.0] - 2026-04-25
+
+### Refactor visual — tema Atelier
+
+- Novo design system **Atelier**: paleta de tokens CSS (blush, vinho, off-white), tipografia Cormorant Garamond + Inter, classes de componente (`.btn`, `.page-head`, `.table`, `.modal`, `.cash-strip`, `.empty-state`, `.alert-bar`).
+- CSS consolidado: `globals.css` fundido em `atelier.css`; `tailwind.config.js` enxugado de 41 → 8 linhas (tokens de cor/fonte movidos para `:root`).
+- Bug silencioso corrigido: 26 ocorrências de classes `blush-*`/`cream-*` em 5 componentes substituídas por Tailwind arbitrary values apontando para CSS vars (`bg-[var(--accent)]` etc.).
+- Botões padronizados em todos os formulários para `btn btn-primary` / `btn btn-ghost`.
+- Sidebar, Dashboard, Produtos, Estoque, Vendas, Feiras, Caixa e Precificação refatorados para usar as classes do tema.
+
+### Revisão de repositório v1.6
+
+- **Limpeza**: arquivos `HANDOFF-*.md` e resíduos pós-refactor removidos.
+- **Dead code**: exports não usados em componentes, utils e types removidos; imports órfãos eliminados.
+- **Qualidade TS/React**: script `typecheck` adicionado ao `package.json`; `"types": ["vite/client"]` em `tsconfig.web.json` (resolve `import.meta.env`); `src/renderer/src/types` incluído em `tsconfig.node.json`; `useEffect` com deps corrigidos; `try/catch` adicionado em `SaleForm`, `VariationForm` e `Cash`.
+- **Banco e IPC**: operações compostas (`variations:create/update/addStock`, `fairs:create/update`) envolvidas em `sqlite.transaction()`; TOCTOU corrigido em contadores de estoque (`UPDATE … SET stock = stock + ?`); `try/catch` padronizado em `insumos.ts` e `cash.ts`.
+- **Segurança**: `npm audit fix` resolve 7 de 12 vulnerabilidades; `preload` lança erro se `contextIsolation=false` (em vez de fallback dev); Content Security Policy adicionada ao HTML do renderer; `SECURITY-REVIEW.md` documenta auditoria completa.
+
+---
+
 ## [0.2.1] - 2026-03-22
 
 ### Adicionado

@@ -171,18 +171,18 @@ export function registerDashboardHandlers(): void {
       if (fromDate && !ISO_DATE.test(fromDate)) throw new Error('Invalid fromDate format')
       if (toDate && !ISO_DATE.test(toDate)) throw new Error('Invalid toDate format')
 
-      // Cláusulas e parâmetros reutilizáveis
+      // Cláusulas com date() para normalizar timestamps completos legados.
       const sSoldAtClause = fromDate
-        ? ` AND s.sold_at >= ?${toDate ? ' AND s.sold_at <= ?' : ''}`
+        ? ` AND date(s.sold_at) >= ?${toDate ? ' AND date(s.sold_at) <= ?' : ''}`
         : ''
       const soldAtClause = fromDate
-        ? ` AND sold_at >= ?${toDate ? ' AND sold_at <= ?' : ''}`
+        ? ` AND date(sold_at) >= ?${toDate ? ' AND date(sold_at) <= ?' : ''}`
         : ''
       const expenseDateClause = fromDate
-        ? ` AND expense_date >= ?${toDate ? ' AND expense_date <= ?' : ''}`
+        ? ` AND date(expense_date) >= ?${toDate ? ' AND date(expense_date) <= ?' : ''}`
         : ''
       const fDateClause = fromDate
-        ? ` AND f.date >= ?${toDate ? ' AND f.date <= ?' : ''}`
+        ? ` AND date(f.date) >= ?${toDate ? ' AND date(f.date) <= ?' : ''}`
         : ''
       const prevSoldAtClause =
         prevFromDate && prevToDate
@@ -254,27 +254,29 @@ export function registerDashboardHandlers(): void {
         )
         .all(...dateParams) as DashboardStats['salesByChannel']
 
+      // LEFT JOIN + COALESCE garante que itens sem categoria (variação removida etc.)
+      // ainda contam para o total, mantendo SUM(salesByCategory.revenue) === overview.totalRevenue.
       const salesByCategory = sqlite
         .prepare(
           `SELECT
-            c.name                                         AS category,
+            COALESCE(c.name, 'Sem categoria')              AS category,
             COALESCE(SUM(si.quantity * si.unit_price), 0) AS revenue,
             COALESCE(SUM(si.quantity), 0)                  AS quantity,
             COUNT(DISTINCT s.id)                           AS count
            FROM sale_items si
            JOIN sales s ON s.id = si.sale_id
-           JOIN product_variations pv ON pv.id = si.variation_id
-           JOIN products p ON p.id = pv.product_id
-           JOIN categories c ON c.id = p.category_id
+           LEFT JOIN product_variations pv ON pv.id = si.variation_id
+           LEFT JOIN products p ON p.id = pv.product_id
+           LEFT JOIN categories c ON c.id = p.category_id
            WHERE 1=1${sSoldAtClause}
-           GROUP BY c.id
+           GROUP BY COALESCE(c.name, 'Sem categoria')
            ORDER BY revenue DESC`
         )
         .all(...dateParams) as DashboardStats['salesByCategory']
 
-      // fairDateClause usa s.sold_at dentro do LEFT JOIN
+      // fairDateClause usa s.sold_at dentro do LEFT JOIN; date() para consistência.
       const fairJoinClause = fromDate
-        ? ` AND s.sold_at >= ?${toDate ? ' AND s.sold_at <= ?' : ''}`
+        ? ` AND date(s.sold_at) >= ?${toDate ? ' AND date(s.sold_at) <= ?' : ''}`
         : ''
 
       const salesByFairRaw = sqlite

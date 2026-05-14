@@ -125,11 +125,11 @@ export function registerCashHandlers(): void {
     const params: string[] = []
 
     if (filters?.startDate) {
-      expenseQuery += ' AND expense_date >= ?'
+      expenseQuery += ' AND date(expense_date) >= ?'
       params.push(filters.startDate)
     }
     if (filters?.endDate) {
-      expenseQuery += ' AND expense_date <= ?'
+      expenseQuery += ' AND date(expense_date) <= ?'
       params.push(filters.endDate)
     }
 
@@ -139,11 +139,11 @@ export function registerCashHandlers(): void {
     const incomeParams: string[] = []
 
     if (filters?.startDate) {
-      incomeQuery += ' AND sold_at >= ?'
+      incomeQuery += ' AND date(sold_at) >= ?'
       incomeParams.push(filters.startDate)
     }
     if (filters?.endDate) {
-      incomeQuery += ' AND sold_at <= ?'
+      incomeQuery += ' AND date(sold_at) <= ?'
       incomeParams.push(filters.endDate)
     }
 

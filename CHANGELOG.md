@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.6.1] - 2026-05-14
+
+### Corrigido
+
+- **Dashboard**: insight "categoria mais vendida" agora identifica corretamente a categoria com mais unidades vendidas (antes usava a de maior faturamento por erro de ordenação).
+- **Dashboard**: gráfico único de categoria dividido em dois — "Vendas por categoria" (por unidades) e "Faturamento por categoria" (por receita), eliminando a confusão visual entre as duas métricas.
+
+---
+
 ## [1.6.0] - 2026-05-14
 
 ### Adicionado

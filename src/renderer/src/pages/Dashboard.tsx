@@ -115,7 +115,7 @@ function InsightsPanel({ stats }: { stats: DashboardStats }): JSX.Element {
   }
 
   if (stats.salesByCategory.length > 0) {
-    const best = stats.salesByCategory[0]
+    const best = stats.salesByCategory.reduce((a, b) => (a.quantity > b.quantity ? a : b))
     insights.push({
       text: `${best.category} é a categoria mais vendida (${best.quantity} unidade${best.quantity !== 1 ? 's' : ''})`,
       colorClass: 'text-purple-600',
@@ -651,7 +651,55 @@ export default function Dashboard(): JSX.Element {
           </div>
 
           {/* Categoria + Canal */}
-          <div className="grid grid-cols-2 gap-5 mb-5">
+          <div className="grid grid-cols-3 gap-5 mb-5">
+            <div className="card">
+              <p className="text-sm font-semibold text-gray-700 mb-4">Vendas por categoria</p>
+              {stats!.salesByCategory.length === 0 ? (
+                <p className="text-sm text-gray-400 text-center py-8">Sem dados.</p>
+              ) : (
+                <ResponsiveContainer width="100%" height={220}>
+                  <PieChart>
+                    <Pie
+                      data={stats!.salesByCategory}
+                      dataKey="quantity"
+                      nameKey="category"
+                      cx="50%"
+                      cy="45%"
+                      outerRadius={75}
+                      innerRadius={40}
+                      paddingAngle={3}
+                    >
+                      {stats!.salesByCategory.map((entry, idx) => (
+                        <Cell
+                          key={entry.category}
+                          fill={
+                            CATEGORY_COLORS[entry.category] ??
+                            CATEGORY_FALLBACK_COLORS[idx % CATEGORY_FALLBACK_COLORS.length]
+                          }
+                        />
+                      ))}
+                    </Pie>
+                    <Tooltip
+                      formatter={(value: number) => [`${value} un.`, 'Unidades']}
+                      contentStyle={{
+                        borderRadius: '12px',
+                        border: '1px solid #edddd2',
+                        fontSize: 12
+                      }}
+                    />
+                    <Legend
+                      iconType="circle"
+                      iconSize={8}
+                      wrapperStyle={{ fontSize: 11, color: '#6b7280' }}
+                      formatter={(value, entry: any) =>
+                        `${value} (${entry.payload.quantity} un.)`
+                      }
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              )}
+            </div>
+
             <div className="card">
               <p className="text-sm font-semibold text-gray-700 mb-4">
                 Faturamento por categoria
@@ -693,9 +741,6 @@ export default function Dashboard(): JSX.Element {
                       iconType="circle"
                       iconSize={8}
                       wrapperStyle={{ fontSize: 11, color: '#6b7280' }}
-                      formatter={(value, entry: any) =>
-                        `${value} (${entry.payload.quantity} un.)`
-                      }
                     />
                   </PieChart>
                 </ResponsiveContainer>

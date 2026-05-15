@@ -70,7 +70,9 @@ O `postinstall` recompila o `better-sqlite3` para o Electron automaticamente. O 
 
 O arquivo SQLite fica em `%APPDATA%/van-bijoux-sys/vanbijouxsys.db` no Windows. As migrations rodam no boot do app — não há comando manual para aplicar.
 
-Tabelas: `categories`, `products`, `product_variations`, `insumos`, `variation_insumos`, `fairs`, `fair_additional_costs`, `sales`, `sale_items`. O schema canônico está em [src/main/database/schema.ts](src/main/database/schema.ts) e precisa ser espelhado em [src/tests/helpers/testDb.ts](src/tests/helpers/testDb.ts) quando mudar, senão os testes de integração ficam defasados.
+Tabelas: `categories`, `products`, `product_variations`, `insumos`, `variation_insumos`, `fairs`, `fair_additional_costs`, `sales`, `sale_items`, `expense_categories`, `cash_expenses`, `cash_settings`. O schema canônico está em [src/main/database/schema.ts](src/main/database/schema.ts) e precisa ser espelhado em [src/tests/helpers/testDb.ts](src/tests/helpers/testDb.ts) quando mudar, senão os testes de integração ficam defasados.
+
+A tabela `sales` aceita `payment_method = 'areceber'` (fiado) com `received_at IS NULL`. Quando o cliente paga, o handler `sales:markAsReceived` troca o `payment_method` pelo método real (dinheiro/PIX/débito/crédito), aplica taxa se houver e grava `received_at`. Vendas pendentes contam em faturamento e lucro do Dashboard mas não entram no Caixa — entram apenas após o recebimento, pela data de `received_at`.
 
 ## Manutenção
 

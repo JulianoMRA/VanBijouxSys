@@ -1,5 +1,22 @@
 # Changelog
 
+## [1.6.0] - 2026-05-14
+
+### Adicionado
+
+- **Vendas**: nova forma de pagamento "A receber" (fiado) para clientes conhecidos que pagam depois. Ao registrar, a venda fica com badge "Pendente" na lista de vendas e não entra no caixa, mas conta em faturamento e lucro.
+- **Vendas**: botão "✓ Marcar recebida" na linha de cada venda pendente, que abre um modal onde a cliente escolhe a forma de pagamento real (dinheiro/PIX/débito/crédito), taxa (se houver) e data efetiva do recebimento.
+- **Vendas**: botão "↶ Desfazer" para reverter um recebimento erroneamente marcado, retornando a venda ao status "A receber".
+- **Dashboard**: novo KPI "A receber" exibe o total pendente de recebimento no período.
+- **Caixa**: vendas pendentes ficam fora das entradas; vendas que foram "A receber" e foram liquidadas depois entram pela data de recebimento, não da venda.
+
+### Corrigido
+
+- **Dashboard**: filtros de data passaram a usar `date()` para incluir vendas legadas com timestamp completo (corrige discrepâncias silenciosas em "hoje").
+- **Dashboard**: faturamento por categoria passa a usar `LEFT JOIN` + "Sem categoria", garantindo que o somatório das fatias bate com o KPI Faturamento bruto mesmo com itens órfãos.
+
+---
+
 ## [0.2.1] - 2026-03-22
 
 ### Adicionado

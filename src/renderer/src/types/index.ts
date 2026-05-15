@@ -112,7 +112,7 @@ export type UpdateFairInput = CreateFairInput & { id: number }
 
 export type SaleChannel = 'Feira' | 'WhatsApp' | 'Instagram' | 'Outro'
 
-export type PaymentMethod = 'dinheiro' | 'pix' | 'debito' | 'credito'
+export type PaymentMethod = 'dinheiro' | 'pix' | 'debito' | 'credito' | 'areceber'
 
 export interface SaleItem {
   id: number
@@ -136,7 +136,17 @@ export interface Sale {
   feeAmount: number
   netAmount: number
   soldAt: string
+  receivedAt: string | null
   items: SaleItem[]
+}
+
+export interface MarkSaleReceivedInput {
+  id: number
+  paymentMethod: Exclude<PaymentMethod, 'areceber'>
+  feePercentage: number
+  feeAmount: number
+  netAmount: number
+  receivedAt: string
 }
 
 export interface CreateSaleItemInput {
@@ -213,6 +223,7 @@ export interface DashboardStats {
     totalProfit: number
     totalSales: number
     avgTicket: number
+    totalReceivable: number
   }
   previousOverview: {
     totalRevenue: number

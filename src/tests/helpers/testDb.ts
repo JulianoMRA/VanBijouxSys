@@ -70,7 +70,8 @@ export async function createTestDb(): Promise<Database> {
       fee_percentage REAL NOT NULL DEFAULT 0,
       fee_amount REAL NOT NULL DEFAULT 0,
       net_amount REAL NOT NULL DEFAULT 0,
-      sold_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+      sold_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      received_at TEXT
     );
     CREATE TABLE sale_items (
       id INTEGER PRIMARY KEY AUTOINCREMENT,

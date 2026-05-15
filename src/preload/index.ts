@@ -9,6 +9,7 @@ import type {
   UpdateFairInput,
   CreateSaleInput,
   UpdateSaleInput,
+  MarkSaleReceivedInput,
   CreateInsumoInput,
   UpdateInsumoInput,
   CreateExpenseCategoryInput,
@@ -44,7 +45,10 @@ const api = {
     getAll: () => ipcRenderer.invoke('sales:getAll'),
     create: (data: CreateSaleInput) => ipcRenderer.invoke('sales:create', data),
     update: (data: UpdateSaleInput) => ipcRenderer.invoke('sales:update', data),
-    delete: (id: number) => ipcRenderer.invoke('sales:delete', id)
+    delete: (id: number) => ipcRenderer.invoke('sales:delete', id),
+    markAsReceived: (data: MarkSaleReceivedInput) =>
+      ipcRenderer.invoke('sales:markAsReceived', data),
+    unmarkAsReceived: (id: number) => ipcRenderer.invoke('sales:unmarkAsReceived', id)
   },
   dashboard: {
     getStats: (params: { period: string; customFrom?: string; customTo?: string }) =>

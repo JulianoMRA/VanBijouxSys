@@ -2,7 +2,7 @@ import { ipcMain } from 'electron'
 import { eq } from 'drizzle-orm'
 import { getDb, getSqlite } from '../database'
 import { sales, saleItems, productVariations, products, fairs } from '../database/schema'
-import type { CreateSaleInput, UpdateSaleInput } from '../../renderer/src/types'
+import type { CreateSaleInput, UpdateSaleInput, MarkSaleReceivedInput } from '../../renderer/src/types'
 
 export function registerSaleHandlers(): void {
   ipcMain.handle('sales:getAll', async () => {
@@ -21,7 +21,8 @@ export function registerSaleHandlers(): void {
           feePercentage: sales.feePercentage,
           feeAmount: sales.feeAmount,
           netAmount: sales.netAmount,
-          soldAt: sales.soldAt
+          soldAt: sales.soldAt,
+          receivedAt: sales.receivedAt
         })
         .from(sales)
         .leftJoin(fairs, eq(sales.fairId, fairs.id))
@@ -169,6 +170,51 @@ export function registerSaleHandlers(): void {
       return { success: true }
     } catch (err) {
       console.error('[sales:update]', err)
+      return { success: false, error: String(err) }
+    }
+  })
+
+  ipcMain.handle('sales:markAsReceived', async (_event, data: MarkSaleReceivedInput) => {
+    try {
+      const sqlite = getSqlite()
+      sqlite
+        .prepare(
+          `UPDATE sales
+             SET payment_method = ?, fee_percentage = ?, fee_amount = ?, net_amount = ?, received_at = ?
+           WHERE id = ?`
+        )
+        .run(
+          data.paymentMethod,
+          data.feePercentage,
+          data.feeAmount,
+          data.netAmount,
+          data.receivedAt,
+          data.id
+        )
+      return { success: true }
+    } catch (err) {
+      console.error('[sales:markAsReceived]', err)
+      return { success: false, error: String(err) }
+    }
+  })
+
+  ipcMain.handle('sales:unmarkAsReceived', async (_event, id: number) => {
+    try {
+      const sqlite = getSqlite()
+      sqlite
+        .prepare(
+          `UPDATE sales
+             SET payment_method = 'areceber',
+                 fee_percentage = 0,
+                 fee_amount = 0,
+                 net_amount = total_amount,
+                 received_at = NULL
+           WHERE id = ?`
+        )
+        .run(id)
+      return { success: true }
+    } catch (err) {
+      console.error('[sales:unmarkAsReceived]', err)
       return { success: false, error: String(err) }
     }
   })

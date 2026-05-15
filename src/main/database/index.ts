@@ -132,6 +132,9 @@ function runMigrations(sqlite: InstanceType<typeof Database>): void {
     sqlite.exec('ALTER TABLE sales ADD COLUMN net_amount REAL NOT NULL DEFAULT 0')
     sqlite.exec('UPDATE sales SET net_amount = total_amount WHERE net_amount = 0')
   }
+  if (!salesColumns.some((c) => c.name === 'received_at')) {
+    sqlite.exec('ALTER TABLE sales ADD COLUMN received_at TEXT')
+  }
 
   sqlite.exec(`
     CREATE TABLE IF NOT EXISTS expense_categories (

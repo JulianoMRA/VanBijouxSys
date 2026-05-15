@@ -135,15 +135,18 @@ export function registerCashHandlers(): void {
 
     const expenseResult = sqlite.prepare(expenseQuery).get(...params) as { total: number }
 
-    let incomeQuery = 'SELECT COALESCE(SUM(net_amount), 0) as total FROM sales WHERE 1=1'
+    // Vendas 'A receber' pendentes não compõem o caixa; vendas recebidas
+    // posteriormente entram na data efetiva (received_at), não na venda.
+    let incomeQuery =
+      "SELECT COALESCE(SUM(net_amount), 0) as total FROM sales WHERE payment_method != 'areceber'"
     const incomeParams: string[] = []
 
     if (filters?.startDate) {
-      incomeQuery += ' AND date(sold_at) >= ?'
+      incomeQuery += ' AND date(COALESCE(received_at, sold_at)) >= ?'
       incomeParams.push(filters.startDate)
     }
     if (filters?.endDate) {
-      incomeQuery += ' AND date(sold_at) <= ?'
+      incomeQuery += ' AND date(COALESCE(received_at, sold_at)) <= ?'
       incomeParams.push(filters.endDate)
     }
 

@@ -9,6 +9,7 @@ export interface DashboardStats {
     totalProfit: number
     totalSales: number
     avgTicket: number
+    totalReceivable: number
   }
   previousOverview: {
     totalRevenue: number
@@ -196,7 +197,7 @@ export function registerDashboardHandlers(): void {
       const prevDateParams: string[] =
         prevFromDate && prevToDate ? [prevFromDate, prevToDate] : []
 
-      const overview = sqlite
+      const overviewBase = sqlite
         .prepare(
           `SELECT
             COALESCE(SUM(s.total_amount), 0)              AS totalRevenue,
@@ -208,7 +209,17 @@ export function registerDashboardHandlers(): void {
            FROM sales s
            WHERE 1=1${sSoldAtClause}`
         )
-        .get(...dateParams) as DashboardStats['overview']
+        .get(...dateParams) as Omit<DashboardStats['overview'], 'totalReceivable'>
+
+      const receivable = sqlite
+        .prepare(
+          `SELECT COALESCE(SUM(s.net_amount), 0) AS totalReceivable
+           FROM sales s
+           WHERE s.payment_method = 'areceber'${sSoldAtClause}`
+        )
+        .get(...dateParams) as { totalReceivable: number }
+
+      const overview: DashboardStats['overview'] = { ...overviewBase, totalReceivable: receivable.totalReceivable }
 
       let previousOverview: DashboardStats['previousOverview'] = null
       if (prevSoldAtClause) {
@@ -224,7 +235,7 @@ export function registerDashboardHandlers(): void {
              FROM sales s
              WHERE 1=1${prevSoldAtClause}`
           )
-          .get(...prevDateParams) as DashboardStats['overview']
+          .get(...prevDateParams) as NonNullable<DashboardStats['previousOverview']>
       }
 
       const revenueByMonth = sqlite
@@ -412,7 +423,13 @@ export function registerDashboardHandlers(): void {
         )
         .all() as DashboardStats['lowInsumos']
 
-      // cashFlow UNION: parâmetros na ordem sales, cash_expenses, fairs
+      // Vendas 'A receber' pendentes (received_at IS NULL) NÃO entram no caixa.
+      // Data efetiva de entrada = COALESCE(received_at, sold_at) — vendas liquidadas
+      // depois (fiado) aparecem no mês do recebimento, não da venda.
+      const cashIncomeClause = fromDate
+        ? ` AND date(COALESCE(received_at, sold_at)) >= ?${toDate ? ' AND date(COALESCE(received_at, sold_at)) <= ?' : ''}`
+        : ''
+
       const cashFlowParams: string[] = [...dateParams, ...dateParams, ...dateParams]
 
       const cashFlow = sqlite
@@ -422,8 +439,8 @@ export function registerDashboardHandlers(): void {
             COALESCE(SUM(income), 0)   AS income,
             COALESCE(SUM(expenses), 0) AS expenses
            FROM (
-             SELECT strftime('%Y-%m', sold_at) AS month, net_amount AS income, 0 AS expenses
-             FROM sales WHERE 1=1${soldAtClause}
+             SELECT strftime('%Y-%m', COALESCE(received_at, sold_at)) AS month, net_amount AS income, 0 AS expenses
+             FROM sales WHERE payment_method != 'areceber'${cashIncomeClause}
              UNION ALL
              SELECT strftime('%Y-%m', expense_date) AS month, 0 AS income, amount AS expenses
              FROM cash_expenses WHERE 1=1${expenseDateClause}
@@ -443,7 +460,11 @@ export function registerDashboardHandlers(): void {
         .get() as { opening_balance: number } | undefined
 
       const cashIncomeTotal = sqlite
-        .prepare(`SELECT COALESCE(SUM(net_amount), 0) AS total FROM sales WHERE 1=1${soldAtClause}`)
+        .prepare(
+          `SELECT COALESCE(SUM(net_amount), 0) AS total
+           FROM sales
+           WHERE payment_method != 'areceber'${cashIncomeClause}`
+        )
         .get(...dateParams) as { total: number }
 
       const cashExpensesTotal = sqlite

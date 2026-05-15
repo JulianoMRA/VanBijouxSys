@@ -491,7 +491,9 @@ export default function Dashboard(): JSX.Element {
       ) : (
         <>
           {/* KPI Cards */}
-          <div className="grid grid-cols-4 gap-4 mb-4">
+          <div
+            className={`grid ${stats!.overview.totalReceivable > 0 ? 'grid-cols-5' : 'grid-cols-4'} gap-4 mb-4`}
+          >
             <StatCard
               label="Faturamento bruto"
               value={formatCurrency(stats!.overview.totalRevenue)}
@@ -521,6 +523,15 @@ export default function Dashboard(): JSX.Element {
               sub="materiais + produção"
               delta={prev ? calcDelta(stats!.overview.totalCost, prev.totalCost) : null}
             />
+            {stats!.overview.totalReceivable > 0 && (
+              <div className="card py-5 bg-amber-50 border-amber-200">
+                <p className="text-xs text-amber-600 uppercase tracking-widest mb-2">A receber</p>
+                <p className="font-display text-2xl font-bold text-amber-700">
+                  {formatCurrency(stats!.overview.totalReceivable)}
+                </p>
+                <p className="text-xs text-amber-600 mt-1">não está no caixa ainda</p>
+              </div>
+            )}
           </div>
 
           {/* Cash Summary */}

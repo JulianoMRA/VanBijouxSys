@@ -23,7 +23,8 @@ const PAYMENT_LABELS: Record<PaymentMethod, string> = {
   dinheiro: 'Dinheiro',
   pix: 'PIX',
   debito: 'Débito',
-  credito: 'Crédito'
+  credito: 'Crédito',
+  areceber: 'A receber'
 }
 
 function getPeriodDates(period: PeriodKey): { startDate: string; endDate: string } | null {
@@ -121,10 +122,13 @@ export default function Cash(): JSX.Element {
     ? (customStart && customEnd ? { startDate: customStart, endDate: customEnd } : null)
     : getPeriodDates(period)
 
+  // Vendas 'A receber' pendentes não estão no caixa; vendas recebidas (receivedAt definido)
+  // usam a data efetiva de recebimento para o filtro de período.
   const filteredSales = useMemo(() => {
-    if (!dateRange) return sales
-    return sales.filter((s) => {
-      const d = s.soldAt.slice(0, 10)
+    const eligible = sales.filter((s) => s.paymentMethod !== 'areceber')
+    if (!dateRange) return eligible
+    return eligible.filter((s) => {
+      const d = (s.receivedAt ?? s.soldAt).slice(0, 10)
       return d >= dateRange.startDate && d <= dateRange.endDate
     })
   }, [sales, dateRange])
@@ -160,11 +164,11 @@ export default function Cash(): JSX.Element {
     const incomeRows: TransactionRow[] = filteredSales.map((s) => ({
       kind: 'income',
       id: s.id,
-      date: s.soldAt.slice(0, 10),
+      date: (s.receivedAt ?? s.soldAt).slice(0, 10),
       label: s.items.length === 1
         ? `${s.items[0].productName} — ${s.items[0].variationIdentifier}`
         : `${s.items.length} itens vendidos`,
-      sub: `${s.channel}${s.fairName ? ` · ${s.fairName}` : ''} · ${PAYMENT_LABELS[s.paymentMethod]}`,
+      sub: `${s.channel}${s.fairName ? ` · ${s.fairName}` : ''} · ${PAYMENT_LABELS[s.paymentMethod]}${s.receivedAt ? ' · recebido' : ''}`,
       amount: s.totalAmount,
       netAmount: s.netAmount,
       feeAmount: s.feeAmount,

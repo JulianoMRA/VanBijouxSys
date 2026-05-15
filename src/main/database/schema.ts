@@ -80,7 +80,8 @@ export const sales = sqliteTable('sales', {
   feePercentage: real('fee_percentage').notNull().default(0),
   feeAmount: real('fee_amount').notNull().default(0),
   netAmount: real('net_amount').notNull().default(0),
-  soldAt: text('sold_at').notNull().default('CURRENT_TIMESTAMP')
+  soldAt: text('sold_at').notNull().default('CURRENT_TIMESTAMP'),
+  receivedAt: text('received_at')
 })
 
 export const expenseCategories = sqliteTable('expense_categories', {

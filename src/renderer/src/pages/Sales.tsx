@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import SaleForm from '../components/sales/SaleForm'
+import MarkReceivedModal from '../components/sales/MarkReceivedModal'
 import ConfirmDialog from '../components/ui/ConfirmDialog'
 import Badge from '../components/ui/Badge'
 import Toast from '../components/ui/Toast'
@@ -11,6 +12,8 @@ type Modal =
   | { type: 'new' }
   | { type: 'edit'; sale: Sale }
   | { type: 'delete'; sale: Sale }
+  | { type: 'markReceived'; sale: Sale }
+  | { type: 'unmarkReceived'; sale: Sale }
 
 const CHANNEL_FILTERS: { label: string; value: SaleChannel | 'Todos' }[] = [
   { label: 'Todos', value: 'Todos' },
@@ -31,7 +34,8 @@ const PAYMENT_LABELS: Record<PaymentMethod, string> = {
   dinheiro: 'Dinheiro',
   pix: 'PIX',
   debito: 'Débito',
-  credito: 'Crédito'
+  credito: 'Crédito',
+  areceber: 'A receber'
 }
 
 export default function Sales(): JSX.Element {
@@ -69,6 +73,20 @@ export default function Sales(): JSX.Element {
     }
   }
 
+  async function handleUnmarkReceived(sale: Sale): Promise<void> {
+    try {
+      await window.api.sales.unmarkAsReceived(sale.id)
+      await loadSales()
+      showToast('Recebimento desfeito — venda voltou para "A receber".')
+    } catch {
+      setErrorMessage('Não foi possível desfazer o recebimento. Tente novamente.')
+    }
+  }
+
+  function isPending(sale: Sale): boolean {
+    return sale.paymentMethod === 'areceber'
+  }
+
   const filtered = channelFilter === 'Todos'
     ? sales
     : sales.filter((s) => s.channel === channelFilter)
@@ -77,6 +95,8 @@ export default function Sales(): JSX.Element {
   const totalNetRevenue = filtered.reduce((s, sale) => s + sale.netAmount, 0)
   const totalProfit = filtered.reduce((s, sale) => s + (sale.netAmount - sale.totalCost), 0)
   const avgTicket = filtered.length > 0 ? totalRevenue / filtered.length : 0
+  const totalReceivable = filtered.filter(isPending).reduce((s, sale) => s + sale.netAmount, 0)
+  const receivableCount = filtered.filter(isPending).length
 
   return (
     <div>
@@ -113,7 +133,7 @@ export default function Sales(): JSX.Element {
 
       {/* Cards de resumo */}
       {filtered.length > 0 && (
-        <div className="grid grid-cols-3 gap-4 mb-5">
+        <div className={`grid ${receivableCount > 0 ? 'grid-cols-4' : 'grid-cols-3'} gap-4 mb-5`}>
           <div className="card py-4">
             <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">Faturamento bruto</p>
             <p className="font-display text-xl font-semibold text-gray-800">{formatCurrency(totalRevenue)}</p>
@@ -133,6 +153,15 @@ export default function Sales(): JSX.Element {
             <p className="font-display text-xl font-semibold text-gray-800">{formatCurrency(avgTicket)}</p>
             <p className="text-xs text-gray-400 mt-0.5">por venda</p>
           </div>
+          {receivableCount > 0 && (
+            <div className="card py-4 bg-amber-50 border-amber-200">
+              <p className="text-xs text-amber-600 uppercase tracking-wide mb-1">A receber</p>
+              <p className="font-display text-xl font-semibold text-amber-700">{formatCurrency(totalReceivable)}</p>
+              <p className="text-xs text-amber-600 mt-0.5">
+                {receivableCount} venda{receivableCount !== 1 ? 's' : ''} pendente{receivableCount !== 1 ? 's' : ''}
+              </p>
+            </div>
+          )}
         </div>
       )}
 
@@ -159,10 +188,14 @@ export default function Sales(): JSX.Element {
             return (
               <div
                 key={sale.id}
-                className="bg-white rounded-2xl border border-cream-200 shadow-card overflow-hidden"
+                className={`bg-white rounded-2xl border shadow-card overflow-hidden ${
+                  isPending(sale) ? 'border-amber-200' : 'border-cream-200'
+                }`}
               >
                 <div
-                  className="flex items-center gap-4 px-5 py-4 cursor-pointer hover:bg-cream-50 transition-colors"
+                  className={`flex items-center gap-4 px-5 py-4 cursor-pointer transition-colors ${
+                    isPending(sale) ? 'hover:bg-amber-50' : 'hover:bg-cream-50'
+                  }`}
                   onClick={() => setExpandedSale(isExpanded ? null : sale.id)}
                 >
                   <div className="flex-1 min-w-0">
@@ -171,10 +204,17 @@ export default function Sales(): JSX.Element {
                       {sale.fairName && (
                         <span className="text-xs text-gray-400">{sale.fairName}</span>
                       )}
-                      <span className="text-xs text-gray-400 bg-cream-100 px-2 py-0.5 rounded-lg">
-                        {PAYMENT_LABELS[sale.paymentMethod]}
-                        {sale.feePercentage > 0 ? ` (${sale.feePercentage}%)` : ''}
-                      </span>
+                      {isPending(sale) ? (
+                        <span className="text-xs font-semibold text-amber-700 bg-amber-100 px-2 py-0.5 rounded-lg">
+                          A receber · Pendente
+                        </span>
+                      ) : (
+                        <span className="text-xs text-gray-400 bg-cream-100 px-2 py-0.5 rounded-lg">
+                          {PAYMENT_LABELS[sale.paymentMethod]}
+                          {sale.feePercentage > 0 ? ` (${sale.feePercentage}%)` : ''}
+                          {sale.receivedAt && ` · recebido em ${formatDate(sale.receivedAt)}`}
+                        </span>
+                      )}
                     </div>
                     <p className="text-xs text-gray-400 mt-1">{formatDate(sale.soldAt)}</p>
                   </div>
@@ -184,10 +224,29 @@ export default function Sales(): JSX.Element {
                     {sale.feeAmount > 0 && (
                       <p className="text-xs text-gray-400">líq. {formatCurrency(sale.netAmount)}</p>
                     )}
-                    <p className="text-xs text-emerald-600">+{formatCurrency(profit)}</p>
+                    <p className={`text-xs ${isPending(sale) ? 'text-amber-600' : 'text-emerald-600'}`}>
+                      {isPending(sale) ? 'lucro estimado ' : '+'}
+                      {formatCurrency(profit)}
+                    </p>
                   </div>
 
                   <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
+                    {isPending(sale) && (
+                      <button
+                        className="text-xs font-semibold text-emerald-700 hover:text-emerald-900 px-2 py-1 rounded-lg hover:bg-emerald-50 transition-colors"
+                        onClick={() => setModal({ type: 'markReceived', sale })}
+                      >
+                        ✓ Marcar recebida
+                      </button>
+                    )}
+                    {!isPending(sale) && sale.receivedAt && (
+                      <button
+                        className="text-xs text-amber-600 hover:text-amber-800 px-2 py-1 rounded-lg hover:bg-amber-50 transition-colors"
+                        onClick={() => setModal({ type: 'unmarkReceived', sale })}
+                      >
+                        ↶ Desfazer
+                      </button>
+                    )}
                     <button
                       className="text-xs text-blush-600 hover:text-blush-800 px-2 py-1 rounded-lg hover:bg-blush-50 transition-colors"
                       onClick={() => setModal({ type: 'edit', sale })}
@@ -281,6 +340,22 @@ export default function Sales(): JSX.Element {
           confirmLabel="Excluir"
           danger
           onConfirm={() => handleDelete(modal.sale)}
+          onClose={() => setModal(null)}
+        />
+      )}
+      {modal?.type === 'markReceived' && (
+        <MarkReceivedModal
+          sale={modal.sale}
+          onSave={() => { loadSales(); showToast('Venda marcada como recebida!') }}
+          onClose={() => setModal(null)}
+        />
+      )}
+      {modal?.type === 'unmarkReceived' && (
+        <ConfirmDialog
+          title="Desfazer recebimento"
+          message="A venda voltará ao status 'A receber' e sairá do caixa. Confirmar?"
+          confirmLabel="Desfazer"
+          onConfirm={() => handleUnmarkReceived(modal.sale)}
           onClose={() => setModal(null)}
         />
       )}

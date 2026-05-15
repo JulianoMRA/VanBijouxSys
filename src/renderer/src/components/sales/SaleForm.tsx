@@ -22,7 +22,8 @@ const PAYMENT_METHODS: { value: PaymentMethod; label: string }[] = [
   { value: 'dinheiro', label: 'Dinheiro' },
   { value: 'pix', label: 'PIX' },
   { value: 'debito', label: 'Débito' },
-  { value: 'credito', label: 'Crédito' }
+  { value: 'credito', label: 'Crédito' },
+  { value: 'areceber', label: 'A receber' }
 ]
 
 const FEE_STORAGE_KEY = (method: PaymentMethod) => `lastFee_${method}`
@@ -32,7 +33,7 @@ function formatCurrency(value: number): string {
 }
 
 function loadLastFee(method: PaymentMethod): string {
-  if (method === 'dinheiro') return '0'
+  if (method === 'dinheiro' || method === 'areceber') return '0'
   return localStorage.getItem(FEE_STORAGE_KEY(method)) ?? ''
 }
 
@@ -298,7 +299,7 @@ export default function SaleForm({ sale, onSave, onClose }: SaleFormProps): JSX.
               ))}
             </div>
           </div>
-          {paymentMethod !== 'dinheiro' && (
+          {paymentMethod !== 'dinheiro' && paymentMethod !== 'areceber' && (
             <div>
               <label className="label">
                 Taxa ({paymentMethod === 'pix' ? 'sugerido: 0,99%' : paymentMethod === 'debito' ? 'sugerido: 1,69%' : 'variável'})
@@ -324,6 +325,11 @@ export default function SaleForm({ sale, onSave, onClose }: SaleFormProps): JSX.
             </div>
           )}
         </div>
+        {paymentMethod === 'areceber' && (
+          <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-xs text-amber-800">
+            Esta venda não entra no caixa até ser marcada como recebida na lista de vendas.
+          </div>
+        )}
 
         {/* Itens */}
         <div>

@@ -7,9 +7,12 @@ import * as schema from './schema'
 let db: ReturnType<typeof drizzle>
 let sqliteInstance: InstanceType<typeof Database>
 
+export function getDbPath(): string {
+  return join(app.getPath('userData'), 'vanbijouxsys.db')
+}
+
 export function initDatabase(): void {
-  const dbPath = join(app.getPath('userData'), 'vanbijouxsys.db')
-  const sqlite = new Database(dbPath)
+  const sqlite = new Database(getDbPath())
   sqliteInstance = sqlite
 
   sqlite.pragma('journal_mode = WAL')
@@ -170,4 +173,10 @@ export function getDb(): ReturnType<typeof drizzle> {
 
 export function getSqlite(): InstanceType<typeof Database> {
   return sqliteInstance
+}
+
+export function closeDatabase(): void {
+  if (sqliteInstance && sqliteInstance.open) {
+    sqliteInstance.close()
+  }
 }

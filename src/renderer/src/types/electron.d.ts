@@ -90,6 +90,15 @@ declare global {
         get: () => Promise<CashSettings>
         setOpeningBalance: (balance: number) => Promise<{ success: boolean }>
       }
+      backup: {
+        exportar: () => Promise<{ salvo: boolean; caminho?: string }>
+        restaurar: () => Promise<{ restaurado: boolean }>
+        info: () => Promise<{ pasta: string; ultimoBackup: string | null }>
+        abrirPasta: () => Promise<{ aberto: boolean }>
+      }
+      app: {
+        versao: () => Promise<string>
+      }
     }
   }
 }

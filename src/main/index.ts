@@ -2,6 +2,7 @@ import { app, shell, BrowserWindow } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import { initDatabase } from './database'
+import { backupDiario } from './database/backup'
 import { registerAllHandlers } from './ipc'
 
 function createWindow(): void {
@@ -44,6 +45,11 @@ app.whenReady().then(() => {
   initDatabase()
   registerAllHandlers()
   createWindow()
+
+  // Falha de backup não pode impedir a cliente de trabalhar — apenas registra.
+  backupDiario().catch((err) => {
+    console.error('[backup] backup diário falhou:', err)
+  })
 
   app.on('activate', function () {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()

@@ -18,69 +18,95 @@ import type {
   UpdateCashExpenseInput
 } from '../renderer/src/types'
 
+/**
+ * O Electron embrulha a mensagem original em "Error invoking remote method
+ * 'canal': Error: ...". Sem limpar isso, o texto técnico chega à tela da cliente.
+ */
+function limparMensagem(err: unknown): string {
+  const texto = err instanceof Error ? err.message : String(err)
+  return texto.replace(/^Error invoking remote method '[^']*':\s*(?:Error:\s*)?/, '')
+}
+
+async function invoke<T>(canal: string, ...args: unknown[]): Promise<T> {
+  try {
+    return (await ipcRenderer.invoke(canal, ...args)) as T
+  } catch (err) {
+    throw new Error(limparMensagem(err))
+  }
+}
+
 const api = {
   categories: {
-    getAll: () => ipcRenderer.invoke('categories:getAll')
+    getAll: () => invoke('categories:getAll')
   },
   products: {
-    getAll: () => ipcRenderer.invoke('products:getAll'),
-    create: (data: CreateProductInput) => ipcRenderer.invoke('products:create', data),
-    update: (data: UpdateProductInput) => ipcRenderer.invoke('products:update', data),
-    delete: (id: number) => ipcRenderer.invoke('products:delete', id)
+    getAll: () => invoke('products:getAll'),
+    create: (data: CreateProductInput) => invoke('products:create', data),
+    update: (data: UpdateProductInput) => invoke('products:update', data),
+    delete: (id: number) => invoke('products:delete', id)
   },
   variations: {
-    create: (data: CreateVariationInput) => ipcRenderer.invoke('variations:create', data),
-    update: (data: UpdateVariationInput) => ipcRenderer.invoke('variations:update', data),
-    delete: (id: number) => ipcRenderer.invoke('variations:delete', id),
+    create: (data: CreateVariationInput) => invoke('variations:create', data),
+    update: (data: UpdateVariationInput) => invoke('variations:update', data),
+    delete: (id: number) => invoke('variations:delete', id),
     addStock: (id: number, quantity: number) =>
-      ipcRenderer.invoke('variations:addStock', id, quantity)
+      invoke('variations:addStock', id, quantity)
   },
   fairs: {
-    getAll: () => ipcRenderer.invoke('fairs:getAll'),
-    create: (data: CreateFairInput) => ipcRenderer.invoke('fairs:create', data),
-    update: (data: UpdateFairInput) => ipcRenderer.invoke('fairs:update', data),
-    delete: (id: number) => ipcRenderer.invoke('fairs:delete', id)
+    getAll: () => invoke('fairs:getAll'),
+    create: (data: CreateFairInput) => invoke('fairs:create', data),
+    update: (data: UpdateFairInput) => invoke('fairs:update', data),
+    delete: (id: number) => invoke('fairs:delete', id)
   },
   sales: {
-    getAll: () => ipcRenderer.invoke('sales:getAll'),
-    create: (data: CreateSaleInput) => ipcRenderer.invoke('sales:create', data),
-    update: (data: UpdateSaleInput) => ipcRenderer.invoke('sales:update', data),
-    delete: (id: number) => ipcRenderer.invoke('sales:delete', id),
+    getAll: () => invoke('sales:getAll'),
+    create: (data: CreateSaleInput) => invoke('sales:create', data),
+    update: (data: UpdateSaleInput) => invoke('sales:update', data),
+    delete: (id: number) => invoke('sales:delete', id),
     markAsReceived: (data: MarkSaleReceivedInput) =>
-      ipcRenderer.invoke('sales:markAsReceived', data),
-    unmarkAsReceived: (id: number) => ipcRenderer.invoke('sales:unmarkAsReceived', id)
+      invoke('sales:markAsReceived', data),
+    unmarkAsReceived: (id: number) => invoke('sales:unmarkAsReceived', id)
   },
   dashboard: {
     getStats: (params: { period: string; customFrom?: string; customTo?: string }) =>
-      ipcRenderer.invoke('dashboard:getStats', params)
+      invoke('dashboard:getStats', params)
   },
   insumos: {
-    getAll: () => ipcRenderer.invoke('insumos:getAll'),
-    create: (data: CreateInsumoInput) => ipcRenderer.invoke('insumos:create', data),
-    update: (data: UpdateInsumoInput) => ipcRenderer.invoke('insumos:update', data),
-    addStock: (id: number, quantity: number) => ipcRenderer.invoke('insumos:addStock', id, quantity),
-    delete: (id: number) => ipcRenderer.invoke('insumos:delete', id),
+    getAll: () => invoke('insumos:getAll'),
+    create: (data: CreateInsumoInput) => invoke('insumos:create', data),
+    update: (data: UpdateInsumoInput) => invoke('insumos:update', data),
+    addStock: (id: number, quantity: number) => invoke('insumos:addStock', id, quantity),
+    delete: (id: number) => invoke('insumos:delete', id),
     exportCsv: (csvContent: string, defaultFileName: string) =>
-      ipcRenderer.invoke('insumos:exportCsv', csvContent, defaultFileName)
+      invoke('insumos:exportCsv', csvContent, defaultFileName)
   },
   expenseCategories: {
-    getAll: () => ipcRenderer.invoke('expense-categories:getAll'),
-    create: (data: CreateExpenseCategoryInput) => ipcRenderer.invoke('expense-categories:create', data),
-    update: (data: UpdateExpenseCategoryInput) => ipcRenderer.invoke('expense-categories:update', data),
-    delete: (id: number) => ipcRenderer.invoke('expense-categories:delete', id)
+    getAll: () => invoke('expense-categories:getAll'),
+    create: (data: CreateExpenseCategoryInput) => invoke('expense-categories:create', data),
+    update: (data: UpdateExpenseCategoryInput) => invoke('expense-categories:update', data),
+    delete: (id: number) => invoke('expense-categories:delete', id)
   },
   cashExpenses: {
     getAll: (filters?: { startDate?: string; endDate?: string; categoryId?: number }) =>
-      ipcRenderer.invoke('cash-expenses:getAll', filters),
-    create: (data: CreateCashExpenseInput) => ipcRenderer.invoke('cash-expenses:create', data),
-    update: (data: UpdateCashExpenseInput) => ipcRenderer.invoke('cash-expenses:update', data),
-    delete: (id: number) => ipcRenderer.invoke('cash-expenses:delete', id),
+      invoke('cash-expenses:getAll', filters),
+    create: (data: CreateCashExpenseInput) => invoke('cash-expenses:create', data),
+    update: (data: UpdateCashExpenseInput) => invoke('cash-expenses:update', data),
+    delete: (id: number) => invoke('cash-expenses:delete', id),
     getStats: (filters?: { startDate?: string; endDate?: string }) =>
-      ipcRenderer.invoke('cash-expenses:getStats', filters)
+      invoke('cash-expenses:getStats', filters)
   },
   cashSettings: {
-    get: () => ipcRenderer.invoke('cash-settings:get'),
-    setOpeningBalance: (balance: number) => ipcRenderer.invoke('cash-settings:setOpeningBalance', balance)
+    get: () => invoke('cash-settings:get'),
+    setOpeningBalance: (balance: number) => invoke('cash-settings:setOpeningBalance', balance)
+  },
+  backup: {
+    exportar: () => invoke('backup:exportar'),
+    restaurar: () => invoke('backup:restaurar'),
+    info: () => invoke('backup:info'),
+    abrirPasta: () => invoke('backup:abrirPasta')
+  },
+  app: {
+    versao: () => invoke('app:versao')
   }
 }
 

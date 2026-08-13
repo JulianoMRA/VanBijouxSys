@@ -1,6 +1,17 @@
+import { useEffect, useState } from 'react'
 import { NavLink } from 'react-router-dom'
-import { LayoutDashboard, Gem, Package, ShoppingBag, Store, Tag, Landmark } from 'lucide-react'
+import {
+  LayoutDashboard,
+  Gem,
+  Package,
+  ShoppingBag,
+  Store,
+  Tag,
+  Landmark,
+  ShieldCheck
+} from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
+import SystemPanel from './SystemPanel'
 
 const navItems: { to: string; label: string; Icon: LucideIcon }[] = [
   { to: '/', label: 'Dashboard', Icon: LayoutDashboard },
@@ -13,6 +24,16 @@ const navItems: { to: string; label: string; Icon: LucideIcon }[] = [
 ]
 
 export default function Sidebar(): JSX.Element {
+  const [versao, setVersao] = useState('')
+  const [painelAberto, setPainelAberto] = useState(false)
+
+  useEffect(() => {
+    window.api.app
+      .versao()
+      .then(setVersao)
+      .catch(() => setVersao(''))
+  }, [])
+
   return (
     <aside
       className="w-60 flex flex-col shrink-0"
@@ -58,9 +79,24 @@ export default function Sidebar(): JSX.Element {
         ))}
       </nav>
 
-      <div className="px-6 py-4" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
-        <p className="text-xs" style={{ color: '#4a2438' }}>v1.6.1</p>
+      <div
+        className="px-3 py-4 space-y-1"
+        style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}
+      >
+        <button
+          onClick={() => setPainelAberto(true)}
+          className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-medium transition-all duration-200"
+          style={{ color: 'rgba(255,255,255,0.42)' }}
+        >
+          <ShieldCheck size={14} />
+          Backup e dados
+        </button>
+        <p className="text-xs px-3" style={{ color: '#4a2438' }}>
+          {versao ? `v${versao}` : ''}
+        </p>
       </div>
+
+      {painelAberto && <SystemPanel onClose={() => setPainelAberto(false)} />}
     </aside>
   )
 }

@@ -25,6 +25,8 @@ import {
   TrendingUp
 } from 'lucide-react'
 import { formatCurrency } from '../utils/format'
+import { buildInsights, calcDelta, formatDay, formatMonth } from '../utils/dashboard-calculations'
+import type { InsightKind } from '../utils/dashboard-calculations'
 import type { DashboardStats } from '../types'
 
 type Period = 'month' | 'quarter' | 'halfyear' | 'year' | 'all' | 'custom'
@@ -54,23 +56,6 @@ const CATEGORY_COLORS: Record<string, string> = {
 }
 
 const CATEGORY_FALLBACK_COLORS = ['#e44d8a', '#f59e0b', '#10b981', '#8b5cf6', '#3b82f6', '#94a3b8']
-
-function formatMonth(ym: string): string {
-  const [year, month] = ym.split('-')
-  const names = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
-  return `${names[parseInt(month) - 1]}/${year.slice(2)}`
-}
-
-function formatDay(dateStr: string): string {
-  const [, month, day] = dateStr.split('-')
-  const names = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
-  return `${parseInt(day)} ${names[parseInt(month) - 1]}`
-}
-
-function calcDelta(current: number, previous: number): number | null {
-  if (previous === 0) return null
-  return ((current - previous) / previous) * 100
-}
 
 function DeltaBadge({ delta }: { delta: number | null }): JSX.Element | null {
   if (delta === null) return null
@@ -111,58 +96,31 @@ function StatCard({
   )
 }
 
+const INSIGHT_STYLES: Record<InsightKind, { colorClass: string; icon: JSX.Element }> = {
+  canal: {
+    colorClass: 'text-blush-600',
+    icon: <Trophy size={14} className="text-blush-500 mt-0.5 shrink-0" />
+  },
+  categoria: {
+    colorClass: 'text-purple-600',
+    icon: <Gem size={14} className="text-purple-400 mt-0.5 shrink-0" />
+  },
+  estoque: {
+    colorClass: 'text-rose-600',
+    icon: <AlertTriangle size={14} className="text-rose-500 mt-0.5 shrink-0" />
+  },
+  feira: {
+    colorClass: 'text-emerald-600',
+    icon: <Star size={14} className="text-emerald-500 mt-0.5 shrink-0" />
+  },
+  margem: {
+    colorClass: 'text-gray-700',
+    icon: <TrendingUp size={14} className="text-gray-400 mt-0.5 shrink-0" />
+  }
+}
+
 function InsightsPanel({ stats }: { stats: DashboardStats }): JSX.Element {
-  const insights: Array<{ text: string; colorClass: string; icon: JSX.Element }> = []
-
-  if (stats.salesByChannel.length > 0) {
-    const best = stats.salesByChannel[0]
-    const totalRev = stats.salesByChannel.reduce((acc, c) => acc + c.revenue, 0)
-    const pct = totalRev > 0 ? ((best.revenue / totalRev) * 100).toFixed(0) : '0'
-    insights.push({
-      text: `${best.channel} é o canal com maior faturamento (${pct}% do total)`,
-      colorClass: 'text-blush-600',
-      icon: <Trophy size={14} className="text-blush-500 mt-0.5 shrink-0" />
-    })
-  }
-
-  if (stats.salesByCategory.length > 0) {
-    const best = stats.salesByCategory.reduce((a, b) => (a.quantity > b.quantity ? a : b))
-    insights.push({
-      text: `${best.category} é a categoria mais vendida (${best.quantity} unidade${best.quantity !== 1 ? 's' : ''})`,
-      colorClass: 'text-purple-600',
-      icon: <Gem size={14} className="text-purple-400 mt-0.5 shrink-0" />
-    })
-  }
-
-  const outCount = stats.outOfStock.length + stats.outOfInsumos.length
-  if (outCount > 0) {
-    insights.push({
-      text: `${outCount} ${outCount !== 1 ? 'itens esgotados' : 'item esgotado'} — atenção ao estoque!`,
-      colorClass: 'text-rose-600',
-      icon: <AlertTriangle size={14} className="text-rose-500 mt-0.5 shrink-0" />
-    })
-  }
-
-  const fairsWithRevenue = stats.salesByFair.filter((f) => f.revenue > 0)
-  if (fairsWithRevenue.length > 0) {
-    const best = fairsWithRevenue.reduce((a, b) => (a.netProfit > b.netProfit ? a : b))
-    if (best.netProfit > 0) {
-      insights.push({
-        text: `Melhor feira: ${best.fairName} com lucro líquido de ${formatCurrency(best.netProfit)}`,
-        colorClass: 'text-emerald-600',
-        icon: <Star size={14} className="text-emerald-500 mt-0.5 shrink-0" />
-      })
-    }
-  }
-
-  if (stats.overview.totalNetRevenue > 0) {
-    const margin = ((stats.overview.totalProfit / stats.overview.totalNetRevenue) * 100).toFixed(1)
-    insights.push({
-      text: `Margem de lucro no período: ${margin}%`,
-      colorClass: 'text-gray-700',
-      icon: <TrendingUp size={14} className="text-gray-400 mt-0.5 shrink-0" />
-    })
-  }
+  const insights = buildInsights(stats)
 
   if (insights.length === 0) {
     return (
@@ -178,12 +136,18 @@ function InsightsPanel({ stats }: { stats: DashboardStats }): JSX.Element {
     <div className="card flex flex-col">
       <p className="text-sm font-semibold text-gray-700 mb-4">Insights do período</p>
       <div className="space-y-2.5">
-        {insights.map((ins, i) => (
-          <div key={i} className="flex items-start gap-2.5 bg-cream-50 rounded-xl px-3.5 py-3">
-            {ins.icon}
-            <p className={`text-sm leading-snug font-medium ${ins.colorClass}`}>{ins.text}</p>
-          </div>
-        ))}
+        {insights.map((ins) => {
+          const estilo = INSIGHT_STYLES[ins.kind]
+          return (
+            <div
+              key={ins.kind}
+              className="flex items-start gap-2.5 bg-cream-50 rounded-xl px-3.5 py-3"
+            >
+              {estilo.icon}
+              <p className={`text-sm leading-snug font-medium ${estilo.colorClass}`}>{ins.text}</p>
+            </div>
+          )
+        })}
       </div>
     </div>
   )

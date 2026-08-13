@@ -1,7 +1,6 @@
 import type {
   Category,
   Product,
-  ProductVariation,
   CreateProductInput,
   UpdateProductInput,
   CreateVariationInput,
@@ -59,7 +58,11 @@ declare global {
         unmarkAsReceived: (id: number) => Promise<{ success: boolean }>
       }
       dashboard: {
-        getStats: (params: { period: string; customFrom?: string; customTo?: string }) => Promise<DashboardStats>
+        getStats: (params: {
+          period: string
+          customFrom?: string
+          customTo?: string
+        }) => Promise<DashboardStats>
       }
       insumos: {
         getAll: () => Promise<Insumo[]>
@@ -79,7 +82,11 @@ declare global {
         delete: (id: number) => Promise<{ success: boolean }>
       }
       cashExpenses: {
-        getAll: (filters?: { startDate?: string; endDate?: string; categoryId?: number }) => Promise<CashExpense[]>
+        getAll: (filters?: {
+          startDate?: string
+          endDate?: string
+          categoryId?: number
+        }) => Promise<CashExpense[]>
         create: (data: CreateCashExpenseInput) => Promise<{ id: number }>
         update: (data: UpdateCashExpenseInput) => Promise<{ success: boolean }>
         delete: (id: number) => Promise<{ success: boolean }>

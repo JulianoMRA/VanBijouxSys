@@ -40,12 +40,18 @@ function getPeriodDates(period: PeriodKey): { startDate: string; endDate: string
   if (period === '3meses') {
     const d = new Date(now)
     d.setMonth(d.getMonth() - 3)
-    return { startDate: `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`, endDate: today }
+    return {
+      startDate: `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`,
+      endDate: today
+    }
   }
   if (period === '6meses') {
     const d = new Date(now)
     d.setMonth(d.getMonth() - 6)
-    return { startDate: `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`, endDate: today }
+    return {
+      startDate: `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`,
+      endDate: today
+    }
   }
   if (period === 'ano') {
     return { startDate: `${now.getFullYear()}-01-01`, endDate: today }
@@ -61,10 +67,14 @@ type ExpenseModal =
 function buildFairCostSub(fair: Fair): string {
   const parts: string[] = []
   if (fair.enrollmentCost > 0) {
-    parts.push(`Inscrição ${fair.enrollmentCost.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}`)
+    parts.push(
+      `Inscrição ${fair.enrollmentCost.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}`
+    )
   }
   fair.additionalCosts.forEach((c) => {
-    parts.push(`${c.description} ${c.amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}`)
+    parts.push(
+      `${c.description} ${c.amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}`
+    )
   })
   return parts.join(' · ') || 'Sem detalhes'
 }
@@ -118,9 +128,12 @@ export default function Cash(): JSX.Element {
   }, [])
 
   // ── Filtering ────────────────────────────────────────────────────────────
-  const dateRange = period === 'custom'
-    ? (customStart && customEnd ? { startDate: customStart, endDate: customEnd } : null)
-    : getPeriodDates(period)
+  const dateRange =
+    period === 'custom'
+      ? customStart && customEnd
+        ? { startDate: customStart, endDate: customEnd }
+        : null
+      : getPeriodDates(period)
 
   // Vendas 'A receber' pendentes não estão no caixa; vendas recebidas (receivedAt definido)
   // usam a data efetiva de recebimento para o filtro de período.
@@ -144,30 +157,60 @@ export default function Cash(): JSX.Element {
     const rows = fairs.flatMap((f) => {
       const total = f.enrollmentCost + f.additionalCosts.reduce((s, c) => s + c.amount, 0)
       if (total === 0) return []
-      return [{ fairId: f.id, date: f.date, label: f.name, sub: buildFairCostSub(f), amount: total }]
+      return [
+        { fairId: f.id, date: f.date, label: f.name, sub: buildFairCostSub(f), amount: total }
+      ]
     })
     if (!dateRange) return rows
     return rows.filter((r) => r.date >= dateRange.startDate && r.date <= dateRange.endDate)
   }, [fairs, dateRange])
 
   const totalIncome = filteredSales.reduce((s, sale) => s + sale.netAmount, 0)
-  const totalExpenses = filteredExpenses.reduce((s, e) => s + e.amount, 0) + filteredFairExpenses.reduce((s, fe) => s + fe.amount, 0)
+  const totalExpenses =
+    filteredExpenses.reduce((s, e) => s + e.amount, 0) +
+    filteredFairExpenses.reduce((s, fe) => s + fe.amount, 0)
   const currentBalance = openingBalance + totalIncome - totalExpenses
 
   // ── Unified transaction list ─────────────────────────────────────────────
   type TransactionRow =
-    | { kind: 'income'; id: number; date: string; label: string; sub: string; amount: number; netAmount: number; feeAmount: number; paymentMethod: PaymentMethod }
-    | { kind: 'expense'; id: number; date: string; label: string; sub: string; amount: number; raw: CashExpense }
-    | { kind: 'fair-expense'; fairId: number; date: string; label: string; sub: string; amount: number }
+    | {
+        kind: 'income'
+        id: number
+        date: string
+        label: string
+        sub: string
+        amount: number
+        netAmount: number
+        feeAmount: number
+        paymentMethod: PaymentMethod
+      }
+    | {
+        kind: 'expense'
+        id: number
+        date: string
+        label: string
+        sub: string
+        amount: number
+        raw: CashExpense
+      }
+    | {
+        kind: 'fair-expense'
+        fairId: number
+        date: string
+        label: string
+        sub: string
+        amount: number
+      }
 
   const transactions = useMemo((): TransactionRow[] => {
     const incomeRows: TransactionRow[] = filteredSales.map((s) => ({
       kind: 'income',
       id: s.id,
       date: (s.receivedAt ?? s.soldAt).slice(0, 10),
-      label: s.items.length === 1
-        ? `${s.items[0].productName} — ${s.items[0].variationIdentifier}`
-        : `${s.items.length} itens vendidos`,
+      label:
+        s.items.length === 1
+          ? `${s.items[0].productName} — ${s.items[0].variationIdentifier}`
+          : `${s.items.length} itens vendidos`,
       sub: `${s.channel}${s.fairName ? ` · ${s.fairName}` : ''} · ${PAYMENT_LABELS[s.paymentMethod]}${s.receivedAt ? ' · recebido' : ''}`,
       amount: s.totalAmount,
       netAmount: s.netAmount,
@@ -272,14 +315,20 @@ export default function Cash(): JSX.Element {
         <div className="flex gap-2">
           <button
             className="btn-secondary flex items-center gap-1.5 text-sm"
-            onClick={() => { setShowOpeningBalance(true); setBalanceInput(openingBalance.toString()) }}
+            onClick={() => {
+              setShowOpeningBalance(true)
+              setBalanceInput(openingBalance.toString())
+            }}
           >
             <Wallet size={14} />
             Saldo de abertura
           </button>
           <button
             className="btn-secondary flex items-center gap-1.5 text-sm"
-            onClick={() => { setShowCategories(true); setCategoryError('') }}
+            onClick={() => {
+              setShowCategories(true)
+              setCategoryError('')
+            }}
           >
             <Settings size={14} />
             Categorias
@@ -297,7 +346,12 @@ export default function Cash(): JSX.Element {
       {errorMessage && (
         <div className="bg-rose-50 border border-rose-200 rounded-2xl px-5 py-3 mb-4 flex items-start justify-between gap-3">
           <p className="text-sm text-rose-700">{errorMessage}</p>
-          <button onClick={() => setErrorMessage('')} className="text-rose-400 hover:text-rose-600 shrink-0 text-lg leading-none">×</button>
+          <button
+            onClick={() => setErrorMessage('')}
+            className="text-rose-400 hover:text-rose-600 shrink-0 text-lg leading-none"
+          >
+            ×
+          </button>
         </div>
       )}
 
@@ -342,10 +396,15 @@ export default function Cash(): JSX.Element {
       <div className="grid grid-cols-4 gap-4 mb-6">
         <div className="card py-4">
           <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">Saldo de abertura</p>
-          <p className="font-display text-xl font-semibold text-gray-700">{formatCurrency(openingBalance)}</p>
+          <p className="font-display text-xl font-semibold text-gray-700">
+            {formatCurrency(openingBalance)}
+          </p>
           <button
             className="text-xs text-blush-500 hover:text-blush-700 mt-1 transition-colors"
-            onClick={() => { setShowOpeningBalance(true); setBalanceInput(openingBalance.toString()) }}
+            onClick={() => {
+              setShowOpeningBalance(true)
+              setBalanceInput(openingBalance.toString())
+            }}
           >
             Alterar
           </button>
@@ -354,22 +413,33 @@ export default function Cash(): JSX.Element {
           <p className="text-xs text-gray-400 uppercase tracking-wide mb-1 flex items-center gap-1">
             <TrendingUp size={12} className="text-emerald-500" /> Entradas
           </p>
-          <p className="font-display text-xl font-semibold text-emerald-600">{formatCurrency(totalIncome)}</p>
-          <p className="text-xs text-gray-400 mt-0.5">{filteredSales.length} venda{filteredSales.length !== 1 ? 's' : ''}</p>
+          <p className="font-display text-xl font-semibold text-emerald-600">
+            {formatCurrency(totalIncome)}
+          </p>
+          <p className="text-xs text-gray-400 mt-0.5">
+            {filteredSales.length} venda{filteredSales.length !== 1 ? 's' : ''}
+          </p>
         </div>
         <div className="card py-4">
           <p className="text-xs text-gray-400 uppercase tracking-wide mb-1 flex items-center gap-1">
             <TrendingDown size={12} className="text-rose-500" /> Saídas
           </p>
-          <p className="font-display text-xl font-semibold text-rose-600">{formatCurrency(totalExpenses)}</p>
+          <p className="font-display text-xl font-semibold text-rose-600">
+            {formatCurrency(totalExpenses)}
+          </p>
           <p className="text-xs text-gray-400 mt-0.5">
             {filteredExpenses.length} despesa{filteredExpenses.length !== 1 ? 's' : ''}
-            {filteredFairExpenses.length > 0 && ` · ${filteredFairExpenses.length} feira${filteredFairExpenses.length !== 1 ? 's' : ''}`}
+            {filteredFairExpenses.length > 0 &&
+              ` · ${filteredFairExpenses.length} feira${filteredFairExpenses.length !== 1 ? 's' : ''}`}
           </p>
         </div>
-        <div className={`card py-4 ${currentBalance >= 0 ? 'bg-emerald-50 border-emerald-200' : 'bg-rose-50 border-rose-200'}`}>
+        <div
+          className={`card py-4 ${currentBalance >= 0 ? 'bg-emerald-50 border-emerald-200' : 'bg-rose-50 border-rose-200'}`}
+        >
           <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">Saldo atual</p>
-          <p className={`font-display text-xl font-semibold ${currentBalance >= 0 ? 'text-emerald-700' : 'text-rose-700'}`}>
+          <p
+            className={`font-display text-xl font-semibold ${currentBalance >= 0 ? 'text-emerald-700' : 'text-rose-700'}`}
+          >
             {formatCurrency(currentBalance)}
           </p>
           <p className="text-xs text-gray-400 mt-0.5">abertura + entradas − saídas</p>
@@ -392,11 +462,13 @@ export default function Cash(): JSX.Element {
         <div className="space-y-2">
           {transactions.map((tx, idx) => (
             <div
-              key={`${tx.kind}-${tx.id}-${idx}`}
+              key={`${tx.kind}-${tx.kind === 'fair-expense' ? tx.fairId : tx.id}-${idx}`}
               className="bg-white rounded-2xl border border-cream-200 shadow-card px-5 py-3.5 flex items-center gap-4"
             >
               {/* Indicador */}
-              <div className={`w-1.5 h-10 rounded-full shrink-0 ${tx.kind === 'income' ? 'bg-emerald-400' : 'bg-rose-400'}`} />
+              <div
+                className={`w-1.5 h-10 rounded-full shrink-0 ${tx.kind === 'income' ? 'bg-emerald-400' : 'bg-rose-400'}`}
+              />
 
               {/* Data */}
               <div className="text-xs text-gray-400 w-20 shrink-0">{formatDate(tx.date)}</div>
@@ -411,13 +483,17 @@ export default function Cash(): JSX.Element {
               <div className="text-right shrink-0">
                 {tx.kind === 'income' ? (
                   <>
-                    <p className="text-sm font-semibold text-emerald-600">+ {formatCurrency(tx.netAmount)}</p>
+                    <p className="text-sm font-semibold text-emerald-600">
+                      + {formatCurrency(tx.netAmount)}
+                    </p>
                     {tx.feeAmount > 0 && (
                       <p className="text-xs text-gray-400">bruto {formatCurrency(tx.amount)}</p>
                     )}
                   </>
                 ) : (
-                  <p className="text-sm font-semibold text-rose-600">− {formatCurrency(tx.amount)}</p>
+                  <p className="text-sm font-semibold text-rose-600">
+                    − {formatCurrency(tx.amount)}
+                  </p>
                 )}
               </div>
 
@@ -456,7 +532,10 @@ export default function Cash(): JSX.Element {
       {expenseModal?.type === 'new' && (
         <ExpenseForm
           categories={categories}
-          onSave={() => { loadAll(); showToast('Despesa registrada!') }}
+          onSave={() => {
+            loadAll()
+            showToast('Despesa registrada!')
+          }}
           onClose={() => setExpenseModal(null)}
         />
       )}
@@ -464,7 +543,10 @@ export default function Cash(): JSX.Element {
         <ExpenseForm
           expense={expenseModal.expense}
           categories={categories}
-          onSave={() => { loadAll(); showToast('Despesa atualizada!') }}
+          onSave={() => {
+            loadAll()
+            showToast('Despesa atualizada!')
+          }}
           onClose={() => setExpenseModal(null)}
         />
       )}
@@ -481,7 +563,14 @@ export default function Cash(): JSX.Element {
 
       {/* Modal: gerenciar categorias */}
       {showCategories && (
-        <Modal title="Gerenciar categorias" onClose={() => { setShowCategories(false); setCategoryError(''); setEditingCategory(null) }}>
+        <Modal
+          title="Gerenciar categorias"
+          onClose={() => {
+            setShowCategories(false)
+            setCategoryError('')
+            setEditingCategory(null)
+          }}
+        >
           <div className="space-y-4">
             {/* Nova categoria */}
             <div>
@@ -493,7 +582,12 @@ export default function Cash(): JSX.Element {
                   value={newCategoryName}
                   onChange={(e) => setNewCategoryName(e.target.value)}
                   placeholder="Nome da categoria"
-                  onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleCreateCategory() } }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault()
+                      handleCreateCategory()
+                    }
+                  }}
                   maxLength={100}
                 />
                 <button
@@ -507,13 +601,13 @@ export default function Cash(): JSX.Element {
               </div>
             </div>
 
-            {categoryError && (
-              <p className="text-sm text-rose-500">{categoryError}</p>
-            )}
+            {categoryError && <p className="text-sm text-rose-500">{categoryError}</p>}
 
             {/* Lista de categorias */}
             {categories.length === 0 ? (
-              <p className="text-sm text-gray-400 text-center py-4">Nenhuma categoria cadastrada.</p>
+              <p className="text-sm text-gray-400 text-center py-4">
+                Nenhuma categoria cadastrada.
+              </p>
             ) : (
               <div className="space-y-1.5 max-h-64 overflow-y-auto">
                 {categories.map((cat) => (
@@ -524,13 +618,27 @@ export default function Cash(): JSX.Element {
                           className="input flex-1 py-1 text-sm"
                           value={editCategoryName}
                           onChange={(e) => setEditCategoryName(e.target.value)}
-                          onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleUpdateCategory() } }}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault()
+                              handleUpdateCategory()
+                            }
+                          }}
                           autoFocus
                         />
-                        <button className="text-xs text-blush-600 hover:text-blush-800 font-medium px-2" onClick={handleUpdateCategory}>
+                        <button
+                          className="text-xs text-blush-600 hover:text-blush-800 font-medium px-2"
+                          onClick={handleUpdateCategory}
+                        >
                           Salvar
                         </button>
-                        <button className="text-xs text-gray-400 hover:text-gray-600 px-1" onClick={() => { setEditingCategory(null); setEditCategoryName('') }}>
+                        <button
+                          className="text-xs text-gray-400 hover:text-gray-600 px-1"
+                          onClick={() => {
+                            setEditingCategory(null)
+                            setEditCategoryName('')
+                          }}
+                        >
                           Cancelar
                         </button>
                       </>
@@ -539,7 +647,11 @@ export default function Cash(): JSX.Element {
                         <span className="flex-1 text-sm text-gray-700">{cat.name}</span>
                         <button
                           className="p-1 text-gray-400 hover:text-blush-600 rounded transition-colors"
-                          onClick={() => { setEditingCategory(cat); setEditCategoryName(cat.name); setCategoryError('') }}
+                          onClick={() => {
+                            setEditingCategory(cat)
+                            setEditCategoryName(cat.name)
+                            setCategoryError('')
+                          }}
                         >
                           <Pencil size={13} />
                         </button>
@@ -576,7 +688,9 @@ export default function Cash(): JSX.Element {
         <Modal title="Saldo de abertura" onClose={() => setShowOpeningBalance(false)}>
           <div className="space-y-4">
             <p className="text-sm text-gray-500">
-              Informe o valor que você já possui em caixa antes de começar a registrar movimentações. Este valor será somado às entradas e descontado das saídas para calcular o saldo atual.
+              Informe o valor que você já possui em caixa antes de começar a registrar
+              movimentações. Este valor será somado às entradas e descontado das saídas para
+              calcular o saldo atual.
             </p>
             <div>
               <label className="label">Valor (R$)</label>
@@ -592,8 +706,12 @@ export default function Cash(): JSX.Element {
               />
             </div>
             <div className="flex justify-end gap-3">
-              <button className="btn-secondary" onClick={() => setShowOpeningBalance(false)}>Cancelar</button>
-              <button className="btn-primary" onClick={handleSaveOpeningBalance}>Salvar</button>
+              <button className="btn-secondary" onClick={() => setShowOpeningBalance(false)}>
+                Cancelar
+              </button>
+              <button className="btn-primary" onClick={handleSaveOpeningBalance}>
+                Salvar
+              </button>
             </div>
           </div>
         </Modal>

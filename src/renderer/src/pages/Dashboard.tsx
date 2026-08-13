@@ -14,7 +14,16 @@ import {
   Pie,
   Legend
 } from 'recharts'
-import { ChevronDown, ChevronUp, AlertTriangle, XCircle, Trophy, Gem, Star, TrendingUp } from 'lucide-react'
+import {
+  ChevronDown,
+  ChevronUp,
+  AlertTriangle,
+  XCircle,
+  Trophy,
+  Gem,
+  Star,
+  TrendingUp
+} from 'lucide-react'
 import { formatCurrency } from '../utils/format'
 import type { DashboardStats } from '../types'
 
@@ -91,7 +100,9 @@ function StatCard({
   return (
     <div className="card py-5">
       <p className="text-xs text-gray-400 uppercase tracking-widest mb-2">{label}</p>
-      <p className={`font-display text-2xl font-bold ${accent ? 'text-blush-600' : 'text-gray-800'}`}>
+      <p
+        className={`font-display text-2xl font-bold ${accent ? 'text-blush-600' : 'text-gray-800'}`}
+      >
         {value}
       </p>
       <DeltaBadge delta={delta ?? null} />
@@ -178,11 +189,7 @@ function InsightsPanel({ stats }: { stats: DashboardStats }): JSX.Element {
   )
 }
 
-function FairCard({
-  fair
-}: {
-  fair: DashboardStats['salesByFair'][number]
-}): JSX.Element {
+function FairCard({ fair }: { fair: DashboardStats['salesByFair'][number] }): JSX.Element {
   const [expanded, setExpanded] = useState(false)
 
   const dateLabel =
@@ -230,13 +237,14 @@ function FairCard({
           <p className="text-xs text-gray-400 mt-1">
             Custo feira: {formatCurrency(totalFairCost)}
             {fair.additionalCosts > 0 &&
-              ` (inscrição ${formatCurrency(fair.enrollmentCost)} + outros ${formatCurrency(fair.additionalCosts)})`}
-            {' '}· Lucro bruto: {formatCurrency(fair.profit)}
+              ` (inscrição ${formatCurrency(fair.enrollmentCost)} + outros ${formatCurrency(fair.additionalCosts)})`}{' '}
+            · Lucro bruto: {formatCurrency(fair.profit)}
           </p>
         )}
         {hasDailyData && bestDay && !expanded && (
           <p className="text-xs text-gray-400 mt-0.5">
-            Melhor dia: {formatDay(bestDay.day)} ({formatCurrency(bestDay.revenue)}) · clique para ver distribuição
+            Melhor dia: {formatDay(bestDay.day)} ({formatCurrency(bestDay.revenue)}) · clique para
+            ver distribuição
           </p>
         )}
       </div>
@@ -271,10 +279,7 @@ function FairCard({
               />
               <Bar dataKey="revenue" name="Faturamento" radius={[4, 4, 0, 0]}>
                 {fair.dailyBreakdown.map((d) => (
-                  <Cell
-                    key={d.day}
-                    fill={d.day === bestDay?.day ? '#e44d8a' : '#f9a8d4'}
-                  />
+                  <Cell key={d.day} fill={d.day === bestDay?.day ? '#e44d8a' : '#f9a8d4'} />
                 ))}
               </Bar>
             </BarChart>
@@ -284,9 +289,7 @@ function FairCard({
               <div key={d.day} className="flex justify-between items-center text-xs">
                 <span
                   className={
-                    d.day === bestDay?.day
-                      ? 'font-semibold text-blush-600'
-                      : 'text-gray-500'
+                    d.day === bestDay?.day ? 'font-semibold text-blush-600' : 'text-gray-500'
                   }
                 >
                   {formatDay(d.day)}
@@ -296,9 +299,7 @@ function FairCard({
                 </span>
                 <span
                   className={
-                    d.day === bestDay?.day
-                      ? 'font-semibold text-blush-600'
-                      : 'text-gray-600'
+                    d.day === bestDay?.day ? 'font-semibold text-blush-600' : 'text-gray-600'
                   }
                 >
                   {formatCurrency(d.revenue)} · {d.salesCount} venda
@@ -504,9 +505,7 @@ export default function Dashboard(): JSX.Element {
       ) : empty ? (
         <div className="card flex flex-col items-center justify-center h-48 text-center">
           <p className="text-gray-500 text-sm">Nenhuma venda registrada neste período.</p>
-          <p className="text-gray-400 text-xs mt-1">
-            Registre uma venda para ver as estatísticas.
-          </p>
+          <p className="text-gray-400 text-xs mt-1">Registre uma venda para ver as estatísticas.</p>
         </div>
       ) : (
         <>
@@ -575,9 +574,7 @@ export default function Dashboard(): JSX.Element {
                 <p className="text-xs text-gray-400 mt-0.5">vendas líquidas</p>
               </div>
               <div className="card py-4 bg-rose-50 border-rose-200">
-                <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">
-                  Saídas (caixa)
-                </p>
+                <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">Saídas (caixa)</p>
                 <p className="font-display text-lg font-semibold text-rose-700">
                   {formatCurrency(stats!.cashSummary.totalExpenses)}
                 </p>
@@ -711,8 +708,8 @@ export default function Dashboard(): JSX.Element {
                       iconType="circle"
                       iconSize={8}
                       wrapperStyle={{ fontSize: 11, color: '#6b7280' }}
-                      formatter={(value, entry: any) =>
-                        `${value} (${entry.payload.quantity} un.)`
+                      formatter={(value, entry) =>
+                        `${value} (${(entry?.payload as { quantity?: number } | undefined)?.quantity ?? 0} un.)`
                       }
                     />
                   </PieChart>
@@ -721,9 +718,7 @@ export default function Dashboard(): JSX.Element {
             </div>
 
             <div className="card">
-              <p className="text-sm font-semibold text-gray-700 mb-4">
-                Faturamento por categoria
-              </p>
+              <p className="text-sm font-semibold text-gray-700 mb-4">Faturamento por categoria</p>
               {stats!.salesByCategory.length === 0 ? (
                 <p className="text-sm text-gray-400 text-center py-8">Sem dados.</p>
               ) : (
@@ -803,7 +798,9 @@ export default function Dashboard(): JSX.Element {
                       iconType="circle"
                       iconSize={8}
                       wrapperStyle={{ fontSize: 11, color: '#6b7280' }}
-                      formatter={(value, entry: any) => `${value} (${entry.payload.count}x)`}
+                      formatter={(value, entry) =>
+                        `${value} (${(entry?.payload as { count?: number } | undefined)?.count ?? 0}x)`
+                      }
                     />
                   </PieChart>
                 </ResponsiveContainer>
@@ -858,9 +855,7 @@ export default function Dashboard(): JSX.Element {
           {/* Top variações + Feiras */}
           <div className="grid grid-cols-2 gap-5 mb-5">
             <div className="card">
-              <p className="text-sm font-semibold text-gray-700 mb-4">
-                Variações mais vendidas
-              </p>
+              <p className="text-sm font-semibold text-gray-700 mb-4">Variações mais vendidas</p>
               {stats!.topVariations.length === 0 ? (
                 <p className="text-sm text-gray-400">Sem dados.</p>
               ) : (
@@ -874,11 +869,7 @@ export default function Dashboard(): JSX.Element {
                     layout="vertical"
                     margin={{ left: 8, right: 16 }}
                   >
-                    <CartesianGrid
-                      strokeDasharray="3 3"
-                      stroke="#f5ede6"
-                      horizontal={false}
-                    />
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f5ede6" horizontal={false} />
                     <XAxis
                       type="number"
                       tick={{ fontSize: 10, fill: '#9ca3af' }}
@@ -903,12 +894,7 @@ export default function Dashboard(): JSX.Element {
                         fontSize: 12
                       }}
                     />
-                    <Bar
-                      dataKey="quantity"
-                      name="Unidades"
-                      fill="#fda4af"
-                      radius={[0, 4, 4, 0]}
-                    />
+                    <Bar dataKey="quantity" name="Unidades" fill="#fda4af" radius={[0, 4, 4, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               )}

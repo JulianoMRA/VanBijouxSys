@@ -1,251 +1,221 @@
-import { ipcMain } from 'electron'
 import { eq } from 'drizzle-orm'
 import { getDb, getSqlite } from '../database'
 import { sales, saleItems, productVariations, products, fairs } from '../database/schema'
+import { handleIpc } from './handle'
 import type { CreateSaleInput, UpdateSaleInput, MarkSaleReceivedInput } from '../../renderer/src/types'
 
 export function registerSaleHandlers(): void {
-  ipcMain.handle('sales:getAll', async () => {
-    try {
-      const db = getDb()
+  handleIpc('sales:getAll', () => {
+    const db = getDb()
 
-      const allSales = db
+    const allSales = db
+      .select({
+        id: sales.id,
+        channel: sales.channel,
+        fairId: sales.fairId,
+        fairName: fairs.name,
+        totalAmount: sales.totalAmount,
+        totalCost: sales.totalCost,
+        paymentMethod: sales.paymentMethod,
+        feePercentage: sales.feePercentage,
+        feeAmount: sales.feeAmount,
+        netAmount: sales.netAmount,
+        soldAt: sales.soldAt,
+        receivedAt: sales.receivedAt
+      })
+      .from(sales)
+      .leftJoin(fairs, eq(sales.fairId, fairs.id))
+      .orderBy(sales.soldAt)
+      .all()
+      .reverse()
+
+    return allSales.map((sale) => {
+      const items = db
         .select({
-          id: sales.id,
-          channel: sales.channel,
-          fairId: sales.fairId,
-          fairName: fairs.name,
-          totalAmount: sales.totalAmount,
-          totalCost: sales.totalCost,
-          paymentMethod: sales.paymentMethod,
-          feePercentage: sales.feePercentage,
-          feeAmount: sales.feeAmount,
-          netAmount: sales.netAmount,
-          soldAt: sales.soldAt,
-          receivedAt: sales.receivedAt
+          id: saleItems.id,
+          variationId: saleItems.variationId,
+          variationIdentifier: productVariations.identifier,
+          productName: products.name,
+          quantity: saleItems.quantity,
+          unitPrice: saleItems.unitPrice,
+          unitCost: saleItems.unitCost
         })
-        .from(sales)
-        .leftJoin(fairs, eq(sales.fairId, fairs.id))
-        .orderBy(sales.soldAt)
+        .from(saleItems)
+        .innerJoin(productVariations, eq(saleItems.variationId, productVariations.id))
+        .innerJoin(products, eq(productVariations.productId, products.id))
+        .where(eq(saleItems.saleId, sale.id))
         .all()
-        .reverse()
 
-      return allSales.map((sale) => {
-        const items = db
-          .select({
-            id: saleItems.id,
-            variationId: saleItems.variationId,
-            variationIdentifier: productVariations.identifier,
-            productName: products.name,
-            quantity: saleItems.quantity,
-            unitPrice: saleItems.unitPrice,
-            unitCost: saleItems.unitCost
-          })
-          .from(saleItems)
-          .innerJoin(productVariations, eq(saleItems.variationId, productVariations.id))
-          .innerJoin(products, eq(productVariations.productId, products.id))
-          .where(eq(saleItems.saleId, sale.id))
-          .all()
-
-        return { ...sale, items }
-      })
-    } catch (err) {
-      console.error('[sales:getAll]', err)
-      return { success: false, error: String(err) }
-    }
+      return { ...sale, items }
+    })
   })
 
-  ipcMain.handle('sales:create', async (_event, data: CreateSaleInput) => {
-    try {
-      const sqlite = getSqlite()
+  handleIpc('sales:create', (data: CreateSaleInput) => {
+    const sqlite = getSqlite()
 
-      const totalAmount = data.items.reduce((s, i) => s + i.quantity * i.unitPrice, 0)
-      const totalCost = data.items.reduce((s, i) => s + i.quantity * i.unitCost, 0)
+    const totalAmount = data.items.reduce((s, i) => s + i.quantity * i.unitPrice, 0)
+    const totalCost = data.items.reduce((s, i) => s + i.quantity * i.unitCost, 0)
 
-      const createSale = sqlite.transaction(() => {
-        const saleResult = sqlite
-          .prepare(
-            `INSERT INTO sales (channel, fair_id, total_amount, total_cost, payment_method, fee_percentage, fee_amount, net_amount, sold_at)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
-          )
-          .run(
-            data.channel,
-            data.fairId ?? null,
-            totalAmount,
-            totalCost,
-            data.paymentMethod,
-            data.feePercentage,
-            data.feeAmount,
-            data.netAmount,
-            data.soldAt
-          )
-
-        const saleId = saleResult.lastInsertRowid
-
-        for (const item of data.items) {
-          sqlite
-            .prepare(
-              `INSERT INTO sale_items (sale_id, variation_id, quantity, unit_price, unit_cost)
-               VALUES (?, ?, ?, ?, ?)`
-            )
-            .run(saleId, item.variationId, item.quantity, item.unitPrice, item.unitCost)
-
-          sqlite
-            .prepare(
-              `UPDATE product_variations
-               SET stock_quantity = MAX(0, stock_quantity - ?)
-               WHERE id = ?`
-            )
-            .run(item.quantity, item.variationId)
-        }
-
-        return { id: saleId }
-      })
-
-      return createSale()
-    } catch (err) {
-      console.error('[sales:create]', err)
-      return { success: false, error: String(err) }
-    }
-  })
-
-  ipcMain.handle('sales:update', async (_event, data: UpdateSaleInput) => {
-    try {
-      const sqlite = getSqlite()
-
-      const updateSale = sqlite.transaction(() => {
-        const oldItems = sqlite
-          .prepare(`SELECT variation_id, quantity FROM sale_items WHERE sale_id = ?`)
-          .all(data.id) as { variation_id: number; quantity: number }[]
-
-        for (const item of oldItems) {
-          sqlite
-            .prepare(`UPDATE product_variations SET stock_quantity = stock_quantity + ? WHERE id = ?`)
-            .run(item.quantity, item.variation_id)
-        }
-
-        sqlite.prepare(`DELETE FROM sale_items WHERE sale_id = ?`).run(data.id)
-
-        const totalAmount = data.items.reduce((s, i) => s + i.quantity * i.unitPrice, 0)
-        const totalCost = data.items.reduce((s, i) => s + i.quantity * i.unitCost, 0)
-
-        sqlite
-          .prepare(
-            `UPDATE sales SET channel = ?, fair_id = ?, total_amount = ?, total_cost = ?,
-             payment_method = ?, fee_percentage = ?, fee_amount = ?, net_amount = ?, sold_at = ?
-             WHERE id = ?`
-          )
-          .run(
-            data.channel,
-            data.fairId ?? null,
-            totalAmount,
-            totalCost,
-            data.paymentMethod,
-            data.feePercentage,
-            data.feeAmount,
-            data.netAmount,
-            data.soldAt,
-            data.id
-          )
-
-        for (const item of data.items) {
-          sqlite
-            .prepare(
-              `INSERT INTO sale_items (sale_id, variation_id, quantity, unit_price, unit_cost)
-               VALUES (?, ?, ?, ?, ?)`
-            )
-            .run(data.id, item.variationId, item.quantity, item.unitPrice, item.unitCost)
-
-          sqlite
-            .prepare(
-              `UPDATE product_variations
-               SET stock_quantity = MAX(0, stock_quantity - ?)
-               WHERE id = ?`
-            )
-            .run(item.quantity, item.variationId)
-        }
-      })
-
-      updateSale()
-      return { success: true }
-    } catch (err) {
-      console.error('[sales:update]', err)
-      return { success: false, error: String(err) }
-    }
-  })
-
-  ipcMain.handle('sales:markAsReceived', async (_event, data: MarkSaleReceivedInput) => {
-    try {
-      const sqlite = getSqlite()
-      sqlite
+    const createSale = sqlite.transaction(() => {
+      const saleResult = sqlite
         .prepare(
-          `UPDATE sales
-             SET payment_method = ?, fee_percentage = ?, fee_amount = ?, net_amount = ?, received_at = ?
-           WHERE id = ?`
+          `INSERT INTO sales (channel, fair_id, total_amount, total_cost, payment_method, fee_percentage, fee_amount, net_amount, sold_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
         )
         .run(
+          data.channel,
+          data.fairId ?? null,
+          totalAmount,
+          totalCost,
           data.paymentMethod,
           data.feePercentage,
           data.feeAmount,
           data.netAmount,
-          data.receivedAt,
-          data.id
+          data.soldAt
         )
-      return { success: true }
-    } catch (err) {
-      console.error('[sales:markAsReceived]', err)
-      return { success: false, error: String(err) }
-    }
+
+      const saleId = saleResult.lastInsertRowid
+
+      for (const item of data.items) {
+        sqlite
+          .prepare(
+            `INSERT INTO sale_items (sale_id, variation_id, quantity, unit_price, unit_cost)
+               VALUES (?, ?, ?, ?, ?)`
+          )
+          .run(saleId, item.variationId, item.quantity, item.unitPrice, item.unitCost)
+
+        sqlite
+          .prepare(
+            `UPDATE product_variations
+               SET stock_quantity = MAX(0, stock_quantity - ?)
+               WHERE id = ?`
+          )
+          .run(item.quantity, item.variationId)
+      }
+
+      return { id: saleId }
+    })
+
+    return createSale()
   })
 
-  ipcMain.handle('sales:unmarkAsReceived', async (_event, id: number) => {
-    try {
-      const sqlite = getSqlite()
+  handleIpc('sales:update', (data: UpdateSaleInput) => {
+    const sqlite = getSqlite()
+
+    const updateSale = sqlite.transaction(() => {
+      const oldItems = sqlite
+        .prepare(`SELECT variation_id, quantity FROM sale_items WHERE sale_id = ?`)
+        .all(data.id) as { variation_id: number; quantity: number }[]
+
+      for (const item of oldItems) {
+        sqlite
+          .prepare(`UPDATE product_variations SET stock_quantity = stock_quantity + ? WHERE id = ?`)
+          .run(item.quantity, item.variation_id)
+      }
+
+      sqlite.prepare(`DELETE FROM sale_items WHERE sale_id = ?`).run(data.id)
+
+      const totalAmount = data.items.reduce((s, i) => s + i.quantity * i.unitPrice, 0)
+      const totalCost = data.items.reduce((s, i) => s + i.quantity * i.unitCost, 0)
+
       sqlite
         .prepare(
-          `UPDATE sales
+          `UPDATE sales SET channel = ?, fair_id = ?, total_amount = ?, total_cost = ?,
+             payment_method = ?, fee_percentage = ?, fee_amount = ?, net_amount = ?, sold_at = ?
+             WHERE id = ?`
+        )
+        .run(
+          data.channel,
+          data.fairId ?? null,
+          totalAmount,
+          totalCost,
+          data.paymentMethod,
+          data.feePercentage,
+          data.feeAmount,
+          data.netAmount,
+          data.soldAt,
+          data.id
+        )
+
+      for (const item of data.items) {
+        sqlite
+          .prepare(
+            `INSERT INTO sale_items (sale_id, variation_id, quantity, unit_price, unit_cost)
+               VALUES (?, ?, ?, ?, ?)`
+          )
+          .run(data.id, item.variationId, item.quantity, item.unitPrice, item.unitCost)
+
+        sqlite
+          .prepare(
+            `UPDATE product_variations
+               SET stock_quantity = MAX(0, stock_quantity - ?)
+               WHERE id = ?`
+          )
+          .run(item.quantity, item.variationId)
+      }
+    })
+
+    updateSale()
+    return { success: true }
+  })
+
+  handleIpc('sales:markAsReceived', (data: MarkSaleReceivedInput) => {
+    const sqlite = getSqlite()
+    sqlite
+      .prepare(
+        `UPDATE sales
+             SET payment_method = ?, fee_percentage = ?, fee_amount = ?, net_amount = ?, received_at = ?
+           WHERE id = ?`
+      )
+      .run(
+        data.paymentMethod,
+        data.feePercentage,
+        data.feeAmount,
+        data.netAmount,
+        data.receivedAt,
+        data.id
+      )
+    return { success: true }
+  })
+
+  handleIpc('sales:unmarkAsReceived', (id: number) => {
+    const sqlite = getSqlite()
+    sqlite
+      .prepare(
+        `UPDATE sales
              SET payment_method = 'areceber',
                  fee_percentage = 0,
                  fee_amount = 0,
                  net_amount = total_amount,
                  received_at = NULL
            WHERE id = ?`
-        )
-        .run(id)
-      return { success: true }
-    } catch (err) {
-      console.error('[sales:unmarkAsReceived]', err)
-      return { success: false, error: String(err) }
-    }
+      )
+      .run(id)
+    return { success: true }
   })
 
-  ipcMain.handle('sales:delete', async (_event, id: number) => {
-    try {
-      const sqlite = getSqlite()
+  handleIpc('sales:delete', (id: number) => {
+    const sqlite = getSqlite()
 
-      const deleteSale = sqlite.transaction(() => {
-        const items = sqlite
-          .prepare(`SELECT variation_id, quantity FROM sale_items WHERE sale_id = ?`)
-          .all(id) as { variation_id: number; quantity: number }[]
+    const deleteSale = sqlite.transaction(() => {
+      const items = sqlite
+        .prepare(`SELECT variation_id, quantity FROM sale_items WHERE sale_id = ?`)
+        .all(id) as { variation_id: number; quantity: number }[]
 
-        for (const item of items) {
-          sqlite
-            .prepare(
-              `UPDATE product_variations
+      for (const item of items) {
+        sqlite
+          .prepare(
+            `UPDATE product_variations
                SET stock_quantity = stock_quantity + ?
                WHERE id = ?`
-            )
-            .run(item.quantity, item.variation_id)
-        }
+          )
+          .run(item.quantity, item.variation_id)
+      }
 
-        sqlite.prepare(`DELETE FROM sales WHERE id = ?`).run(id)
-      })
+      sqlite.prepare(`DELETE FROM sales WHERE id = ?`).run(id)
+    })
 
-      deleteSale()
-      return { success: true }
-    } catch (err) {
-      console.error('[sales:delete]', err)
-      return { success: false, error: String(err) }
-    }
+    deleteSale()
+    return { success: true }
   })
 }

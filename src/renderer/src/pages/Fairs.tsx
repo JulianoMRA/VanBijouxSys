@@ -45,11 +45,16 @@ export default function Fairs(): JSX.Element {
   }, [])
 
   async function handleDelete(fair: Fair): Promise<void> {
+    setErrorMessage('')
     try {
       await window.api.fairs.delete(fair.id)
       await loadFairs()
-    } catch {
-      setErrorMessage(`"${fair.name}" não pode ser excluída pois possui vendas registradas.`)
+    } catch (err) {
+      setErrorMessage(
+        err instanceof Error
+          ? `"${fair.name}": ${err.message}`
+          : `"${fair.name}" não pode ser excluída pois possui vendas registradas.`
+      )
     }
   }
 

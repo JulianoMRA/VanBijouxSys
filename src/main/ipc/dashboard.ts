@@ -1,5 +1,5 @@
-import { ipcMain } from 'electron'
 import { getSqlite } from '../database'
+import { ErroDeNegocio, handleIpc } from './handle'
 
 export interface DashboardStats {
   overview: {
@@ -151,8 +151,8 @@ function computePeriodDates(period: Exclude<Period, 'custom'>): {
 }
 
 export function registerDashboardHandlers(): void {
-  ipcMain.handle('dashboard:getStats', async (_event, params: DashboardParams) => {
-    try {
+  handleIpc('dashboard:getStats', (params: DashboardParams) => {
+    {
       const sqlite = getSqlite()
 
       let fromDate: string | null
@@ -169,6 +169,11 @@ export function registerDashboardHandlers(): void {
         ;({ fromDate, toDate, prevFromDate, prevToDate } = computePeriodDates(params.period))
       }
 
+      // Cada cláusula de data depende de fromDate; um toDate solto geraria mais
+      // parâmetros do que placeholders e a consulta quebraria.
+      if (toDate && !fromDate) {
+        throw new ErroDeNegocio('Informe a data inicial do período personalizado.')
+      }
       if (fromDate && !ISO_DATE.test(fromDate)) throw new Error('Invalid fromDate format')
       if (toDate && !ISO_DATE.test(toDate)) throw new Error('Invalid toDate format')
 
@@ -504,9 +509,6 @@ export function registerDashboardHandlers(): void {
         cashFlow,
         cashSummary
       }
-    } catch (err) {
-      console.error('[dashboard:getStats]', err)
-      return { success: false, error: String(err) }
     }
   })
 }

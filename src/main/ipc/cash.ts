@@ -1,7 +1,7 @@
-import { ipcMain } from 'electron'
 import { eq } from 'drizzle-orm'
 import { getDb, getSqlite } from '../database'
 import { expenseCategories, cashExpenses, cashSettings } from '../database/schema'
+import { ErroDeNegocio, handleIpc } from './handle'
 import type {
   CreateExpenseCategoryInput,
   UpdateExpenseCategoryInput,
@@ -12,31 +12,37 @@ import type {
 export function registerCashHandlers(): void {
   // ── Categorias de despesa ────────────────────────────────────────────────
 
-  ipcMain.handle('expense-categories:getAll', async () => {
+  handleIpc('expense-categories:getAll', () => {
     const db = getDb()
     return db.select().from(expenseCategories).orderBy(expenseCategories.name).all()
   })
 
-  ipcMain.handle('expense-categories:create', async (_event, data: CreateExpenseCategoryInput) => {
+  handleIpc('expense-categories:create', (data: CreateExpenseCategoryInput) => {
     const db = getDb()
     const result = db.insert(expenseCategories).values({ name: data.name }).run()
     return { id: result.lastInsertRowid }
   })
 
-  ipcMain.handle('expense-categories:update', async (_event, data: UpdateExpenseCategoryInput) => {
+  handleIpc('expense-categories:update', (data: UpdateExpenseCategoryInput) => {
     const db = getDb()
-    db.update(expenseCategories).set({ name: data.name }).where(eq(expenseCategories.id, data.id)).run()
+    db.update(expenseCategories)
+      .set({ name: data.name })
+      .where(eq(expenseCategories.id, data.id))
+      .run()
     return { success: true }
   })
 
-  ipcMain.handle('expense-categories:delete', async (_event, id: number) => {
+  handleIpc('expense-categories:delete', (id: number) => {
     const sqlite = getSqlite()
     const linked = sqlite
       .prepare('SELECT COUNT(*) as count FROM cash_expenses WHERE category_id = ?')
       .get(id) as { count: number }
     if (linked.count > 0) {
-      throw new Error('Categoria possui despesas vinculadas. Remova as despesas antes de excluir.')
+      throw new ErroDeNegocio(
+        'Esta categoria possui despesas vinculadas. Remova as despesas antes de excluir.'
+      )
     }
+
     const db = getDb()
     db.delete(expenseCategories).where(eq(expenseCategories.id, id)).run()
     return { success: true }
@@ -44,10 +50,12 @@ export function registerCashHandlers(): void {
 
   // ── Despesas ─────────────────────────────────────────────────────────────
 
-  ipcMain.handle('cash-expenses:getAll', async (_event, filters?: { startDate?: string; endDate?: string; categoryId?: number }) => {
-    const sqlite = getSqlite()
+  handleIpc(
+    'cash-expenses:getAll',
+    (filters?: { startDate?: string; endDate?: string; categoryId?: number }) => {
+      const sqlite = getSqlite()
 
-    let query = `
+      let query = `
       SELECT
         e.id,
         e.category_id as categoryId,
@@ -61,27 +69,28 @@ export function registerCashHandlers(): void {
       INNER JOIN expense_categories c ON e.category_id = c.id
       WHERE 1=1
     `
-    const params: (string | number)[] = []
+      const params: (string | number)[] = []
 
-    if (filters?.startDate) {
-      query += ' AND e.expense_date >= ?'
-      params.push(filters.startDate)
+      if (filters?.startDate) {
+        query += ' AND e.expense_date >= ?'
+        params.push(filters.startDate)
+      }
+      if (filters?.endDate) {
+        query += ' AND e.expense_date <= ?'
+        params.push(filters.endDate)
+      }
+      if (filters?.categoryId) {
+        query += ' AND e.category_id = ?'
+        params.push(filters.categoryId)
+      }
+
+      query += ' ORDER BY e.expense_date DESC, e.created_at DESC'
+
+      return sqlite.prepare(query).all(...params)
     }
-    if (filters?.endDate) {
-      query += ' AND e.expense_date <= ?'
-      params.push(filters.endDate)
-    }
-    if (filters?.categoryId) {
-      query += ' AND e.category_id = ?'
-      params.push(filters.categoryId)
-    }
+  )
 
-    query += ' ORDER BY e.expense_date DESC, e.created_at DESC'
-
-    return sqlite.prepare(query).all(...params)
-  })
-
-  ipcMain.handle('cash-expenses:create', async (_event, data: CreateCashExpenseInput) => {
+  handleIpc('cash-expenses:create', (data: CreateCashExpenseInput) => {
     const db = getDb()
     const result = db
       .insert(cashExpenses)
@@ -96,10 +105,9 @@ export function registerCashHandlers(): void {
     return { id: result.lastInsertRowid }
   })
 
-  ipcMain.handle('cash-expenses:update', async (_event, data: UpdateCashExpenseInput) => {
+  handleIpc('cash-expenses:update', (data: UpdateCashExpenseInput) => {
     const db = getDb()
-    db
-      .update(cashExpenses)
+    db.update(cashExpenses)
       .set({
         categoryId: data.categoryId,
         description: data.description,
@@ -112,13 +120,13 @@ export function registerCashHandlers(): void {
     return { success: true }
   })
 
-  ipcMain.handle('cash-expenses:delete', async (_event, id: number) => {
+  handleIpc('cash-expenses:delete', (id: number) => {
     const db = getDb()
     db.delete(cashExpenses).where(eq(cashExpenses.id, id)).run()
     return { success: true }
   })
 
-  ipcMain.handle('cash-expenses:getStats', async (_event, filters?: { startDate?: string; endDate?: string }) => {
+  handleIpc('cash-expenses:getStats', (filters?: { startDate?: string; endDate?: string }) => {
     const sqlite = getSqlite()
 
     let expenseQuery = 'SELECT COALESCE(SUM(amount), 0) as total FROM cash_expenses WHERE 1=1'
@@ -152,7 +160,9 @@ export function registerCashHandlers(): void {
 
     const incomeResult = sqlite.prepare(incomeQuery).get(...incomeParams) as { total: number }
 
-    const settings = sqlite.prepare('SELECT opening_balance FROM cash_settings WHERE id = 1').get() as { opening_balance: number }
+    const settings = sqlite
+      .prepare('SELECT opening_balance FROM cash_settings WHERE id = 1')
+      .get() as { opening_balance: number } | undefined
 
     return {
       totalExpenses: expenseResult.total,
@@ -163,12 +173,12 @@ export function registerCashHandlers(): void {
 
   // ── Configurações do caixa ───────────────────────────────────────────────
 
-  ipcMain.handle('cash-settings:get', async () => {
+  handleIpc('cash-settings:get', () => {
     const db = getDb()
     return db.select().from(cashSettings).where(eq(cashSettings.id, 1)).get()
   })
 
-  ipcMain.handle('cash-settings:setOpeningBalance', async (_event, balance: number) => {
+  handleIpc('cash-settings:setOpeningBalance', (balance: number) => {
     const sqlite = getSqlite()
     const now = new Date().toISOString()
     sqlite

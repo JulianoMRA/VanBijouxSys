@@ -1,7 +1,7 @@
-import { ipcMain } from 'electron'
 import { eq } from 'drizzle-orm'
-import { getDb } from '../database'
+import { getDb, getSqlite } from '../database'
 import { fairs, fairAdditionalCosts } from '../database/schema'
+import { handleIpc } from './handle'
 
 export interface CreateFairInput {
   name: string
@@ -18,27 +18,24 @@ export interface UpdateFairInput extends CreateFairInput {
 }
 
 export function registerFairHandlers(): void {
-  ipcMain.handle('fairs:getAll', async () => {
-    try {
-      const db = getDb()
-      const fairsList = db.select().from(fairs).orderBy(fairs.date).all()
-      return fairsList.map((fair) => {
-        const costs = db
-          .select()
-          .from(fairAdditionalCosts)
-          .where(eq(fairAdditionalCosts.fairId, fair.id))
-          .all()
-        return { ...fair, additionalCosts: costs }
-      })
-    } catch (err) {
-      console.error('[fairs:getAll]', err)
-      return { success: false, error: String(err) }
-    }
+  handleIpc('fairs:getAll', () => {
+    const db = getDb()
+    const fairsList = db.select().from(fairs).orderBy(fairs.date).all()
+    return fairsList.map((fair) => {
+      const costs = db
+        .select()
+        .from(fairAdditionalCosts)
+        .where(eq(fairAdditionalCosts.fairId, fair.id))
+        .all()
+      return { ...fair, additionalCosts: costs }
+    })
   })
 
-  ipcMain.handle('fairs:create', async (_event, data: CreateFairInput) => {
-    try {
-      const db = getDb()
+  handleIpc('fairs:create', (data: CreateFairInput) => {
+    const sqlite = getSqlite()
+    const db = getDb()
+
+    const criar = sqlite.transaction(() => {
       const result = db
         .insert(fairs)
         .values({
@@ -51,21 +48,24 @@ export function registerFairHandlers(): void {
         })
         .run()
       const fairId = Number(result.lastInsertRowid)
+
       for (const cost of data.additionalCosts ?? []) {
         db.insert(fairAdditionalCosts)
           .values({ fairId, description: cost.description, amount: cost.amount })
           .run()
       }
+
       return { id: fairId }
-    } catch (err) {
-      console.error('[fairs:create]', err)
-      return { success: false, error: String(err) }
-    }
+    })
+
+    return criar()
   })
 
-  ipcMain.handle('fairs:update', async (_event, data: UpdateFairInput) => {
-    try {
-      const db = getDb()
+  handleIpc('fairs:update', (data: UpdateFairInput) => {
+    const sqlite = getSqlite()
+    const db = getDb()
+
+    const atualizar = sqlite.transaction(() => {
       db.update(fairs)
         .set({
           name: data.name,
@@ -77,27 +77,22 @@ export function registerFairHandlers(): void {
         })
         .where(eq(fairs.id, data.id))
         .run()
+
       db.delete(fairAdditionalCosts).where(eq(fairAdditionalCosts.fairId, data.id)).run()
       for (const cost of data.additionalCosts ?? []) {
         db.insert(fairAdditionalCosts)
           .values({ fairId: data.id, description: cost.description, amount: cost.amount })
           .run()
       }
-      return { success: true }
-    } catch (err) {
-      console.error('[fairs:update]', err)
-      return { success: false, error: String(err) }
-    }
+    })
+
+    atualizar()
+    return { success: true }
   })
 
-  ipcMain.handle('fairs:delete', async (_event, id: number) => {
-    try {
-      const db = getDb()
-      db.delete(fairs).where(eq(fairs.id, id)).run()
-      return { success: true }
-    } catch (err) {
-      console.error('[fairs:delete]', err)
-      return { success: false, error: String(err) }
-    }
+  handleIpc('fairs:delete', (id: number) => {
+    const db = getDb()
+    db.delete(fairs).where(eq(fairs.id, id)).run()
+    return { success: true }
   })
 }

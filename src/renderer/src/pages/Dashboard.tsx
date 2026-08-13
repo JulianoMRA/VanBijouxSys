@@ -126,7 +126,7 @@ function InsightsPanel({ stats }: { stats: DashboardStats }): JSX.Element {
   const outCount = stats.outOfStock.length + stats.outOfInsumos.length
   if (outCount > 0) {
     insights.push({
-      text: `${outCount} item${outCount !== 1 ? 'ns' : ''} esgotado${outCount !== 1 ? 's' : ''} — atenção ao estoque!`,
+      text: `${outCount} ${outCount !== 1 ? 'itens esgotados' : 'item esgotado'} — atenção ao estoque!`,
       colorClass: 'text-rose-600',
       icon: <AlertTriangle size={14} className="text-rose-500 mt-0.5 shrink-0" />
     })
@@ -319,18 +319,26 @@ export default function Dashboard(): JSX.Element {
   const [customTo, setCustomTo] = useState('')
   const [stats, setStats] = useState<DashboardStats | null>(null)
   const [loading, setLoading] = useState(true)
+  const [erro, setErro] = useState('')
   const [alertsExpanded, setAlertsExpanded] = useState(true)
 
   async function loadStats(p: Period, from?: string, to?: string): Promise<void> {
     if (p === 'custom' && (!from || !to)) return
     setLoading(true)
-    const data = await window.api.dashboard.getStats({
-      period: p,
-      customFrom: from,
-      customTo: to
-    })
-    setStats(data)
-    setLoading(false)
+    setErro('')
+    try {
+      const data = await window.api.dashboard.getStats({
+        period: p,
+        customFrom: from,
+        customTo: to
+      })
+      setStats(data)
+    } catch (err) {
+      setStats(null)
+      setErro(err instanceof Error ? err.message : 'Não foi possível carregar o dashboard.')
+    } finally {
+      setLoading(false)
+    }
   }
 
   useEffect(() => {
@@ -387,6 +395,18 @@ export default function Dashboard(): JSX.Element {
             min={customFrom || undefined}
             onChange={(e) => setCustomTo(e.target.value)}
           />
+        </div>
+      )}
+
+      {erro && (
+        <div className="bg-rose-50 border border-rose-200 rounded-2xl px-5 py-3 mb-4 flex items-start justify-between gap-3">
+          <p className="text-sm text-rose-700">{erro}</p>
+          <button
+            onClick={() => setErro('')}
+            className="text-rose-400 hover:text-rose-600 shrink-0 text-lg leading-none"
+          >
+            ×
+          </button>
         </div>
       )}
 

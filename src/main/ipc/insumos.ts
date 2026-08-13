@@ -1,17 +1,21 @@
-import { ipcMain, dialog } from 'electron'
+import { dialog } from 'electron'
 import { writeFileSync } from 'fs'
 import { eq } from 'drizzle-orm'
 import { getDb } from '../database'
 import { insumos } from '../database/schema'
+import { ErroDeNegocio, handleIpc } from './handle'
 import type { CreateInsumoInput, UpdateInsumoInput } from '../../renderer/src/types'
 
+/** Sem o BOM o Excel abre o CSV com a acentuação quebrada. */
+const BOM_UTF8 = String.fromCharCode(0xfeff)
+
 export function registerInsumoHandlers(): void {
-  ipcMain.handle('insumos:getAll', async () => {
+  handleIpc('insumos:getAll', () => {
     const db = getDb()
     return db.select().from(insumos).orderBy(insumos.name).all()
   })
 
-  ipcMain.handle('insumos:create', async (_event, data: CreateInsumoInput) => {
+  handleIpc('insumos:create', (data: CreateInsumoInput) => {
     const db = getDb()
     const result = db
       .insert(insumos)
@@ -26,7 +30,7 @@ export function registerInsumoHandlers(): void {
     return { id: Number(result.lastInsertRowid) }
   })
 
-  ipcMain.handle('insumos:update', async (_event, data: UpdateInsumoInput) => {
+  handleIpc('insumos:update', (data: UpdateInsumoInput) => {
     const db = getDb()
     db.update(insumos)
       .set({
@@ -41,10 +45,11 @@ export function registerInsumoHandlers(): void {
     return { success: true }
   })
 
-  ipcMain.handle('insumos:addStock', async (_event, id: number, quantity: number) => {
+  handleIpc('insumos:addStock', (id: number, quantity: number) => {
     const db = getDb()
     const insumo = db.select().from(insumos).where(eq(insumos.id, id)).get()
-    if (!insumo) return { success: false }
+    if (!insumo) throw new ErroDeNegocio('Insumo não encontrado.')
+
     db.update(insumos)
       .set({ stockQuantity: insumo.stockQuantity + quantity })
       .where(eq(insumos.id, id))
@@ -52,23 +57,20 @@ export function registerInsumoHandlers(): void {
     return { success: true }
   })
 
-  ipcMain.handle('insumos:delete', async (_event, id: number) => {
+  handleIpc('insumos:delete', (id: number) => {
     const db = getDb()
-    try {
-      db.delete(insumos).where(eq(insumos.id, id)).run()
-      return { success: true }
-    } catch {
-      return { success: false, error: 'insumo_in_use' }
-    }
+    db.delete(insumos).where(eq(insumos.id, id)).run()
+    return { success: true }
   })
 
-  ipcMain.handle('insumos:exportCsv', async (_event, csvContent: string, defaultFileName: string) => {
+  handleIpc('insumos:exportCsv', async (csvContent: string, defaultFileName: string) => {
     const result = await dialog.showSaveDialog({
       defaultPath: defaultFileName,
       filters: [{ name: 'CSV (Excel)', extensions: ['csv'] }]
     })
-    if (result.canceled || !result.filePath) return { success: false, canceled: true }
-    writeFileSync(result.filePath, '\uFEFF' + csvContent, 'utf8')
-    return { success: true }
+    if (result.canceled || !result.filePath) return { salvo: false }
+
+    writeFileSync(result.filePath, BOM_UTF8 + csvContent, 'utf8')
+    return { salvo: true, caminho: result.filePath }
   })
 }

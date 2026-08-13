@@ -102,16 +102,24 @@ export default function Stock(): JSX.Element {
       showToast('Nenhum insumo para exportar.')
       return
     }
-    const result = await window.api.insumos.exportCsv(buildCsv(rows), fileName)
-    if (result.success) showToast('Arquivo exportado com sucesso!')
+    try {
+      const result = await window.api.insumos.exportCsv(buildCsv(rows), fileName)
+      if (result.salvo) showToast('Arquivo exportado com sucesso!')
+    } catch (err) {
+      setErrorMessage(err instanceof Error ? err.message : 'Erro ao exportar o arquivo.')
+    }
   }
 
   async function handleDelete(insumo: Insumo): Promise<void> {
-    const result = await window.api.insumos.delete(insumo.id)
-    if (result.success) {
+    try {
+      await window.api.insumos.delete(insumo.id)
       await loadInsumos()
-    } else {
-      setErrorMessage(`"${insumo.name}" não pode ser excluído pois está vinculado a variações de produtos.`)
+    } catch (err) {
+      setErrorMessage(
+        err instanceof Error
+          ? err.message
+          : `"${insumo.name}" não pode ser excluído pois está vinculado a variações de produtos.`
+      )
     }
   }
 

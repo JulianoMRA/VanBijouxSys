@@ -66,8 +66,11 @@ declare global {
         create: (data: CreateInsumoInput) => Promise<{ id: number }>
         update: (data: UpdateInsumoInput) => Promise<{ success: boolean }>
         addStock: (id: number, quantity: number) => Promise<{ success: boolean }>
-        delete: (id: number) => Promise<{ success: boolean; error?: string }>
-        exportCsv: (csvContent: string, defaultFileName: string) => Promise<{ success: boolean; filePath?: string; cancelled?: boolean; error?: string }>
+        delete: (id: number) => Promise<{ success: boolean }>
+        exportCsv: (
+          csvContent: string,
+          defaultFileName: string
+        ) => Promise<{ salvo: boolean; caminho?: string }>
       }
       expenseCategories: {
         getAll: () => Promise<ExpenseCategory[]>

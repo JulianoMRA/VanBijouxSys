@@ -123,24 +123,30 @@ export default function Products(): JSX.Element {
   }
 
   async function handleDeleteProduct(product: Product): Promise<void> {
+    setErrorMessage('')
     try {
       await window.api.products.delete(product.id)
       if (expandedProduct === product.id) setExpandedProduct(null)
       await loadData()
-    } catch {
+    } catch (err) {
       setErrorMessage(
-        `"${product.name}" não pode ser excluído pois possui vendas registradas. O histórico de vendas seria perdido.`
+        err instanceof Error
+          ? `"${product.name}": ${err.message}`
+          : `"${product.name}" não pode ser excluído.`
       )
     }
   }
 
   async function handleDeleteVariation(variation: ProductVariation): Promise<void> {
+    setErrorMessage('')
     try {
       await window.api.variations.delete(variation.id)
       await loadData()
-    } catch {
+    } catch (err) {
       setErrorMessage(
-        `A variação "${variation.identifier}" não pode ser excluída pois está vinculada a vendas registradas.`
+        err instanceof Error
+          ? `Variação "${variation.identifier}": ${err.message}`
+          : `A variação "${variation.identifier}" não pode ser excluída.`
       )
     }
   }

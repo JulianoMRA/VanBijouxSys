@@ -13,9 +13,9 @@ export default function Toast({ message, onDismiss }: ToastProps): JSX.Element {
   }, [onDismiss])
 
   return (
-    <div className="fixed bottom-6 right-6 z-50 flex items-center gap-3 bg-emerald-600 text-white px-4 py-3 rounded-2xl shadow-lg">
-      <CheckCircle size={17} />
-      <span className="text-sm font-medium">{message}</span>
+    <div className="fixed bottom-6 right-6 z-50 flex items-center gap-3 bg-ink-900 text-bone-50 px-4 py-3 rounded-control shadow-pop">
+      <CheckCircle size={16} className="text-sage-400" />
+      <span className="text-body font-medium">{message}</span>
     </div>
   )
 }

@@ -108,6 +108,7 @@ declare global {
       }
       app: {
         versao: () => Promise<string>
+        verificarAtualizacoes: () => Promise<{ atualizacaoDisponivel: boolean }>
       }
     }
   }

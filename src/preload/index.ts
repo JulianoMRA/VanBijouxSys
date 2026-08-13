@@ -104,7 +104,8 @@ const api = {
     abrirPasta: () => invoke('backup:abrirPasta')
   },
   app: {
-    versao: () => invoke('app:versao')
+    versao: () => invoke('app:versao'),
+    verificarAtualizacoes: () => invoke('app:verificarAtualizacoes')
   }
 }
 

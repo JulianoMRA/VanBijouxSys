@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { DatabaseBackup, FolderOpen, RotateCcw, Save } from 'lucide-react'
+import { DatabaseBackup, Download, FolderOpen, RotateCcw, Save } from 'lucide-react'
 import Modal from '../ui/Modal'
 import Toast from '../ui/Toast'
 import { useToast } from '../../hooks/useToast'
@@ -68,6 +68,18 @@ export default function SystemPanel({ onClose }: { onClose: () => void }): JSX.E
     }
   }
 
+  async function handleVerificarAtualizacoes(): Promise<void> {
+    setErro('')
+    setOcupado(true)
+    try {
+      await window.api.app.verificarAtualizacoes()
+    } catch (err) {
+      setErro(err instanceof Error ? err.message : 'Não foi possível verificar atualizações.')
+    } finally {
+      setOcupado(false)
+    }
+  }
+
   return (
     <Modal title="Backup e dados" onClose={onClose}>
       <div className="space-y-4">
@@ -122,6 +134,21 @@ export default function SystemPanel({ onClose }: { onClose: () => void }): JSX.E
           <p className="text-xs text-gray-400 px-1">
             Substitui todos os dados atuais pelos do arquivo escolhido. O app pede confirmação e
             reinicia.
+          </p>
+        </div>
+
+        <div className="border-t border-cream-200 pt-4 space-y-2">
+          <button
+            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-cream-300 text-sm font-medium text-gray-600 hover:bg-cream-100 transition-colors disabled:opacity-50"
+            onClick={handleVerificarAtualizacoes}
+            disabled={ocupado}
+          >
+            <Download size={16} />
+            Verificar atualizações
+          </button>
+          <p className="text-xs text-gray-400 px-1">
+            O aplicativo também procura atualizações sozinho ao abrir. Um backup é feito antes de
+            qualquer atualização ser aplicada.
           </p>
         </div>
 

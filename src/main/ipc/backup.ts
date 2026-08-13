@@ -2,6 +2,7 @@ import { app, dialog, shell, BrowserWindow } from 'electron'
 import { existsSync, readdirSync, statSync } from 'fs'
 import { basename, join } from 'path'
 import { criarBackup, getBackupDir, restaurarBackup, validarBackup } from '../database/backup'
+import { verificarAtualizacoesManual } from '../updater'
 import { ErroDeNegocio, handleIpc } from './handle'
 
 export interface BackupInfo {
@@ -88,4 +89,6 @@ export function registerBackupHandlers(): void {
   })
 
   handleIpc('app:versao', () => app.getVersion())
+
+  handleIpc('app:verificarAtualizacoes', () => verificarAtualizacoesManual())
 }

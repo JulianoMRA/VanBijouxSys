@@ -4,6 +4,7 @@ import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import { initDatabase } from './database'
 import { backupDiario } from './database/backup'
 import { registerAllHandlers } from './ipc'
+import { iniciarAutoUpdate } from './updater'
 
 function createWindow(): void {
   const mainWindow = new BrowserWindow({
@@ -50,6 +51,8 @@ app.whenReady().then(() => {
   backupDiario().catch((err) => {
     console.error('[backup] backup diário falhou:', err)
   })
+
+  iniciarAutoUpdate()
 
   app.on('activate', function () {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()

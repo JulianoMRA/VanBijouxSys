@@ -1,6 +1,7 @@
 import { useEffect, useState, useMemo } from 'react'
+import { ChevronDown, ChevronUp } from 'lucide-react'
 import { formatCurrency } from '../utils/format'
-import Badge from '../components/ui/Badge'
+import ActionMenu from '../components/ui/ActionMenu'
 import ConfirmDialog from '../components/ui/ConfirmDialog'
 import ProductForm from '../components/products/ProductForm'
 import VariationForm from '../components/products/VariationForm'
@@ -24,17 +25,61 @@ type Modal =
   | { type: 'addStock'; product: Product; variation: ProductVariation }
   | { type: 'detailsVariation'; product: Product; variation: ProductVariation }
 
-function stockVariant(v: ProductVariation): 'success' | 'warning' | 'danger' {
-  if (v.stockQuantity === 0) return 'danger'
-  if (v.stockQuantity < v.minimumStock) return 'warning'
-  return 'success'
+interface EstoqueInfo {
+  pct: number
+  barra: string
+  classeTexto: string
+  valor: string
 }
 
-function stockLabel(v: ProductVariation): string {
-  if (v.stockQuantity === 0) return 'Sem estoque'
-  if (v.stockQuantity < v.minimumStock) return `${v.stockQuantity} un. — baixo`
-  return `${v.stockQuantity} un.`
+function estoqueInfo(v: ProductVariation): EstoqueInfo {
+  if (v.stockQuantity === 0) {
+    return { pct: 0, barra: '#b3413f', classeTexto: 'text-clay-500', valor: '0 un.' }
+  }
+  if (v.stockQuantity < v.minimumStock) {
+    return {
+      pct: v.minimumStock > 0 ? (v.stockQuantity / v.minimumStock) * 100 : 100,
+      barra: '#c98b2e',
+      classeTexto: 'text-honey-500',
+      valor: `${v.stockQuantity} / ${v.minimumStock}`
+    }
+  }
+  return {
+    pct: 100,
+    barra: '#5d8f76',
+    classeTexto: 'text-ink-900',
+    valor: `${v.stockQuantity} un.`
+  }
 }
+
+function formatarMargem(v: ProductVariation): string {
+  if (v.salePrice <= 0) return '—'
+  const margem = ((v.salePrice - v.costPrice) / v.salePrice) * 100
+  return `${margem.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%`
+}
+
+function Tag({
+  texto,
+  tom
+}: {
+  texto: string
+  tom: 'categoria' | 'alerta' | 'critico'
+}): JSX.Element {
+  const estilos = {
+    categoria: 'bg-plum-100 text-plum-500',
+    alerta: 'bg-honey-100 text-honey-500',
+    critico: 'bg-clay-100 text-clay-600'
+  }
+  return (
+    <span
+      className={`shrink-0 rounded-[5px] px-2 py-0.5 text-meta font-bold tracking-[0.03em] ${estilos[tom]}`}
+    >
+      {texto}
+    </span>
+  )
+}
+
+const TH = 'px-3 py-2.5 text-meta font-bold uppercase tracking-[0.1em] text-ink-200'
 
 export default function Products(): JSX.Element {
   const [products, setProducts] = useState<Product[]>([])
@@ -98,9 +143,18 @@ export default function Products(): JSX.Element {
     })
   }, [products, search, selectedCategory, sortBy])
 
-  const lowStockCount = products.reduce((acc, p) => {
-    return acc + p.variations.filter((v) => v.stockQuantity < v.minimumStock).length
-  }, 0)
+  const totalVariacoes = products.reduce((acc, p) => acc + p.variations.length, 0)
+  const totalEsgotadas = products.reduce(
+    (acc, p) => acc + p.variations.filter((v) => v.stockQuantity === 0).length,
+    0
+  )
+  const totalBaixas = products.reduce(
+    (acc, p) =>
+      acc +
+      p.variations.filter((v) => v.stockQuantity > 0 && v.stockQuantity < v.minimumStock).length,
+    0
+  )
+  const filtrando = search !== '' || selectedCategory !== null
 
   function resetVariationFilters(): void {
     setVariationSearch('')
@@ -158,68 +212,47 @@ export default function Products(): JSX.Element {
   }
 
   return (
-    <div>
-      {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h2 className="font-display text-2xl font-semibold text-gray-800">Produtos</h2>
-          <p className="text-sm text-gray-400 mt-0.5">
-            {products.length === 0
-              ? 'Nenhum produto cadastrado'
-              : search || selectedCategory !== null
-                ? `${filtered.length} de ${products.length} produto${products.length !== 1 ? 's' : ''}`
-                : `${products.length} produto${products.length !== 1 ? 's' : ''} cadastrado${products.length !== 1 ? 's' : ''}`}
-            {lowStockCount > 0 && (
-              <span className="ml-2 text-amber-600">
-                · ⚠ {lowStockCount} {lowStockCount > 1 ? 'variações' : 'variação'} com estoque baixo
-              </span>
-            )}
-          </p>
-        </div>
-        <button className="btn-primary" onClick={() => setModal({ type: 'newProduct' })}>
-          + Novo produto
-        </button>
-      </div>
-
-      {/* Erro de exclusão */}
-      {errorMessage && (
-        <div className="bg-rose-50 border border-rose-200 rounded-2xl px-5 py-3 mb-4 flex items-start justify-between gap-3">
-          <p className="text-sm text-rose-700">{errorMessage}</p>
-          <button
-            onClick={() => setErrorMessage('')}
-            className="text-rose-400 hover:text-rose-600 shrink-0 text-lg leading-none"
-          >
-            ×
+    <div className="pb-10">
+      <div className="sticky top-0 z-10 border-b border-bone-400 bg-bone-200 px-8 pb-3.5 pt-[26px]">
+        <div className="mb-4 flex items-end justify-between gap-6">
+          <div>
+            <p className="label mb-1">
+              {filtrando
+                ? `${filtered.length} de ${products.length} produtos`
+                : `${products.length} produto${products.length !== 1 ? 's' : ''} · ${totalVariacoes} variaç${totalVariacoes !== 1 ? 'ões' : 'ão'}`}
+              {totalEsgotadas > 0 && (
+                <span className="text-clay-500">
+                  {' '}
+                  · {totalEsgotadas} esgotada{totalEsgotadas !== 1 ? 's' : ''}
+                </span>
+              )}
+              {totalBaixas > 0 && (
+                <span className="text-honey-500"> · {totalBaixas} abaixo do mínimo</span>
+              )}
+            </p>
+            <h2 className="font-display text-[30px] font-semibold leading-none text-ink-900">
+              Produtos
+            </h2>
+          </div>
+          <button className="btn-primary" onClick={() => setModal({ type: 'newProduct' })}>
+            + Novo produto
           </button>
         </div>
-      )}
 
-      {/* Filtros */}
-      <div className="flex gap-3 mb-4 flex-wrap items-center">
-        <input
-          className="input max-w-xs"
-          placeholder="Buscar produto…"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
-        <select
-          value={sortBy}
-          onChange={(e) => setSortBy(e.target.value as SortOption)}
-          className="px-3 py-2 rounded-xl border border-cream-200 bg-white text-xs text-gray-600 focus:outline-none focus:ring-2 focus:ring-blush-300"
-        >
-          <option value="recente">Último adicionado</option>
-          <option value="nome-az">Nome A→Z</option>
-          <option value="nome-za">Nome Z→A</option>
-          <option value="mais-variacoes">Mais variações</option>
-          <option value="menos-variacoes">Menos variações</option>
-        </select>
-        <div className="flex gap-2 flex-wrap">
+        <div className="flex flex-wrap items-center gap-2">
+          <input
+            className="input w-[280px]"
+            placeholder="Buscar produto…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+          <div className="mx-1 h-[22px] w-px bg-bone-500" />
           <button
             onClick={() => setSelectedCategory(null)}
-            className={`px-3 py-2 rounded-xl text-sm font-medium transition-all ${
+            className={`rounded-lg px-3 py-1.5 text-body transition-colors ${
               selectedCategory === null
-                ? 'bg-blush-500 text-white'
-                : 'bg-white border border-cream-300 text-gray-600 hover:bg-cream-100'
+                ? 'bg-ink-900 font-semibold text-bone-50'
+                : 'font-medium text-ink-600 hover:bg-bone-300'
             }`}
           >
             Todos
@@ -228,104 +261,147 @@ export default function Products(): JSX.Element {
             <button
               key={cat.id}
               onClick={() => setSelectedCategory(cat.id)}
-              className={`px-3 py-2 rounded-xl text-sm font-medium transition-all ${
+              className={`rounded-lg px-3 py-1.5 text-body transition-colors ${
                 selectedCategory === cat.id
-                  ? 'bg-blush-500 text-white'
-                  : 'bg-white border border-cream-300 text-gray-600 hover:bg-cream-100'
+                  ? 'bg-ink-900 font-semibold text-bone-50'
+                  : 'font-medium text-ink-600 hover:bg-bone-300'
               }`}
             >
               {cat.name}
             </button>
           ))}
+          <label className="ml-auto flex items-center gap-1 text-aux text-ink-300">
+            Ordenar:
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as SortOption)}
+              className="cursor-pointer bg-transparent font-semibold text-ink-800 outline-none"
+            >
+              <option value="recente">recentes</option>
+              <option value="nome-az">nome A→Z</option>
+              <option value="nome-za">nome Z→A</option>
+              <option value="mais-variacoes">mais variações</option>
+              <option value="menos-variacoes">menos variações</option>
+            </select>
+          </label>
         </div>
       </div>
 
-      {/* Lista */}
-      {loading ? (
-        <div className="card flex items-center justify-center h-40">
-          <p className="text-gray-400 text-sm">Carregando…</p>
-        </div>
-      ) : filtered.length === 0 ? (
-        <div className="card flex flex-col items-center justify-center h-40 text-center">
-          <p className="text-gray-500 text-sm">Nenhum produto encontrado.</p>
-          {search === '' && selectedCategory === null && (
-            <button className="btn-primary mt-3" onClick={() => setModal({ type: 'newProduct' })}>
-              Cadastrar primeiro produto
+      <div className="px-8 pt-5">
+        {errorMessage && (
+          <div className="mb-4 flex items-start justify-between gap-3 rounded-[11px] border border-bone-500 bg-clay-100 px-4 py-3">
+            <p className="text-body text-clay-600">{errorMessage}</p>
+            <button
+              onClick={() => setErrorMessage('')}
+              className="shrink-0 text-lg leading-none text-clay-500 hover:text-clay-600"
+            >
+              ×
             </button>
-          )}
-        </div>
-      ) : (
-        <div className="space-y-2">
-          {filtered.map((product) => {
-            const isExpanded = expandedProduct === product.id
-            const hasLowStock = product.variations.some((v) => v.stockQuantity < v.minimumStock)
+          </div>
+        )}
 
-            return (
-              <div
-                key={product.id}
-                className="bg-white rounded-2xl border border-cream-200 shadow-card overflow-hidden"
-              >
-                {/* Linha do produto */}
+        {loading ? (
+          <div className="card flex h-40 items-center justify-center">
+            <p className="text-body text-ink-300">Carregando…</p>
+          </div>
+        ) : filtered.length === 0 ? (
+          <div className="card flex h-40 flex-col items-center justify-center text-center">
+            <p className="text-body text-ink-600">Nenhum produto encontrado.</p>
+            {!filtrando && (
+              <button className="btn-primary mt-3" onClick={() => setModal({ type: 'newProduct' })}>
+                Cadastrar primeiro produto
+              </button>
+            )}
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {filtered.map((product) => {
+              const isExpanded = expandedProduct === product.id
+              const esgotadas = product.variations.filter((v) => v.stockQuantity === 0).length
+              const baixas = product.variations.filter(
+                (v) => v.stockQuantity > 0 && v.stockQuantity < v.minimumStock
+              ).length
+              const estoqueTotal = product.variations.reduce((s, v) => s + v.stockQuantity, 0)
+
+              return (
                 <div
-                  className="flex items-center gap-4 px-5 py-4 cursor-pointer hover:bg-cream-50 transition-colors"
-                  onClick={() => toggleExpand(product.id)}
+                  key={product.id}
+                  className="overflow-hidden rounded-card border border-bone-400 bg-bone-50"
                 >
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-medium text-gray-800 text-sm">{product.name}</span>
-                      {hasLowStock && (
-                        <span
-                          className="w-2 h-2 rounded-full bg-amber-400 inline-block"
-                          title="Estoque baixo"
-                        />
+                  <div
+                    className={`flex cursor-pointer items-center gap-4 px-[22px] py-4 transition-colors ${
+                      isExpanded ? 'border-b border-bone-400 bg-bone-100' : 'hover:bg-bone-100'
+                    }`}
+                    onClick={() => toggleExpand(product.id)}
+                  >
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2.5">
+                        <span className="text-[15px] font-semibold text-ink-900">
+                          {product.name}
+                        </span>
+                        <Tag texto={product.categoryName.toUpperCase()} tom="categoria" />
+                        {esgotadas > 0 && (
+                          <Tag
+                            texto={`${esgotadas} esgotada${esgotadas !== 1 ? 's' : ''}`}
+                            tom="critico"
+                          />
+                        )}
+                        {baixas > 0 && <Tag texto={`${baixas} abaixo do mínimo`} tom="alerta" />}
+                      </div>
+                      <p className="mt-0.5 truncate text-aux text-ink-300">
+                        {product.description ? `${product.description} · ` : ''}
+                        {product.variations.length} variaç
+                        {product.variations.length !== 1 ? 'ões' : 'ão'}
+                      </p>
+                    </div>
+
+                    <div className="shrink-0 text-right">
+                      <p className="label mb-0">Estoque</p>
+                      <p className="text-sm font-semibold tabular-nums text-ink-900">
+                        {estoqueTotal} un.
+                      </p>
+                    </div>
+
+                    <div
+                      className="flex shrink-0 items-center gap-1.5"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <button
+                        className="btn-secondary px-2.5 py-1.5 text-aux"
+                        onClick={() => {
+                          setExpandedProduct(product.id)
+                          setModal({ type: 'newVariation', product })
+                        }}
+                      >
+                        + Variação
+                      </button>
+                      <ActionMenu
+                        items={[
+                          {
+                            label: 'Editar produto',
+                            onClick: () => setModal({ type: 'editProduct', product })
+                          },
+                          {
+                            label: 'Excluir produto',
+                            danger: true,
+                            onClick: () => setModal({ type: 'deleteProduct', product })
+                          }
+                        ]}
+                      />
+                      {isExpanded ? (
+                        <ChevronUp size={15} className="text-ink-200" />
+                      ) : (
+                        <ChevronDown size={15} className="text-ink-200" />
                       )}
                     </div>
-                    {product.description && (
-                      <p className="text-xs text-gray-400 mt-0.5 truncate">{product.description}</p>
-                    )}
                   </div>
 
-                  <Badge label={product.categoryName} variant="category" />
-
-                  <span className="text-xs text-gray-400 whitespace-nowrap">
-                    {product.variations.length !== 1 ? 'variações' : 'variação'}
-                  </span>
-
-                  <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
-                    <button
-                      className="text-xs text-blush-600 hover:text-blush-800 px-2 py-1 rounded-lg hover:bg-blush-50 transition-colors"
-                      onClick={() => setModal({ type: 'editProduct', product })}
-                    >
-                      Editar
-                    </button>
-                    <button
-                      className="text-xs text-rose-500 hover:text-rose-700 px-2 py-1 rounded-lg hover:bg-rose-50 transition-colors"
-                      onClick={() => setModal({ type: 'deleteProduct', product })}
-                    >
-                      Excluir
-                    </button>
-                    <button
-                      className="text-xs text-blush-600 hover:text-blush-800 px-2 py-1 rounded-lg hover:bg-blush-50 transition-colors"
-                      onClick={() => {
-                        setExpandedProduct(product.id)
-                        setModal({ type: 'newVariation', product })
-                      }}
-                    >
-                      + Variação
-                    </button>
-                  </div>
-
-                  <span className="text-gray-300 text-sm ml-1">{isExpanded ? '▲' : '▼'}</span>
-                </div>
-
-                {/* Painel de variações */}
-                {isExpanded && (
-                  <div className="border-t border-cream-100 bg-cream-50 px-5 py-4">
-                    {product.variations.length === 0 ? (
-                      <div className="flex items-center justify-between">
-                        <p className="text-sm text-gray-400">Nenhuma variação cadastrada.</p>
+                  {isExpanded &&
+                    (product.variations.length === 0 ? (
+                      <div className="flex items-center justify-between px-[22px] py-4">
+                        <p className="text-body text-ink-300">Nenhuma variação cadastrada.</p>
                         <button
-                          className="btn-primary text-xs"
+                          className="btn-primary"
                           onClick={() => setModal({ type: 'newVariation', product })}
                         >
                           + Cadastrar variação
@@ -333,8 +409,8 @@ export default function Products(): JSX.Element {
                       </div>
                     ) : (
                       (() => {
-                        const filteredVariations = getFilteredVariations(product.variations)
-                        const hasActiveFilters =
+                        const variacoes = getFilteredVariations(product.variations)
+                        const filtrosAtivos =
                           variationSearch !== '' ||
                           variationStockFilter !== 'todos' ||
                           variationPriceMin !== '' ||
@@ -342,10 +418,9 @@ export default function Products(): JSX.Element {
 
                         return (
                           <>
-                            {/* Filtros de variações */}
-                            <div className="flex gap-2 mb-3 flex-wrap items-center">
+                            <div className="flex flex-wrap items-center gap-2 border-b border-bone-300 px-[22px] py-3">
                               <input
-                                className="input max-w-[180px] text-xs"
+                                className="input w-[180px] py-1.5 text-aux"
                                 placeholder="Buscar variação…"
                                 value={variationSearch}
                                 onChange={(e) => setVariationSearch(e.target.value)}
@@ -355,7 +430,7 @@ export default function Products(): JSX.Element {
                                 onChange={(e) =>
                                   setVariationSortBy(e.target.value as VariationSortOption)
                                 }
-                                className="px-2.5 py-1.5 rounded-xl border border-cream-200 bg-white text-xs text-gray-600 focus:outline-none focus:ring-2 focus:ring-blush-300"
+                                className="input w-auto py-1.5 text-aux"
                               >
                                 <option value="recente">Mais recente</option>
                                 <option value="nome-az">Nome A→Z</option>
@@ -370,168 +445,183 @@ export default function Products(): JSX.Element {
                                 onChange={(e) =>
                                   setVariationStockFilter(e.target.value as VariationStockFilter)
                                 }
-                                className="px-2.5 py-1.5 rounded-xl border border-cream-200 bg-white text-xs text-gray-600 focus:outline-none focus:ring-2 focus:ring-blush-300"
+                                className="input w-auto py-1.5 text-aux"
                               >
                                 <option value="todos">Todos os estoques</option>
                                 <option value="sem-estoque">Sem estoque</option>
                                 <option value="estoque-baixo">Estoque baixo</option>
                                 <option value="normal">Estoque normal</option>
                               </select>
-                              <div className="flex items-center gap-1">
-                                <input
-                                  type="number"
-                                  className="input w-24 text-xs"
-                                  placeholder="Preço mín."
-                                  value={variationPriceMin}
-                                  onChange={(e) => setVariationPriceMin(e.target.value)}
-                                  min="0"
-                                  step="0.01"
-                                />
-                                <span className="text-xs text-gray-400">—</span>
-                                <input
-                                  type="number"
-                                  className="input w-24 text-xs"
-                                  placeholder="Preço máx."
-                                  value={variationPriceMax}
-                                  onChange={(e) => setVariationPriceMax(e.target.value)}
-                                  min="0"
-                                  step="0.01"
-                                />
-                              </div>
-                              {hasActiveFilters && (
+                              <input
+                                type="number"
+                                className="input w-28 py-1.5 text-aux"
+                                placeholder="Preço mín."
+                                value={variationPriceMin}
+                                onChange={(e) => setVariationPriceMin(e.target.value)}
+                                min="0"
+                                step="0.01"
+                              />
+                              <span className="text-aux text-ink-300">—</span>
+                              <input
+                                type="number"
+                                className="input w-28 py-1.5 text-aux"
+                                placeholder="Preço máx."
+                                value={variationPriceMax}
+                                onChange={(e) => setVariationPriceMax(e.target.value)}
+                                min="0"
+                                step="0.01"
+                              />
+                              {filtrosAtivos && (
                                 <button
+                                  className="btn-ghost py-1.5 text-aux"
                                   onClick={resetVariationFilters}
-                                  className="text-xs text-blush-600 hover:text-blush-800 px-2 py-1 rounded-lg hover:bg-blush-50 transition-colors"
                                 >
                                   Limpar filtros
                                 </button>
                               )}
-                              <span className="text-xs text-gray-400 ml-auto">
-                                {hasActiveFilters
-                                  ? `${filteredVariations.length} de ${product.variations.length}`
+                              <span className="ml-auto text-aux text-ink-300">
+                                {filtrosAtivos
+                                  ? `${variacoes.length} de ${product.variations.length}`
                                   : `${product.variations.length}`}{' '}
-                                variação{product.variations.length !== 1 ? 'ões' : ''}
+                                variaç{product.variations.length !== 1 ? 'ões' : 'ão'}
                               </span>
                             </div>
 
-                            {filteredVariations.length === 0 ? (
-                              <p className="text-sm text-gray-400 text-center py-4">
+                            {variacoes.length === 0 ? (
+                              <p className="py-6 text-center text-body text-ink-300">
                                 Nenhuma variação encontrada com os filtros aplicados.
                               </p>
                             ) : (
-                              <table className="w-full text-sm">
+                              <table className="w-full text-body">
                                 <thead>
-                                  <tr className="text-xs text-gray-400 uppercase tracking-wide">
-                                    <th className="text-left pb-2 font-medium">Identificador</th>
-                                    <th className="text-right pb-2 font-medium">Custo</th>
-                                    <th className="text-right pb-2 font-medium">Venda</th>
-                                    <th className="text-center pb-2 font-medium">Estoque</th>
-                                    <th className="text-center pb-2 font-medium">Mín.</th>
-                                    <th className="pb-2" />
+                                  <tr>
+                                    <th className={`${TH} pl-[22px] text-left`}>Variação</th>
+                                    <th className={`${TH} text-left`}>Estoque</th>
+                                    <th className={`${TH} text-right`}>Custo</th>
+                                    <th className={`${TH} text-right`}>Venda</th>
+                                    <th className={`${TH} text-right`}>Margem</th>
+                                    <th className={`${TH} pr-[22px]`} />
                                   </tr>
                                 </thead>
-                                <tbody className="divide-y divide-cream-200">
-                                  {filteredVariations.map((v) => (
-                                    <tr key={v.id} className="hover:bg-cream-100 transition-colors">
-                                      <td className="py-2.5 font-medium text-gray-700">
-                                        {v.identifier}
-                                      </td>
-                                      <td className="py-2.5 text-right">
-                                        <span className="text-gray-500">
+                                <tbody>
+                                  {variacoes.map((v) => {
+                                    const estoque = estoqueInfo(v)
+                                    const custoInsumos = v.insumos.reduce(
+                                      (s, i) => s + i.costPerUnit * i.quantity,
+                                      0
+                                    )
+
+                                    return (
+                                      <tr
+                                        key={v.id}
+                                        className="border-t border-bone-300 transition-colors hover:bg-bone-100"
+                                      >
+                                        <td className="py-3 pl-[22px] pr-3 font-medium text-ink-900">
+                                          {v.identifier}
+                                        </td>
+                                        <td className="px-3 py-3">
+                                          <div
+                                            className="flex items-center gap-2.5"
+                                            title={`Mínimo: ${v.minimumStock} un.`}
+                                          >
+                                            <div className="h-[5px] w-[52px] overflow-hidden rounded-full bg-bone-300">
+                                              <div
+                                                className="h-full rounded-full"
+                                                style={{
+                                                  width: `${estoque.pct}%`,
+                                                  background: estoque.barra
+                                                }}
+                                              />
+                                            </div>
+                                            <span
+                                              className={`text-aux font-semibold tabular-nums ${estoque.classeTexto}`}
+                                            >
+                                              {estoque.valor}
+                                            </span>
+                                          </div>
+                                        </td>
+                                        <td className="px-3 py-3 text-right tabular-nums text-ink-400">
                                           {formatCurrency(v.costPrice)}
-                                        </span>
-                                        {v.insumos.length > 0 &&
-                                          (() => {
-                                            const insumosCost = v.insumos.reduce(
-                                              (s, i) => s + i.costPerUnit * i.quantity,
-                                              0
-                                            )
-                                            return (
-                                              <span
-                                                className="block text-xs text-gray-400"
-                                                title="Custo calculado pelos insumos"
-                                              >
-                                                insumos: {formatCurrency(insumosCost)}
-                                              </span>
-                                            )
-                                          })()}
-                                      </td>
-                                      <td className="py-2.5 text-right text-gray-800 font-medium">
-                                        {formatCurrency(v.salePrice)}
-                                      </td>
-                                      <td className="py-2.5 text-center">
-                                        <Badge label={stockLabel(v)} variant={stockVariant(v)} />
-                                      </td>
-                                      <td className="py-2.5 text-center text-gray-400">
-                                        {v.minimumStock}
-                                      </td>
-                                      <td className="py-2.5">
-                                        <div className="flex justify-end gap-1">
-                                          <button
-                                            className="text-xs text-gray-500 hover:text-gray-700 px-2 py-1 rounded-lg hover:bg-gray-100 transition-colors"
-                                            onClick={() =>
-                                              setModal({
-                                                type: 'detailsVariation',
-                                                product,
-                                                variation: v
-                                              })
-                                            }
-                                            title="Ver detalhes"
-                                          >
-                                            Detalhes
-                                          </button>
-                                          <button
-                                            className="text-xs text-emerald-600 hover:text-emerald-800 px-2 py-1 rounded-lg hover:bg-emerald-50 transition-colors"
-                                            onClick={() =>
-                                              setModal({ type: 'addStock', product, variation: v })
-                                            }
-                                          >
-                                            + Estoque
-                                          </button>
-                                          <button
-                                            className="text-xs text-blush-600 hover:text-blush-800 px-2 py-1 rounded-lg hover:bg-blush-50 transition-colors"
-                                            onClick={() =>
-                                              setModal({
-                                                type: 'editVariation',
-                                                product,
-                                                variation: v
-                                              })
-                                            }
-                                          >
-                                            Editar
-                                          </button>
-                                          <button
-                                            className="text-xs text-rose-500 hover:text-rose-700 px-2 py-1 rounded-lg hover:bg-rose-50 transition-colors"
-                                            onClick={() =>
-                                              setModal({
-                                                type: 'deleteVariation',
-                                                product,
-                                                variation: v
-                                              })
-                                            }
-                                          >
-                                            Excluir
-                                          </button>
-                                        </div>
-                                      </td>
-                                    </tr>
-                                  ))}
+                                          {v.insumos.length > 0 && (
+                                            <span
+                                              className="block text-micro text-ink-200"
+                                              title="Custo calculado pelos insumos"
+                                            >
+                                              insumos: {formatCurrency(custoInsumos)}
+                                            </span>
+                                          )}
+                                        </td>
+                                        <td className="px-3 py-3 text-right font-semibold tabular-nums text-ink-900">
+                                          {formatCurrency(v.salePrice)}
+                                        </td>
+                                        <td className="px-3 py-3 text-right tabular-nums text-ink-800">
+                                          {formatarMargem(v)}
+                                        </td>
+                                        <td className="py-3 pl-3 pr-[22px]">
+                                          <div className="flex items-center justify-end gap-2">
+                                            <button
+                                              className="text-aux font-semibold text-wine-500 hover:text-wine-600"
+                                              onClick={() =>
+                                                setModal({
+                                                  type: 'addStock',
+                                                  product,
+                                                  variation: v
+                                                })
+                                              }
+                                            >
+                                              + Estoque
+                                            </button>
+                                            <ActionMenu
+                                              items={[
+                                                {
+                                                  label: 'Ver detalhes',
+                                                  onClick: () =>
+                                                    setModal({
+                                                      type: 'detailsVariation',
+                                                      product,
+                                                      variation: v
+                                                    })
+                                                },
+                                                {
+                                                  label: 'Editar variação',
+                                                  onClick: () =>
+                                                    setModal({
+                                                      type: 'editVariation',
+                                                      product,
+                                                      variation: v
+                                                    })
+                                                },
+                                                {
+                                                  label: 'Excluir variação',
+                                                  danger: true,
+                                                  onClick: () =>
+                                                    setModal({
+                                                      type: 'deleteVariation',
+                                                      product,
+                                                      variation: v
+                                                    })
+                                                }
+                                              ]}
+                                            />
+                                          </div>
+                                        </td>
+                                      </tr>
+                                    )
+                                  })}
                                 </tbody>
                               </table>
                             )}
                           </>
                         )
                       })()
-                    )}
-                  </div>
-                )}
-              </div>
-            )
-          })}
-        </div>
-      )}
+                    ))}
+                </div>
+              )
+            })}
+          </div>
+        )}
+      </div>
 
-      {/* Modals */}
       {toastMsg && <Toast message={toastMsg} onDismiss={dismissToast} />}
 
       {modal?.type === 'newProduct' && (

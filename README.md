@@ -106,6 +106,16 @@ A restauração ([src/main/database/backup.ts](src/main/database/backup.ts)) val
 
 Backup na mesma máquina não protege contra defeito de disco. A exportação manual existe para a cópia sair do computador.
 
+Sempre exporte pelo painel, nunca copiando `vanbijouxsys.db` na mão: o banco roda em WAL e as escritas recentes ficam em `vanbijouxsys.db-wal` até o checkpoint. Copiar só o `.db` leva um estado antigo — a API de backup do SQLite consolida os dois.
+
+## Migrations
+
+O schema é versionado por `PRAGMA user_version` e as migrações vivem em [src/main/database/migrations.ts](src/main/database/migrations.ts). No boot, o app aplica só as pendentes, cada uma na própria transação: se falhar no meio, o banco volta atrás e a versão não avança, então a tentativa se repete no próximo boot em vez de deixar o schema pela metade.
+
+A versão 1 é a linha de base e reproduz o schema que os bancos em uso já tinham, por isso precisa continuar idempotente. Migrações novas entram como 2, 3, ... e nunca devem ser editadas depois de publicadas — o banco da cliente já as aplicou.
+
+Quando existe migração pendente e o banco já existia, um backup é criado **antes** de o schema mudar. É o único momento em que ainda dá para voltar atrás, e importa mais agora que a atualização chega sozinha pelo updater.
+
 ## Publicando uma versão
 
 O app se atualiza pelas releases do GitHub via electron-updater. O fluxo é:

@@ -1,8 +1,10 @@
 import Database from 'better-sqlite3'
 import { drizzle } from 'drizzle-orm/better-sqlite3'
 import { app } from 'electron'
+import { existsSync } from 'fs'
 import { join } from 'path'
 import * as schema from './schema'
+import { aplicarMigracoes, migracoesPendentes, versaoAtual } from './migrations'
 
 let db: ReturnType<typeof drizzle>
 let sqliteInstance: InstanceType<typeof Database>
@@ -11,8 +13,16 @@ export function getDbPath(): string {
   return join(app.getPath('userData'), 'vanbijouxsys.db')
 }
 
-export function initDatabase(): void {
-  const sqlite = new Database(getDbPath())
+/**
+ * `antesDeMigrar` recebe a chance de guardar uma cópia do banco antes de o
+ * schema mudar — é o único momento em que ainda dá para voltar atrás. O callback
+ * entra por parâmetro para o módulo de banco não depender do de backup.
+ */
+export async function initDatabase(antesDeMigrar?: () => Promise<void>): Promise<void> {
+  const caminho = getDbPath()
+  const bancoJaExistia = existsSync(caminho)
+
+  const sqlite = new Database(caminho)
   sqliteInstance = sqlite
 
   sqlite.pragma('journal_mode = WAL')
@@ -20,151 +30,14 @@ export function initDatabase(): void {
 
   db = drizzle(sqlite, { schema })
 
-  runMigrations(sqlite)
-}
+  const pendentes = migracoesPendentes(versaoAtual(sqlite))
+  if (pendentes.length > 0) {
+    // Banco recém-criado não tem o que preservar.
+    if (bancoJaExistia && antesDeMigrar) await antesDeMigrar()
 
-function runMigrations(sqlite: InstanceType<typeof Database>): void {
-  sqlite.exec(`
-    CREATE TABLE IF NOT EXISTS categories (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      name TEXT NOT NULL UNIQUE
-    );
-
-    CREATE TABLE IF NOT EXISTS products (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      name TEXT NOT NULL,
-      category_id INTEGER NOT NULL REFERENCES categories(id),
-      description TEXT,
-      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-    );
-
-    CREATE TABLE IF NOT EXISTS product_variations (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      product_id INTEGER NOT NULL REFERENCES products(id) ON DELETE CASCADE,
-      identifier TEXT NOT NULL,
-      cost_price REAL NOT NULL DEFAULT 0,
-      sale_price REAL NOT NULL DEFAULT 0,
-      stock_quantity INTEGER NOT NULL DEFAULT 0,
-      minimum_stock INTEGER NOT NULL DEFAULT 1,
-      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-    );
-
-    CREATE TABLE IF NOT EXISTS fairs (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      name TEXT NOT NULL,
-      location TEXT NOT NULL,
-      organizer TEXT,
-      date TEXT NOT NULL,
-      enrollment_cost REAL NOT NULL DEFAULT 0,
-      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-    );
-
-    CREATE TABLE IF NOT EXISTS sales (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      channel TEXT NOT NULL,
-      fair_id INTEGER REFERENCES fairs(id),
-      total_amount REAL NOT NULL,
-      total_cost REAL NOT NULL,
-      sold_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-    );
-
-    CREATE TABLE IF NOT EXISTS sale_items (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      sale_id INTEGER NOT NULL REFERENCES sales(id) ON DELETE CASCADE,
-      variation_id INTEGER NOT NULL REFERENCES product_variations(id),
-      quantity INTEGER NOT NULL,
-      unit_price REAL NOT NULL,
-      unit_cost REAL NOT NULL
-    );
-
-    INSERT OR IGNORE INTO categories (name) VALUES
-      ('Colar'),
-      ('Pulseira'),
-      ('Brinco'),
-      ('Tiara'),
-      ('Pingente');
-
-    CREATE TABLE IF NOT EXISTS insumos (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      name TEXT NOT NULL,
-      unit TEXT NOT NULL,
-      cost_per_unit REAL NOT NULL DEFAULT 0,
-      stock_quantity REAL NOT NULL DEFAULT 0,
-      minimum_stock REAL NOT NULL DEFAULT 0,
-      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-    );
-
-    CREATE TABLE IF NOT EXISTS variation_insumos (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      variation_id INTEGER NOT NULL REFERENCES product_variations(id) ON DELETE CASCADE,
-      insumo_id INTEGER NOT NULL REFERENCES insumos(id),
-      quantity REAL NOT NULL DEFAULT 0
-    );
-
-    CREATE TABLE IF NOT EXISTS fair_additional_costs (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      fair_id INTEGER NOT NULL REFERENCES fairs(id) ON DELETE CASCADE,
-      description TEXT NOT NULL,
-      amount REAL NOT NULL DEFAULT 0
-    );
-  `)
-
-  const fairColumns = sqlite.prepare('PRAGMA table_info(fairs)').all() as Array<{ name: string }>
-  if (!fairColumns.some((c) => c.name === 'end_date')) {
-    sqlite.exec('ALTER TABLE fairs ADD COLUMN end_date TEXT')
+    const aplicadas = aplicarMigracoes(sqlite)
+    console.info(`[db] migrações aplicadas: ${aplicadas.join(', ')}`)
   }
-
-  const variationColumns = sqlite.prepare('PRAGMA table_info(product_variations)').all() as Array<{
-    name: string
-  }>
-  if (!variationColumns.some((c) => c.name === 'labor_cost')) {
-    sqlite.exec('ALTER TABLE product_variations ADD COLUMN labor_cost REAL NOT NULL DEFAULT 0')
-  }
-
-  const salesColumns = sqlite.prepare('PRAGMA table_info(sales)').all() as Array<{ name: string }>
-  if (!salesColumns.some((c) => c.name === 'payment_method')) {
-    sqlite.exec("ALTER TABLE sales ADD COLUMN payment_method TEXT NOT NULL DEFAULT 'dinheiro'")
-  }
-  if (!salesColumns.some((c) => c.name === 'fee_percentage')) {
-    sqlite.exec('ALTER TABLE sales ADD COLUMN fee_percentage REAL NOT NULL DEFAULT 0')
-  }
-  if (!salesColumns.some((c) => c.name === 'fee_amount')) {
-    sqlite.exec('ALTER TABLE sales ADD COLUMN fee_amount REAL NOT NULL DEFAULT 0')
-  }
-  if (!salesColumns.some((c) => c.name === 'net_amount')) {
-    sqlite.exec('ALTER TABLE sales ADD COLUMN net_amount REAL NOT NULL DEFAULT 0')
-    sqlite.exec('UPDATE sales SET net_amount = total_amount WHERE net_amount = 0')
-  }
-  if (!salesColumns.some((c) => c.name === 'received_at')) {
-    sqlite.exec('ALTER TABLE sales ADD COLUMN received_at TEXT')
-  }
-
-  sqlite.exec(`
-    CREATE TABLE IF NOT EXISTS expense_categories (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      name TEXT NOT NULL UNIQUE,
-      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-    );
-
-    CREATE TABLE IF NOT EXISTS cash_expenses (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      category_id INTEGER NOT NULL REFERENCES expense_categories(id),
-      description TEXT NOT NULL,
-      amount REAL NOT NULL,
-      expense_date TEXT NOT NULL,
-      notes TEXT,
-      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-    );
-
-    CREATE TABLE IF NOT EXISTS cash_settings (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      opening_balance REAL NOT NULL DEFAULT 0,
-      updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-    );
-
-    INSERT OR IGNORE INTO cash_settings (id, opening_balance, updated_at)
-    VALUES (1, 0, CURRENT_TIMESTAMP);
-  `)
 }
 
 export function getDb(): ReturnType<typeof drizzle> {

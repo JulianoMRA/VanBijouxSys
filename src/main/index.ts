@@ -2,7 +2,7 @@ import { app, shell, BrowserWindow } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import { initDatabase } from './database'
-import { backupDiario } from './database/backup'
+import { backupDiario, criarBackup } from './database/backup'
 import { registerAllHandlers } from './ipc'
 import { iniciarAutoUpdate } from './updater'
 
@@ -36,14 +36,18 @@ function createWindow(): void {
   }
 }
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
   electronApp.setAppUserModelId('com.vanbijouxsys')
 
   app.on('browser-window-created', (_, window) => {
     optimizer.watchWindowShortcuts(window)
   })
 
-  initDatabase()
+  await initDatabase(async () => {
+    const caminho = await criarBackup()
+    console.info(`[db] backup antes de migrar: ${caminho}`)
+  })
+
   registerAllHandlers()
   createWindow()
 

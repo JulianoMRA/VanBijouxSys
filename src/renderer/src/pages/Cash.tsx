@@ -6,9 +6,16 @@ import Toast from '../components/ui/Toast'
 import ExpenseForm from '../components/cash/ExpenseForm'
 import { useToast } from '../hooks/useToast'
 import { formatCurrency, formatDate } from '../utils/format'
-import type { Sale, CashExpense, ExpenseCategory, Fair, PaymentMethod } from '../types'
-
-type PeriodKey = 'mes' | '3meses' | '6meses' | 'ano' | 'tudo' | 'custom'
+import {
+  buildFairExpenses,
+  buildTransactions,
+  calcCashSummary,
+  filterCashSales,
+  filterExpenses,
+  resolveDateRange
+} from '../utils/cash-calculations'
+import type { PeriodKey, TransactionRow } from '../utils/cash-calculations'
+import type { Sale, CashExpense, ExpenseCategory, Fair } from '../types'
 
 const PERIODS: { label: string; value: PeriodKey }[] = [
   { label: 'Este mês', value: 'mes' },
@@ -19,65 +26,10 @@ const PERIODS: { label: string; value: PeriodKey }[] = [
   { label: 'Personalizado', value: 'custom' }
 ]
 
-const PAYMENT_LABELS: Record<PaymentMethod, string> = {
-  dinheiro: 'Dinheiro',
-  pix: 'PIX',
-  debito: 'Débito',
-  credito: 'Crédito',
-  areceber: 'A receber'
-}
-
-function getPeriodDates(period: PeriodKey): { startDate: string; endDate: string } | null {
-  if (period === 'tudo') return null
-  const now = new Date()
-  const pad = (n: number) => String(n).padStart(2, '0')
-  const today = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`
-
-  if (period === 'mes') {
-    const start = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-01`
-    return { startDate: start, endDate: today }
-  }
-  if (period === '3meses') {
-    const d = new Date(now)
-    d.setMonth(d.getMonth() - 3)
-    return {
-      startDate: `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`,
-      endDate: today
-    }
-  }
-  if (period === '6meses') {
-    const d = new Date(now)
-    d.setMonth(d.getMonth() - 6)
-    return {
-      startDate: `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`,
-      endDate: today
-    }
-  }
-  if (period === 'ano') {
-    return { startDate: `${now.getFullYear()}-01-01`, endDate: today }
-  }
-  return null
-}
-
 type ExpenseModal =
   | { type: 'new' }
   | { type: 'edit'; expense: CashExpense }
   | { type: 'delete'; expense: CashExpense }
-
-function buildFairCostSub(fair: Fair): string {
-  const parts: string[] = []
-  if (fair.enrollmentCost > 0) {
-    parts.push(
-      `Inscrição ${fair.enrollmentCost.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}`
-    )
-  }
-  fair.additionalCosts.forEach((c) => {
-    parts.push(
-      `${c.description} ${c.amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}`
-    )
-  })
-  return parts.join(' · ') || 'Sem detalhes'
-}
 
 export default function Cash(): JSX.Element {
   const [period, setPeriod] = useState<PeriodKey>('mes')
@@ -128,120 +80,32 @@ export default function Cash(): JSX.Element {
   }, [])
 
   // ── Filtering ────────────────────────────────────────────────────────────
-  const dateRange =
-    period === 'custom'
-      ? customStart && customEnd
-        ? { startDate: customStart, endDate: customEnd }
-        : null
-      : getPeriodDates(period)
+  const dateRange = useMemo(
+    () => resolveDateRange(period, customStart, customEnd),
+    [period, customStart, customEnd]
+  )
 
-  // Vendas 'A receber' pendentes não estão no caixa; vendas recebidas (receivedAt definido)
-  // usam a data efetiva de recebimento para o filtro de período.
-  const filteredSales = useMemo(() => {
-    const eligible = sales.filter((s) => s.paymentMethod !== 'areceber')
-    if (!dateRange) return eligible
-    return eligible.filter((s) => {
-      const d = (s.receivedAt ?? s.soldAt).slice(0, 10)
-      return d >= dateRange.startDate && d <= dateRange.endDate
-    })
-  }, [sales, dateRange])
+  const filteredSales = useMemo(() => filterCashSales(sales, dateRange), [sales, dateRange])
 
-  const filteredExpenses = useMemo(() => {
-    if (!dateRange) return expenses
-    return expenses.filter((e) => {
-      return e.expenseDate >= dateRange.startDate && e.expenseDate <= dateRange.endDate
-    })
-  }, [expenses, dateRange])
+  const filteredExpenses = useMemo(() => filterExpenses(expenses, dateRange), [expenses, dateRange])
 
-  const filteredFairExpenses = useMemo(() => {
-    const rows = fairs.flatMap((f) => {
-      const total = f.enrollmentCost + f.additionalCosts.reduce((s, c) => s + c.amount, 0)
-      if (total === 0) return []
-      return [
-        { fairId: f.id, date: f.date, label: f.name, sub: buildFairCostSub(f), amount: total }
-      ]
-    })
-    if (!dateRange) return rows
-    return rows.filter((r) => r.date >= dateRange.startDate && r.date <= dateRange.endDate)
-  }, [fairs, dateRange])
+  const filteredFairExpenses = useMemo(
+    () => buildFairExpenses(fairs, dateRange),
+    [fairs, dateRange]
+  )
 
-  const totalIncome = filteredSales.reduce((s, sale) => s + sale.netAmount, 0)
-  const totalExpenses =
-    filteredExpenses.reduce((s, e) => s + e.amount, 0) +
-    filteredFairExpenses.reduce((s, fe) => s + fe.amount, 0)
-  const currentBalance = openingBalance + totalIncome - totalExpenses
+  const { totalIncome, totalExpenses, currentBalance } = calcCashSummary({
+    openingBalance,
+    sales: filteredSales,
+    expenses: filteredExpenses,
+    fairExpenses: filteredFairExpenses
+  })
 
-  // ── Unified transaction list ─────────────────────────────────────────────
-  type TransactionRow =
-    | {
-        kind: 'income'
-        id: number
-        date: string
-        label: string
-        sub: string
-        amount: number
-        netAmount: number
-        feeAmount: number
-        paymentMethod: PaymentMethod
-      }
-    | {
-        kind: 'expense'
-        id: number
-        date: string
-        label: string
-        sub: string
-        amount: number
-        raw: CashExpense
-      }
-    | {
-        kind: 'fair-expense'
-        fairId: number
-        date: string
-        label: string
-        sub: string
-        amount: number
-      }
-
-  const transactions = useMemo((): TransactionRow[] => {
-    const incomeRows: TransactionRow[] = filteredSales.map((s) => ({
-      kind: 'income',
-      id: s.id,
-      date: (s.receivedAt ?? s.soldAt).slice(0, 10),
-      label:
-        s.items.length === 1
-          ? `${s.items[0].productName} — ${s.items[0].variationIdentifier}`
-          : `${s.items.length} itens vendidos`,
-      sub: `${s.channel}${s.fairName ? ` · ${s.fairName}` : ''} · ${PAYMENT_LABELS[s.paymentMethod]}${s.receivedAt ? ' · recebido' : ''}`,
-      amount: s.totalAmount,
-      netAmount: s.netAmount,
-      feeAmount: s.feeAmount,
-      paymentMethod: s.paymentMethod
-    }))
-
-    const expenseRows: TransactionRow[] = filteredExpenses.map((e) => ({
-      kind: 'expense',
-      id: e.id,
-      date: e.expenseDate,
-      label: e.description,
-      sub: e.categoryName,
-      amount: e.amount,
-      raw: e
-    }))
-
-    const fairExpenseRows: TransactionRow[] = filteredFairExpenses.map((fe) => ({
-      kind: 'fair-expense',
-      fairId: fe.fairId,
-      date: fe.date,
-      label: fe.label,
-      sub: fe.sub,
-      amount: fe.amount
-    }))
-
-    return [...incomeRows, ...expenseRows, ...fairExpenseRows].sort((a, b) => {
-      if (b.date !== a.date) return b.date.localeCompare(a.date)
-      return 0
-    })
-  }, [filteredSales, filteredExpenses, filteredFairExpenses])
+  const transactions = useMemo(
+    (): TransactionRow[] =>
+      buildTransactions(filteredSales, filteredExpenses, filteredFairExpenses),
+    [filteredSales, filteredExpenses, filteredFairExpenses]
+  )
 
   // ── Handlers: despesas ───────────────────────────────────────────────────
   async function handleDeleteExpense(expense: CashExpense): Promise<void> {

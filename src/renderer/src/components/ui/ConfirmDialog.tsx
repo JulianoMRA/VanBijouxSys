@@ -26,9 +26,7 @@ export default function ConfirmDialog({
         </button>
         <button
           className={`font-medium px-4 py-2 rounded-xl transition-colors duration-200 text-sm text-white ${
-            danger
-              ? 'bg-rose-500 hover:bg-rose-600'
-              : 'bg-blush-500 hover:bg-blush-600'
+            danger ? 'bg-rose-500 hover:bg-rose-600' : 'bg-blush-500 hover:bg-blush-600'
           }`}
           onClick={() => {
             onConfirm()

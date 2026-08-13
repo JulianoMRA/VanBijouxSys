@@ -14,7 +14,8 @@ type Modal =
   | { type: 'delete'; insumo: Insumo }
 
 type StatusFilter = 'todos' | 'low' | 'out'
-type SortOption = 'recente' | 'nome-az' | 'nome-za' | 'estoque-asc' | 'estoque-desc' | 'custo-asc' | 'custo-desc'
+type SortOption =
+  'recente' | 'nome-az' | 'nome-za' | 'estoque-asc' | 'estoque-desc' | 'custo-asc' | 'custo-desc'
 
 function stockStatus(insumo: Insumo): 'ok' | 'low' | 'out' {
   if (insumo.stockQuantity <= 0) return 'out'
@@ -140,14 +141,22 @@ export default function Stock(): JSX.Element {
 
     result = [...result].sort((a, b) => {
       switch (sortBy) {
-        case 'nome-az': return a.name.localeCompare(b.name, 'pt-BR')
-        case 'nome-za': return b.name.localeCompare(a.name, 'pt-BR')
-        case 'estoque-asc': return a.stockQuantity - b.stockQuantity
-        case 'estoque-desc': return b.stockQuantity - a.stockQuantity
-        case 'custo-asc': return a.costPerUnit - b.costPerUnit
-        case 'custo-desc': return b.costPerUnit - a.costPerUnit
-        case 'recente': return b.id - a.id
-        default: return 0
+        case 'nome-az':
+          return a.name.localeCompare(b.name, 'pt-BR')
+        case 'nome-za':
+          return b.name.localeCompare(a.name, 'pt-BR')
+        case 'estoque-asc':
+          return a.stockQuantity - b.stockQuantity
+        case 'estoque-desc':
+          return b.stockQuantity - a.stockQuantity
+        case 'custo-asc':
+          return a.costPerUnit - b.costPerUnit
+        case 'custo-desc':
+          return b.costPerUnit - a.costPerUnit
+        case 'recente':
+          return b.id - a.id
+        default:
+          return 0
       }
     })
 
@@ -172,10 +181,7 @@ export default function Stock(): JSX.Element {
         <div className="flex items-center gap-2">
           {insumos.length > 0 && (
             <div className="relative" ref={exportMenuRef}>
-              <button
-                className="btn-secondary"
-                onClick={() => setExportMenuOpen((v) => !v)}
-              >
+              <button className="btn-secondary" onClick={() => setExportMenuOpen((v) => !v)}>
                 Exportar ↓
               </button>
               {exportMenuOpen && (
@@ -201,7 +207,9 @@ export default function Stock(): JSX.Element {
                     onClick={() => handleExport('atual')}
                   >
                     Visão atual da tela
-                    <span className="ml-1.5 text-xs text-gray-400">({displayedInsumos.length})</span>
+                    <span className="ml-1.5 text-xs text-gray-400">
+                      ({displayedInsumos.length})
+                    </span>
                   </button>
                 </div>
               )}
@@ -216,7 +224,12 @@ export default function Stock(): JSX.Element {
       {errorMessage && (
         <div className="bg-rose-50 border border-rose-200 rounded-2xl px-5 py-3 mb-4 flex items-start justify-between gap-3">
           <p className="text-sm text-rose-700">{errorMessage}</p>
-          <button onClick={() => setErrorMessage('')} className="text-rose-400 hover:text-rose-600 shrink-0 text-lg leading-none">×</button>
+          <button
+            onClick={() => setErrorMessage('')}
+            className="text-rose-400 hover:text-rose-600 shrink-0 text-lg leading-none"
+          >
+            ×
+          </button>
         </div>
       )}
 
@@ -227,7 +240,9 @@ export default function Stock(): JSX.Element {
       ) : insumos.length === 0 ? (
         <div className="card flex flex-col items-center justify-center h-48 text-center">
           <p className="text-gray-500 text-sm">Nenhum insumo cadastrado ainda.</p>
-          <p className="text-xs text-gray-400 mt-1">Cadastre os materiais que você usa para fazer suas peças.</p>
+          <p className="text-xs text-gray-400 mt-1">
+            Cadastre os materiais que você usa para fazer suas peças.
+          </p>
           <button className="btn-primary mt-3" onClick={() => setModal({ type: 'new' })}>
             Cadastrar primeiro insumo
           </button>
@@ -237,19 +252,29 @@ export default function Stock(): JSX.Element {
           {/* Stats */}
           <div className="grid grid-cols-3 gap-4 mb-5">
             <div className="card py-4">
-              <p className="text-xs text-gray-400 uppercase tracking-widest mb-1">Valor em estoque</p>
-              <p className="font-display text-xl font-bold text-blush-600">{formatCurrency(totalStockValue)}</p>
+              <p className="text-xs text-gray-400 uppercase tracking-widest mb-1">
+                Valor em estoque
+              </p>
+              <p className="font-display text-xl font-bold text-blush-600">
+                {formatCurrency(totalStockValue)}
+              </p>
               <p className="text-xs text-gray-400 mt-0.5">custo total dos insumos</p>
             </div>
             <div className="card py-4">
-              <p className="text-xs text-gray-400 uppercase tracking-widest mb-1">Insumos em falta/baixo</p>
-              <p className={`font-display text-xl font-bold ${lowStock.length > 0 ? 'text-amber-500' : 'text-emerald-500'}`}>
+              <p className="text-xs text-gray-400 uppercase tracking-widest mb-1">
+                Insumos em falta/baixo
+              </p>
+              <p
+                className={`font-display text-xl font-bold ${lowStock.length > 0 ? 'text-amber-500' : 'text-emerald-500'}`}
+              >
                 {lowStock.length}
               </p>
               <p className="text-xs text-gray-400 mt-0.5">precisam de reposição</p>
             </div>
             <div className="card py-4">
-              <p className="text-xs text-gray-400 uppercase tracking-widest mb-1">Total de insumos</p>
+              <p className="text-xs text-gray-400 uppercase tracking-widest mb-1">
+                Total de insumos
+              </p>
               <p className="font-display text-xl font-bold text-gray-700">{insumos.length}</p>
               <p className="text-xs text-gray-400 mt-0.5">materiais cadastrados</p>
             </div>
@@ -263,7 +288,8 @@ export default function Stock(): JSX.Element {
                 className="flex items-center justify-between w-full text-left"
               >
                 <p className="text-sm font-semibold text-amber-800">
-                  ⚠ {lowStock.length} insumo{lowStock.length !== 1 ? 's' : ''} com estoque baixo ou esgotado
+                  ⚠ {lowStock.length} insumo{lowStock.length !== 1 ? 's' : ''} com estoque baixo ou
+                  esgotado
                 </p>
                 <span className="text-amber-500 text-xs font-medium ml-3 shrink-0">
                   {lowStockExpanded ? '▲ Recolher' : '▼ Expandir'}
@@ -280,7 +306,8 @@ export default function Stock(): JSX.Element {
                           : 'bg-amber-100 text-amber-700'
                       }`}
                     >
-                      {i.name} — {i.stockQuantity.toLocaleString('pt-BR')} {i.unit === 'unidade' ? 'un.' : i.unit}
+                      {i.name} — {i.stockQuantity.toLocaleString('pt-BR')}{' '}
+                      {i.unit === 'unidade' ? 'un.' : i.unit}
                     </span>
                   ))}
                 </div>
@@ -299,11 +326,13 @@ export default function Stock(): JSX.Element {
             />
 
             <div className="flex rounded-xl border border-cream-200 bg-white overflow-hidden text-xs font-semibold">
-              {([
-                ['todos', 'Todos'],
-                ['low', 'Baixo'],
-                ['out', 'Esgotado'],
-              ] as [StatusFilter, string][]).map(([value, label]) => (
+              {(
+                [
+                  ['todos', 'Todos'],
+                  ['low', 'Baixo'],
+                  ['out', 'Esgotado']
+                ] as [StatusFilter, string][]
+              ).map(([value, label]) => (
                 <button
                   key={value}
                   onClick={() => setStatusFilter(value)}
@@ -338,11 +367,21 @@ export default function Stock(): JSX.Element {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-cream-100">
-                  <th className="text-left px-5 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">Insumo</th>
-                  <th className="text-right px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">Custo/un.</th>
-                  <th className="text-right px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">Estoque</th>
-                  <th className="text-right px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">Mínimo</th>
-                  <th className="text-right px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">Val. estoque</th>
+                  <th className="text-left px-5 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">
+                    Insumo
+                  </th>
+                  <th className="text-right px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">
+                    Custo/un.
+                  </th>
+                  <th className="text-right px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">
+                    Estoque
+                  </th>
+                  <th className="text-right px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">
+                    Mínimo
+                  </th>
+                  <th className="text-right px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">
+                    Val. estoque
+                  </th>
                   <th className="px-4 py-3" />
                 </tr>
               </thead>
@@ -353,62 +392,78 @@ export default function Stock(): JSX.Element {
                       Nenhum insumo encontrado para esta pesquisa.
                     </td>
                   </tr>
-                ) : displayedInsumos.map((insumo) => {
-                  const status = stockStatus(insumo)
-                  const unitLabel = insumo.unit === 'unidade' ? 'un.' : insumo.unit
-                  return (
-                    <tr key={insumo.id} className="hover:bg-cream-50 transition-colors">
-                      <td className="px-5 py-3">
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium text-gray-800">{insumo.name}</span>
-                          {status === 'out' && (
-                            <span className="text-xs bg-rose-100 text-rose-600 px-2 py-0.5 rounded-full">Esgotado</span>
-                          )}
-                          {status === 'low' && (
-                            <span className="text-xs bg-amber-100 text-amber-600 px-2 py-0.5 rounded-full">Baixo</span>
-                          )}
-                        </div>
-                        <p className="text-xs text-gray-400 mt-0.5">{insumo.unit === 'unidade' ? 'Por unidade' : `Por ${insumo.unit}`}</p>
-                      </td>
-                      <td className="px-4 py-3 text-right text-gray-600">
-                        {formatCurrency(insumo.costPerUnit)}/{unitLabel}
-                      </td>
-                      <td className={`px-4 py-3 text-right font-medium ${
-                        status === 'out' ? 'text-rose-600' : status === 'low' ? 'text-amber-600' : 'text-gray-700'
-                      }`}>
-                        {insumo.stockQuantity.toLocaleString('pt-BR')} {unitLabel}
-                      </td>
-                      <td className="px-4 py-3 text-right text-gray-400">
-                        {insumo.minimumStock > 0 ? `${insumo.minimumStock.toLocaleString('pt-BR')} ${unitLabel}` : '—'}
-                      </td>
-                      <td className="px-4 py-3 text-right text-gray-600">
-                        {formatCurrency(insumo.stockQuantity * insumo.costPerUnit)}
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="flex justify-end gap-1">
-                          <button
-                            className="text-xs text-emerald-600 hover:text-emerald-800 px-2 py-1 rounded-lg hover:bg-emerald-50 transition-colors whitespace-nowrap"
-                            onClick={() => setModal({ type: 'addStock', insumo })}
-                          >
-                            + Estoque
-                          </button>
-                          <button
-                            className="text-xs text-blush-600 hover:text-blush-800 px-2 py-1 rounded-lg hover:bg-blush-50 transition-colors"
-                            onClick={() => setModal({ type: 'edit', insumo })}
-                          >
-                            Editar
-                          </button>
-                          <button
-                            className="text-xs text-rose-500 hover:text-rose-700 px-2 py-1 rounded-lg hover:bg-rose-50 transition-colors"
-                            onClick={() => setModal({ type: 'delete', insumo })}
-                          >
-                            Excluir
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  )
-                })}
+                ) : (
+                  displayedInsumos.map((insumo) => {
+                    const status = stockStatus(insumo)
+                    const unitLabel = insumo.unit === 'unidade' ? 'un.' : insumo.unit
+                    return (
+                      <tr key={insumo.id} className="hover:bg-cream-50 transition-colors">
+                        <td className="px-5 py-3">
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium text-gray-800">{insumo.name}</span>
+                            {status === 'out' && (
+                              <span className="text-xs bg-rose-100 text-rose-600 px-2 py-0.5 rounded-full">
+                                Esgotado
+                              </span>
+                            )}
+                            {status === 'low' && (
+                              <span className="text-xs bg-amber-100 text-amber-600 px-2 py-0.5 rounded-full">
+                                Baixo
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-xs text-gray-400 mt-0.5">
+                            {insumo.unit === 'unidade' ? 'Por unidade' : `Por ${insumo.unit}`}
+                          </p>
+                        </td>
+                        <td className="px-4 py-3 text-right text-gray-600">
+                          {formatCurrency(insumo.costPerUnit)}/{unitLabel}
+                        </td>
+                        <td
+                          className={`px-4 py-3 text-right font-medium ${
+                            status === 'out'
+                              ? 'text-rose-600'
+                              : status === 'low'
+                                ? 'text-amber-600'
+                                : 'text-gray-700'
+                          }`}
+                        >
+                          {insumo.stockQuantity.toLocaleString('pt-BR')} {unitLabel}
+                        </td>
+                        <td className="px-4 py-3 text-right text-gray-400">
+                          {insumo.minimumStock > 0
+                            ? `${insumo.minimumStock.toLocaleString('pt-BR')} ${unitLabel}`
+                            : '—'}
+                        </td>
+                        <td className="px-4 py-3 text-right text-gray-600">
+                          {formatCurrency(insumo.stockQuantity * insumo.costPerUnit)}
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="flex justify-end gap-1">
+                            <button
+                              className="text-xs text-emerald-600 hover:text-emerald-800 px-2 py-1 rounded-lg hover:bg-emerald-50 transition-colors whitespace-nowrap"
+                              onClick={() => setModal({ type: 'addStock', insumo })}
+                            >
+                              + Estoque
+                            </button>
+                            <button
+                              className="text-xs text-blush-600 hover:text-blush-800 px-2 py-1 rounded-lg hover:bg-blush-50 transition-colors"
+                              onClick={() => setModal({ type: 'edit', insumo })}
+                            >
+                              Editar
+                            </button>
+                            <button
+                              className="text-xs text-rose-500 hover:text-rose-700 px-2 py-1 rounded-lg hover:bg-rose-50 transition-colors"
+                              onClick={() => setModal({ type: 'delete', insumo })}
+                            >
+                              Excluir
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    )
+                  })
+                )}
               </tbody>
             </table>
           </div>
@@ -418,13 +473,33 @@ export default function Stock(): JSX.Element {
       {toastMsg && <Toast message={toastMsg} onDismiss={dismissToast} />}
 
       {modal?.type === 'new' && (
-        <InsumoForm onSave={() => { loadInsumos(); showToast('Insumo salvo!') }} onClose={() => setModal(null)} />
+        <InsumoForm
+          onSave={() => {
+            loadInsumos()
+            showToast('Insumo salvo!')
+          }}
+          onClose={() => setModal(null)}
+        />
       )}
       {modal?.type === 'edit' && (
-        <InsumoForm insumo={modal.insumo} onSave={() => { loadInsumos(); showToast('Insumo atualizado!') }} onClose={() => setModal(null)} />
+        <InsumoForm
+          insumo={modal.insumo}
+          onSave={() => {
+            loadInsumos()
+            showToast('Insumo atualizado!')
+          }}
+          onClose={() => setModal(null)}
+        />
       )}
       {modal?.type === 'addStock' && (
-        <AddInsumoStockForm insumo={modal.insumo} onSave={() => { loadInsumos(); showToast('Estoque atualizado!') }} onClose={() => setModal(null)} />
+        <AddInsumoStockForm
+          insumo={modal.insumo}
+          onSave={() => {
+            loadInsumos()
+            showToast('Estoque atualizado!')
+          }}
+          onClose={() => setModal(null)}
+        />
       )}
       {modal?.type === 'delete' && (
         <ConfirmDialog

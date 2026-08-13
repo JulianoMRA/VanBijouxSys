@@ -34,7 +34,17 @@ function insertSale(opts: {
     `INSERT INTO sales
       (channel, total_amount, total_cost, payment_method, fee_percentage, fee_amount, net_amount, sold_at, received_at)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    ['WhatsApp', totalAmount, totalCost, paymentMethod, feePercentage, feeAmount, netAmount, opts.soldAt, receivedAt]
+    [
+      'WhatsApp',
+      totalAmount,
+      totalCost,
+      paymentMethod,
+      feePercentage,
+      feeAmount,
+      netAmount,
+      opts.soldAt,
+      receivedAt
+    ]
   )
   const saleId = queryOne<{ id: number }>(db, 'SELECT last_insert_rowid() AS id')!.id
   for (const i of opts.items) {
@@ -49,7 +59,11 @@ function insertSale(opts: {
 
 describe("'A receber' — competência vs caixa", () => {
   it('venda A receber pendente NÃO entra em cashSummary.totalIncome', () => {
-    insertSale({ soldAt: '2026-05-10', paymentMethod: 'areceber', items: [{ variationId: 1, qty: 1, unitPrice: 30, unitCost: 5 }] })
+    insertSale({
+      soldAt: '2026-05-10',
+      paymentMethod: 'areceber',
+      items: [{ variationId: 1, qty: 1, unitPrice: 30, unitCost: 5 }]
+    })
 
     const result = queryOne<{ total: number }>(
       db,
@@ -63,7 +77,11 @@ describe("'A receber' — competência vs caixa", () => {
   })
 
   it('venda A receber pendente CONTA em overview.totalRevenue/totalProfit', () => {
-    insertSale({ soldAt: '2026-05-10', paymentMethod: 'areceber', items: [{ variationId: 1, qty: 1, unitPrice: 30, unitCost: 5 }] })
+    insertSale({
+      soldAt: '2026-05-10',
+      paymentMethod: 'areceber',
+      items: [{ variationId: 1, qty: 1, unitPrice: 30, unitCost: 5 }]
+    })
 
     const result = queryOne<{ totalRevenue: number; totalProfit: number; totalSales: number }>(
       db,
@@ -81,9 +99,21 @@ describe("'A receber' — competência vs caixa", () => {
   })
 
   it('overview.totalReceivable soma vendas pendentes do período', () => {
-    insertSale({ soldAt: '2026-05-10', paymentMethod: 'areceber', items: [{ variationId: 1, qty: 1, unitPrice: 30, unitCost: 5 }] })
-    insertSale({ soldAt: '2026-05-11', paymentMethod: 'areceber', items: [{ variationId: 1, qty: 2, unitPrice: 30, unitCost: 5 }] })
-    insertSale({ soldAt: '2026-05-12', paymentMethod: 'dinheiro', items: [{ variationId: 1, qty: 1, unitPrice: 30, unitCost: 5 }] })
+    insertSale({
+      soldAt: '2026-05-10',
+      paymentMethod: 'areceber',
+      items: [{ variationId: 1, qty: 1, unitPrice: 30, unitCost: 5 }]
+    })
+    insertSale({
+      soldAt: '2026-05-11',
+      paymentMethod: 'areceber',
+      items: [{ variationId: 1, qty: 2, unitPrice: 30, unitCost: 5 }]
+    })
+    insertSale({
+      soldAt: '2026-05-12',
+      paymentMethod: 'dinheiro',
+      items: [{ variationId: 1, qty: 1, unitPrice: 30, unitCost: 5 }]
+    })
 
     const result = queryOne<{ total: number }>(
       db,
@@ -103,7 +133,11 @@ describe("'A receber' — competência vs caixa", () => {
       receivedAt: '2026-05-20',
       items: [{ variationId: 1, qty: 1, unitPrice: 30, unitCost: 5 }]
     })
-    insertSale({ soldAt: '2026-05-11', paymentMethod: 'areceber', items: [{ variationId: 1, qty: 1, unitPrice: 30, unitCost: 5 }] })
+    insertSale({
+      soldAt: '2026-05-11',
+      paymentMethod: 'areceber',
+      items: [{ variationId: 1, qty: 1, unitPrice: 30, unitCost: 5 }]
+    })
 
     const result = queryOne<{ total: number }>(
       db,
@@ -118,8 +152,12 @@ describe("'A receber' — competência vs caixa", () => {
 })
 
 describe("'A receber' — markAsReceived e unmarkAsReceived", () => {
-  it("markAsReceived: atualiza payment_method, fee, net_amount e received_at", () => {
-    const saleId = insertSale({ soldAt: '2026-05-10', paymentMethod: 'areceber', items: [{ variationId: 1, qty: 1, unitPrice: 100, unitCost: 20 }] })
+  it('markAsReceived: atualiza payment_method, fee, net_amount e received_at', () => {
+    const saleId = insertSale({
+      soldAt: '2026-05-10',
+      paymentMethod: 'areceber',
+      items: [{ variationId: 1, qty: 1, unitPrice: 100, unitCost: 20 }]
+    })
 
     db.run(
       `UPDATE sales
@@ -128,11 +166,14 @@ describe("'A receber' — markAsReceived e unmarkAsReceived", () => {
       ['pix', 0.99, 0.99, 99.01, '2026-05-20', saleId]
     )
 
-    const sale = queryOne<{ payment_method: string; fee_amount: number; net_amount: number; received_at: string }>(
-      db,
-      'SELECT payment_method, fee_amount, net_amount, received_at FROM sales WHERE id = ?',
-      [saleId]
-    )
+    const sale = queryOne<{
+      payment_method: string
+      fee_amount: number
+      net_amount: number
+      received_at: string
+    }>(db, 'SELECT payment_method, fee_amount, net_amount, received_at FROM sales WHERE id = ?', [
+      saleId
+    ])
     expect(sale!.payment_method).toBe('pix')
     expect(sale!.fee_amount).toBeCloseTo(0.99, 2)
     expect(sale!.net_amount).toBeCloseTo(99.01, 2)
@@ -157,11 +198,14 @@ describe("'A receber' — markAsReceived e unmarkAsReceived", () => {
       [saleId]
     )
 
-    const sale = queryOne<{ payment_method: string; fee_amount: number; net_amount: number; received_at: string | null }>(
-      db,
-      'SELECT payment_method, fee_amount, net_amount, received_at FROM sales WHERE id = ?',
-      [saleId]
-    )
+    const sale = queryOne<{
+      payment_method: string
+      fee_amount: number
+      net_amount: number
+      received_at: string | null
+    }>(db, 'SELECT payment_method, fee_amount, net_amount, received_at FROM sales WHERE id = ?', [
+      saleId
+    ])
     expect(sale!.payment_method).toBe('areceber')
     expect(sale!.fee_amount).toBe(0)
     expect(sale!.net_amount).toBe(100)
@@ -196,7 +240,11 @@ describe("'A receber' — cashFlow agrupa por data efetiva de recebimento", () =
   })
 
   it('venda à vista mantém mês do sold_at no cashFlow', () => {
-    insertSale({ soldAt: '2026-04-20', paymentMethod: 'dinheiro', items: [{ variationId: 1, qty: 1, unitPrice: 40, unitCost: 5 }] })
+    insertSale({
+      soldAt: '2026-04-20',
+      paymentMethod: 'dinheiro',
+      items: [{ variationId: 1, qty: 1, unitPrice: 40, unitCost: 5 }]
+    })
 
     const cashFlow = queryAll<{ month: string; income: number }>(
       db,
@@ -213,7 +261,11 @@ describe("'A receber' — cashFlow agrupa por data efetiva de recebimento", () =
   })
 
   it('venda areceber pendente não aparece em nenhum mês do cashFlow', () => {
-    insertSale({ soldAt: '2026-05-01', paymentMethod: 'areceber', items: [{ variationId: 1, qty: 1, unitPrice: 30, unitCost: 5 }] })
+    insertSale({
+      soldAt: '2026-05-01',
+      paymentMethod: 'areceber',
+      items: [{ variationId: 1, qty: 1, unitPrice: 30, unitCost: 5 }]
+    })
 
     const cashFlow = queryAll<{ month: string; income: number }>(
       db,

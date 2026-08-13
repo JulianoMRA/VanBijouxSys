@@ -16,7 +16,9 @@ export default function ProductForm({
   onClose
 }: ProductFormProps): JSX.Element {
   const [name, setName] = useState(product?.name ?? '')
-  const [categoryId, setCategoryId] = useState<number>(product?.categoryId ?? categories[0]?.id ?? 0)
+  const [categoryId, setCategoryId] = useState<number>(
+    product?.categoryId ?? categories[0]?.id ?? 0
+  )
   const [description, setDescription] = useState(product?.description ?? '')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -84,7 +86,9 @@ export default function ProductForm({
         </div>
 
         <div>
-          <label className="label">Descrição <span className="text-gray-400 font-normal">(opcional)</span></label>
+          <label className="label">
+            Descrição <span className="text-gray-400 font-normal">(opcional)</span>
+          </label>
           <textarea
             className="input resize-none"
             rows={3}

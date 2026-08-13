@@ -57,11 +57,7 @@ export default function Sidebar(): JSX.Element {
 
       <nav className="flex-1 px-3 py-5 space-y-0.5">
         {navItems.map(({ to, label, Icon }) => (
-          <NavLink
-            key={to}
-            to={to}
-            end={to === '/'}
-          >
+          <NavLink key={to} to={to} end={to === '/'}>
             {({ isActive }) => (
               <div
                 className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 cursor-pointer"

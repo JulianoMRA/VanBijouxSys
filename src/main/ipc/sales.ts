@@ -2,7 +2,11 @@ import { eq } from 'drizzle-orm'
 import { getDb, getSqlite } from '../database'
 import { sales, saleItems, productVariations, products, fairs } from '../database/schema'
 import { handleIpc } from './handle'
-import type { CreateSaleInput, UpdateSaleInput, MarkSaleReceivedInput } from '../../renderer/src/types'
+import type {
+  CreateSaleInput,
+  UpdateSaleInput,
+  MarkSaleReceivedInput
+} from '../../renderer/src/types'
 
 export function registerSaleHandlers(): void {
   handleIpc('sales:getAll', () => {

@@ -45,7 +45,8 @@ export default function AddStockForm({
           <p className="font-medium text-gray-700">{productName}</p>
           <p className="text-gray-500">{variation.identifier}</p>
           <p className="text-gray-500 mt-1">
-            Estoque atual: <span className="font-medium text-gray-700">{variation.stockQuantity} unidades</span>
+            Estoque atual:{' '}
+            <span className="font-medium text-gray-700">{variation.stockQuantity} unidades</span>
           </p>
         </div>
 

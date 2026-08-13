@@ -9,7 +9,12 @@ interface ExpenseFormProps {
   onClose: () => void
 }
 
-export default function ExpenseForm({ expense, categories, onSave, onClose }: ExpenseFormProps): JSX.Element {
+export default function ExpenseForm({
+  expense,
+  categories,
+  onSave,
+  onClose
+}: ExpenseFormProps): JSX.Element {
   const [categoryId, setCategoryId] = useState<number | ''>(expense?.categoryId ?? '')
   const [description, setDescription] = useState(expense?.description ?? '')
   const [amount, setAmount] = useState(expense ? expense.amount.toString() : '')
@@ -75,7 +80,9 @@ export default function ExpenseForm({ expense, categories, onSave, onClose }: Ex
             >
               <option value="">Selecione…</option>
               {categories.map((c) => (
-                <option key={c.id} value={c.id}>{c.name}</option>
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
               ))}
             </select>
           </div>
@@ -116,7 +123,9 @@ export default function ExpenseForm({ expense, categories, onSave, onClose }: Ex
         </div>
 
         <div>
-          <label className="label">Observações <span className="text-gray-400">(opcional)</span></label>
+          <label className="label">
+            Observações <span className="text-gray-400">(opcional)</span>
+          </label>
           <textarea
             className="input resize-none"
             rows={2}
@@ -130,7 +139,9 @@ export default function ExpenseForm({ expense, categories, onSave, onClose }: Ex
         {error && <p className="text-sm text-rose-500">{error}</p>}
 
         <div className="flex justify-end gap-3 pt-1">
-          <button type="button" className="btn-secondary" onClick={onClose}>Cancelar</button>
+          <button type="button" className="btn-secondary" onClick={onClose}>
+            Cancelar
+          </button>
           <button type="submit" className="btn-primary" disabled={saving}>
             {saving ? 'Salvando…' : expense ? 'Salvar alterações' : 'Registrar despesa'}
           </button>

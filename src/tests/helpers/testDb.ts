@@ -108,7 +108,11 @@ export async function createTestDb(): Promise<Database> {
 }
 
 /** Executa SELECT e retorna array de objetos tipados */
-export function queryAll<T = Record<string, unknown>>(db: Database, sql: string, params: unknown[] = []): T[] {
+export function queryAll<T = Record<string, unknown>>(
+  db: Database,
+  sql: string,
+  params: unknown[] = []
+): T[] {
   const stmt = db.prepare(sql)
   stmt.bind(params)
   const rows: T[] = []
@@ -120,6 +124,10 @@ export function queryAll<T = Record<string, unknown>>(db: Database, sql: string,
 }
 
 /** Executa SELECT e retorna o primeiro resultado */
-export function queryOne<T = Record<string, unknown>>(db: Database, sql: string, params: unknown[] = []): T | undefined {
+export function queryOne<T = Record<string, unknown>>(
+  db: Database,
+  sql: string,
+  params: unknown[] = []
+): T | undefined {
   return queryAll<T>(db, sql, params)[0]
 }

@@ -89,9 +89,7 @@ function ApplyToVariation({
             <select
               className="input"
               value={variationId}
-              onChange={(e) =>
-                setVariationId(e.target.value === '' ? '' : Number(e.target.value))
-              }
+              onChange={(e) => setVariationId(e.target.value === '' ? '' : Number(e.target.value))}
             >
               <option value="">Selecione uma variação…</option>
               {variations.map((v) => (
@@ -104,12 +102,12 @@ function ApplyToVariation({
         )}
 
         {variationId !== '' && (
-          <button
-            className="btn-primary w-full"
-            onClick={handleApply}
-            disabled={saving || success}
-          >
-            {success ? '✓ Preço aplicado!' : saving ? 'Aplicando…' : `Aplicar ${formatCurrency(suggestedPrice)} a esta variação`}
+          <button className="btn-primary w-full" onClick={handleApply} disabled={saving || success}>
+            {success
+              ? '✓ Preço aplicado!'
+              : saving
+                ? 'Aplicando…'
+                : `Aplicar ${formatCurrency(suggestedPrice)} a esta variação`}
           </button>
         )}
       </div>
@@ -159,14 +157,12 @@ export default function PriceCalculator(): JSX.Element {
   }
 
   function updateMaterial(id: string, field: 'name' | 'cost' | 'quantity', value: string): void {
-    setMaterials((prev) =>
-      prev.map((m) => (m.id === id ? { ...m, [field]: value } : m))
-    )
+    setMaterials((prev) => prev.map((m) => (m.id === id ? { ...m, [field]: value } : m)))
   }
 
   function setMaterialInsumo(id: string, insumoId: number | null): void {
     setMaterials((prev) =>
-      prev.map((m) => m.id === id ? { ...m, insumoId, quantity: '', name: '', cost: '' } : m)
+      prev.map((m) => (m.id === id ? { ...m, insumoId, quantity: '', name: '', cost: '' } : m))
     )
   }
 
@@ -219,10 +215,13 @@ export default function PriceCalculator(): JSX.Element {
 
             <div className="space-y-2">
               {materials.map((m, index) => {
-                const linkedInsumo = m.insumoId !== null ? insumos.find((i) => i.id === m.insumoId) : null
+                const linkedInsumo =
+                  m.insumoId !== null ? insumos.find((i) => i.id === m.insumoId) : null
                 const computedCost = linkedInsumo ? rowCost(m) : null
                 const unitLabel = linkedInsumo
-                  ? (linkedInsumo.unit === 'unidade' ? 'un.' : linkedInsumo.unit)
+                  ? linkedInsumo.unit === 'unidade'
+                    ? 'un.'
+                    : linkedInsumo.unit
                   : null
 
                 return (
@@ -232,7 +231,10 @@ export default function PriceCalculator(): JSX.Element {
                         className="input flex-1"
                         value={m.insumoId ?? ''}
                         onChange={(e) =>
-                          setMaterialInsumo(m.id, e.target.value === '' ? null : Number(e.target.value))
+                          setMaterialInsumo(
+                            m.id,
+                            e.target.value === '' ? null : Number(e.target.value)
+                          )
                         }
                       >
                         <option value="">Inserir manualmente…</option>
@@ -240,7 +242,8 @@ export default function PriceCalculator(): JSX.Element {
                           <optgroup label="Insumos cadastrados">
                             {insumos.map((i) => (
                               <option key={i.id} value={i.id}>
-                                {i.name} ({i.unit === 'unidade' ? 'un.' : i.unit} · {formatCurrency(i.costPerUnit)})
+                                {i.name} ({i.unit === 'unidade' ? 'un.' : i.unit} ·{' '}
+                                {formatCurrency(i.costPerUnit)})
                               </option>
                             ))}
                           </optgroup>
@@ -266,7 +269,9 @@ export default function PriceCalculator(): JSX.Element {
                           onChange={(e) => updateMaterial(m.id, 'name', e.target.value)}
                         />
                         <div className="relative w-32 shrink-0">
-                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm pointer-events-none">R$</span>
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm pointer-events-none">
+                            R$
+                          </span>
                           <input
                             className="input pl-8"
                             type="number"
@@ -293,9 +298,11 @@ export default function PriceCalculator(): JSX.Element {
                         </div>
                         <span className="text-xs text-gray-400">{unitLabel}</span>
                         <span className="ml-auto text-sm font-medium text-gray-700">
-                          {computedCost !== null && computedCost > 0
-                            ? `= ${formatCurrency(computedCost)}`
-                            : <span className="text-gray-300">= R$ —</span>}
+                          {computedCost !== null && computedCost > 0 ? (
+                            `= ${formatCurrency(computedCost)}`
+                          ) : (
+                            <span className="text-gray-300">= R$ —</span>
+                          )}
                         </span>
                       </div>
                     )}
@@ -358,7 +365,9 @@ export default function PriceCalculator(): JSX.Element {
                   <p className="text-sm font-medium text-gray-700">Materiais × 3</p>
                   <p className="text-xs text-gray-400">{formatCurrency(totalMaterials)} × 3</p>
                 </div>
-                <span className={`text-sm font-semibold ${hasResult ? 'text-gray-800' : 'text-gray-300'}`}>
+                <span
+                  className={`text-sm font-semibold ${hasResult ? 'text-gray-800' : 'text-gray-300'}`}
+                >
                   {formatCurrency(step1)}
                 </span>
               </div>
@@ -366,9 +375,13 @@ export default function PriceCalculator(): JSX.Element {
               <div className="flex items-center justify-between py-2.5 border-b border-cream-100">
                 <div>
                   <p className="text-sm font-medium text-gray-700">+ Mão de obra</p>
-                  <p className="text-xs text-gray-400">{formatCurrency(step1)} + {formatCurrency(laborValue)}</p>
+                  <p className="text-xs text-gray-400">
+                    {formatCurrency(step1)} + {formatCurrency(laborValue)}
+                  </p>
                 </div>
-                <span className={`text-sm font-semibold ${hasResult ? 'text-gray-800' : 'text-gray-300'}`}>
+                <span
+                  className={`text-sm font-semibold ${hasResult ? 'text-gray-800' : 'text-gray-300'}`}
+                >
                   {formatCurrency(step2)}
                 </span>
               </div>
@@ -378,7 +391,9 @@ export default function PriceCalculator(): JSX.Element {
                   <p className="text-sm font-medium text-gray-700">× 1,10 (margem)</p>
                   <p className="text-xs text-gray-400">{formatCurrency(step2)} × 1,10</p>
                 </div>
-                <span className={`text-sm font-semibold ${hasResult ? 'text-gray-800' : 'text-gray-300'}`}>
+                <span
+                  className={`text-sm font-semibold ${hasResult ? 'text-gray-800' : 'text-gray-300'}`}
+                >
                   {formatCurrency(step3)}
                 </span>
               </div>
@@ -388,7 +403,9 @@ export default function PriceCalculator(): JSX.Element {
                   <p className="text-sm font-medium text-gray-700">+ Embalagem</p>
                   <p className="text-xs text-gray-400">{formatCurrency(step3)} + R$ 1,00</p>
                 </div>
-                <span className={`text-sm font-semibold ${hasResult ? 'text-gray-800' : 'text-gray-300'}`}>
+                <span
+                  className={`text-sm font-semibold ${hasResult ? 'text-gray-800' : 'text-gray-300'}`}
+                >
                   {formatCurrency(step4)}
                 </span>
               </div>
@@ -398,16 +415,22 @@ export default function PriceCalculator(): JSX.Element {
                   <p className="text-sm font-medium text-gray-700">Arredondamento</p>
                   <p className="text-xs text-gray-400">Sempre para o R$ inteiro acima</p>
                 </div>
-                <span className={`text-sm font-semibold ${hasResult ? 'text-gray-800' : 'text-gray-300'}`}>
+                <span
+                  className={`text-sm font-semibold ${hasResult ? 'text-gray-800' : 'text-gray-300'}`}
+                >
                   {hasResult ? formatCurrency(finalPrice) : formatCurrency(0)}
                 </span>
               </div>
             </div>
 
             {/* Preço final */}
-            <div className={`mt-4 rounded-xl p-4 text-center transition-all ${hasResult ? 'bg-blush-50' : 'bg-cream-100'}`}>
+            <div
+              className={`mt-4 rounded-xl p-4 text-center transition-all ${hasResult ? 'bg-blush-50' : 'bg-cream-100'}`}
+            >
               <p className="text-xs text-gray-400 uppercase tracking-widest mb-1">Preço sugerido</p>
-              <p className={`font-display text-4xl font-bold transition-colors ${hasResult ? 'text-blush-600' : 'text-gray-300'}`}>
+              <p
+                className={`font-display text-4xl font-bold transition-colors ${hasResult ? 'text-blush-600' : 'text-gray-300'}`}
+              >
                 {formatCurrency(finalPrice)}
               </p>
               {hasResult && (
@@ -424,10 +447,7 @@ export default function PriceCalculator(): JSX.Element {
             {hasResult && products.length > 0 && (
               <>
                 {!showApply ? (
-                  <button
-                    className="btn-secondary w-full mt-4"
-                    onClick={() => setShowApply(true)}
-                  >
+                  <button className="btn-secondary w-full mt-4" onClick={() => setShowApply(true)}>
                     Aplicar preço a uma variação
                   </button>
                 ) : (

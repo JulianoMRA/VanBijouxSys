@@ -87,9 +87,8 @@ export default function Sales(): JSX.Element {
     return sale.paymentMethod === 'areceber'
   }
 
-  const filtered = channelFilter === 'Todos'
-    ? sales
-    : sales.filter((s) => s.channel === channelFilter)
+  const filtered =
+    channelFilter === 'Todos' ? sales : sales.filter((s) => s.channel === channelFilter)
 
   const totalRevenue = filtered.reduce((s, sale) => s + sale.totalAmount, 0)
   const totalNetRevenue = filtered.reduce((s, sale) => s + sale.netAmount, 0)
@@ -110,7 +109,12 @@ export default function Sales(): JSX.Element {
       {errorMessage && (
         <div className="bg-rose-50 border border-rose-200 rounded-2xl px-5 py-3 mb-4 flex items-start justify-between gap-3">
           <p className="text-sm text-rose-700">{errorMessage}</p>
-          <button onClick={() => setErrorMessage('')} className="text-rose-400 hover:text-rose-600 shrink-0 text-lg leading-none">×</button>
+          <button
+            onClick={() => setErrorMessage('')}
+            className="text-rose-400 hover:text-rose-600 shrink-0 text-lg leading-none"
+          >
+            ×
+          </button>
         </div>
       )}
 
@@ -136,29 +140,41 @@ export default function Sales(): JSX.Element {
         <div className={`grid ${receivableCount > 0 ? 'grid-cols-4' : 'grid-cols-3'} gap-4 mb-5`}>
           <div className="card py-4">
             <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">Faturamento bruto</p>
-            <p className="font-display text-xl font-semibold text-gray-800">{formatCurrency(totalRevenue)}</p>
+            <p className="font-display text-xl font-semibold text-gray-800">
+              {formatCurrency(totalRevenue)}
+            </p>
             <p className="text-xs text-gray-400 mt-0.5">
-              {filtered.length} venda{filtered.length !== 1 ? 's' : ''} · líquido {formatCurrency(totalNetRevenue)}
+              {filtered.length} venda{filtered.length !== 1 ? 's' : ''} · líquido{' '}
+              {formatCurrency(totalNetRevenue)}
             </p>
           </div>
           <div className="card py-4">
             <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">Lucro</p>
-            <p className="font-display text-xl font-semibold text-emerald-600">{formatCurrency(totalProfit)}</p>
+            <p className="font-display text-xl font-semibold text-emerald-600">
+              {formatCurrency(totalProfit)}
+            </p>
             <p className="text-xs text-gray-400 mt-0.5">
-              {totalNetRevenue > 0 ? `${((totalProfit / totalNetRevenue) * 100).toFixed(1)}% de margem` : '—'}
+              {totalNetRevenue > 0
+                ? `${((totalProfit / totalNetRevenue) * 100).toFixed(1)}% de margem`
+                : '—'}
             </p>
           </div>
           <div className="card py-4">
             <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">Ticket médio</p>
-            <p className="font-display text-xl font-semibold text-gray-800">{formatCurrency(avgTicket)}</p>
+            <p className="font-display text-xl font-semibold text-gray-800">
+              {formatCurrency(avgTicket)}
+            </p>
             <p className="text-xs text-gray-400 mt-0.5">por venda</p>
           </div>
           {receivableCount > 0 && (
             <div className="card py-4 bg-amber-50 border-amber-200">
               <p className="text-xs text-amber-600 uppercase tracking-wide mb-1">A receber</p>
-              <p className="font-display text-xl font-semibold text-amber-700">{formatCurrency(totalReceivable)}</p>
+              <p className="font-display text-xl font-semibold text-amber-700">
+                {formatCurrency(totalReceivable)}
+              </p>
               <p className="text-xs text-amber-600 mt-0.5">
-                {receivableCount} venda{receivableCount !== 1 ? 's' : ''} pendente{receivableCount !== 1 ? 's' : ''}
+                {receivableCount} venda{receivableCount !== 1 ? 's' : ''} pendente
+                {receivableCount !== 1 ? 's' : ''}
               </p>
             </div>
           )}
@@ -200,7 +216,10 @@ export default function Sales(): JSX.Element {
                 >
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <Badge label={sale.channel} variant={channelVariant(sale.channel as SaleChannel)} />
+                      <Badge
+                        label={sale.channel}
+                        variant={channelVariant(sale.channel as SaleChannel)}
+                      />
                       {sale.fairName && (
                         <span className="text-xs text-gray-400">{sale.fairName}</span>
                       )}
@@ -220,17 +239,24 @@ export default function Sales(): JSX.Element {
                   </div>
 
                   <div className="text-right shrink-0">
-                    <p className="text-sm font-semibold text-gray-800">{formatCurrency(sale.totalAmount)}</p>
+                    <p className="text-sm font-semibold text-gray-800">
+                      {formatCurrency(sale.totalAmount)}
+                    </p>
                     {sale.feeAmount > 0 && (
                       <p className="text-xs text-gray-400">líq. {formatCurrency(sale.netAmount)}</p>
                     )}
-                    <p className={`text-xs ${isPending(sale) ? 'text-amber-600' : 'text-emerald-600'}`}>
+                    <p
+                      className={`text-xs ${isPending(sale) ? 'text-amber-600' : 'text-emerald-600'}`}
+                    >
                       {isPending(sale) ? 'lucro estimado ' : '+'}
                       {formatCurrency(profit)}
                     </p>
                   </div>
 
-                  <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
+                  <div
+                    className="flex items-center gap-1 shrink-0"
+                    onClick={(e) => e.stopPropagation()}
+                  >
                     {isPending(sale) && (
                       <button
                         className="text-xs font-semibold text-emerald-700 hover:text-emerald-900 px-2 py-1 rounded-lg hover:bg-emerald-50 transition-colors"
@@ -280,10 +306,14 @@ export default function Sales(): JSX.Element {
                           <tr key={item.id}>
                             <td className="py-2 text-gray-700">
                               <span className="font-medium">{item.productName}</span>
-                              <span className="text-gray-400 ml-1">— {item.variationIdentifier}</span>
+                              <span className="text-gray-400 ml-1">
+                                — {item.variationIdentifier}
+                              </span>
                             </td>
                             <td className="py-2 text-center text-gray-500">{item.quantity}</td>
-                            <td className="py-2 text-right text-gray-500">{formatCurrency(item.unitPrice)}</td>
+                            <td className="py-2 text-right text-gray-500">
+                              {formatCurrency(item.unitPrice)}
+                            </td>
                             <td className="py-2 text-right font-medium text-gray-800">
                               {formatCurrency(item.quantity * item.unitPrice)}
                             </td>
@@ -292,7 +322,9 @@ export default function Sales(): JSX.Element {
                       </tbody>
                       <tfoot>
                         <tr className="border-t border-cream-300">
-                          <td colSpan={3} className="pt-2 text-xs text-gray-400">Custo total: {formatCurrency(sale.totalCost)}</td>
+                          <td colSpan={3} className="pt-2 text-xs text-gray-400">
+                            Custo total: {formatCurrency(sale.totalCost)}
+                          </td>
                           <td className="pt-2 text-right font-semibold text-blush-700">
                             {formatCurrency(sale.totalAmount)}
                           </td>
@@ -309,7 +341,9 @@ export default function Sales(): JSX.Element {
                         )}
                         {sale.feeAmount > 0 && (
                           <tr>
-                            <td colSpan={3} className="text-xs text-gray-500 font-medium">Valor líquido recebido</td>
+                            <td colSpan={3} className="text-xs text-gray-500 font-medium">
+                              Valor líquido recebido
+                            </td>
                             <td className="text-right text-xs font-semibold text-emerald-700">
                               {formatCurrency(sale.netAmount)}
                             </td>
@@ -328,10 +362,23 @@ export default function Sales(): JSX.Element {
       {toastMsg && <Toast message={toastMsg} onDismiss={dismissToast} />}
 
       {modal?.type === 'new' && (
-        <SaleForm onSave={() => { loadSales(); showToast('Venda registrada!') }} onClose={() => setModal(null)} />
+        <SaleForm
+          onSave={() => {
+            loadSales()
+            showToast('Venda registrada!')
+          }}
+          onClose={() => setModal(null)}
+        />
       )}
       {modal?.type === 'edit' && (
-        <SaleForm sale={modal.sale} onSave={() => { loadSales(); showToast('Venda atualizada!') }} onClose={() => setModal(null)} />
+        <SaleForm
+          sale={modal.sale}
+          onSave={() => {
+            loadSales()
+            showToast('Venda atualizada!')
+          }}
+          onClose={() => setModal(null)}
+        />
       )}
       {modal?.type === 'delete' && (
         <ConfirmDialog
@@ -346,7 +393,10 @@ export default function Sales(): JSX.Element {
       {modal?.type === 'markReceived' && (
         <MarkReceivedModal
           sale={modal.sale}
-          onSave={() => { loadSales(); showToast('Venda marcada como recebida!') }}
+          onSave={() => {
+            loadSales()
+            showToast('Venda marcada como recebida!')
+          }}
           onClose={() => setModal(null)}
         />
       )}

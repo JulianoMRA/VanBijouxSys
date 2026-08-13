@@ -8,7 +8,11 @@ interface AddInsumoStockFormProps {
   onClose: () => void
 }
 
-export default function AddInsumoStockForm({ insumo, onSave, onClose }: AddInsumoStockFormProps): JSX.Element {
+export default function AddInsumoStockForm({
+  insumo,
+  onSave,
+  onClose
+}: AddInsumoStockFormProps): JSX.Element {
   const [quantity, setQuantity] = useState('')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -18,7 +22,10 @@ export default function AddInsumoStockForm({ insumo, onSave, onClose }: AddInsum
   async function handleSubmit(e: React.FormEvent): Promise<void> {
     e.preventDefault()
     const qty = parseFloat(quantity)
-    if (isNaN(qty) || qty <= 0) { setError('Informe uma quantidade válida.'); return }
+    if (isNaN(qty) || qty <= 0) {
+      setError('Informe uma quantidade válida.')
+      return
+    }
 
     setSaving(true)
     try {
@@ -58,7 +65,8 @@ export default function AddInsumoStockForm({ insumo, onSave, onClose }: AddInsum
 
         {quantity && !isNaN(parseFloat(quantity)) && (
           <p className="text-xs text-blush-600">
-            Novo estoque: {(insumo.stockQuantity + parseFloat(quantity)).toLocaleString('pt-BR')} {unitLabel}
+            Novo estoque: {(insumo.stockQuantity + parseFloat(quantity)).toLocaleString('pt-BR')}{' '}
+            {unitLabel}
           </p>
         )}
 

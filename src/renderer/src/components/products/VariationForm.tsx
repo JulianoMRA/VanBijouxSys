@@ -75,7 +75,7 @@ export default function VariationForm({
   }, 0)
 
   const hasInsumos = insumoRows.length > 0 && insumoRows.some((r) => r.insumoId !== '')
-  const materialsForCalc = hasInsumos ? insumosCost : (parseFloat(costPrice) || 0)
+  const materialsForCalc = hasInsumos ? insumosCost : parseFloat(costPrice) || 0
   const labor = parseFloat(laborCost) || 0
   const suggestedPrice = Math.ceil((materialsForCalc * 3 + labor) * 1.1 + 1)
   const hasCalcResult = materialsForCalc > 0 || labor > 0
@@ -132,15 +132,33 @@ export default function VariationForm({
     const stock = parseInt(stockQuantity)
     const minStock = parseInt(minimumStock)
 
-    if (isNaN(cost) || cost < 0) { setError('Preço de custo inválido.'); return }
-    if (isNaN(sale) || sale < 0) { setError('Preço de venda inválido.'); return }
-    if (isNaN(stock) || stock < 0) { setError('Quantidade em estoque inválida.'); return }
-    if (isNaN(minStock) || minStock < 0) { setError('Estoque mínimo inválido.'); return }
+    if (isNaN(cost) || cost < 0) {
+      setError('Preço de custo inválido.')
+      return
+    }
+    if (isNaN(sale) || sale < 0) {
+      setError('Preço de venda inválido.')
+      return
+    }
+    if (isNaN(stock) || stock < 0) {
+      setError('Quantidade em estoque inválida.')
+      return
+    }
+    if (isNaN(minStock) || minStock < 0) {
+      setError('Estoque mínimo inválido.')
+      return
+    }
 
     for (const row of insumoRows) {
-      if (row.insumoId === '') { setError('Selecione o insumo em todas as linhas ou remova as vazias.'); return }
+      if (row.insumoId === '') {
+        setError('Selecione o insumo em todas as linhas ou remova as vazias.')
+        return
+      }
       const qty = parseFloat(row.quantity)
-      if (isNaN(qty) || qty <= 0) { setError('Informe a quantidade de cada insumo.'); return }
+      if (isNaN(qty) || qty <= 0) {
+        setError('Informe a quantidade de cada insumo.')
+        return
+      }
     }
 
     const parsedInsumos = insumoRows
@@ -219,7 +237,10 @@ export default function VariationForm({
                 placeholder="0,00"
               />
               {hasInsumos && (
-                <p className="text-xs text-blush-500 mt-1 cursor-pointer hover:underline" onClick={useInsumosCost}>
+                <p
+                  className="text-xs text-blush-500 mt-1 cursor-pointer hover:underline"
+                  onClick={useInsumosCost}
+                >
                   Calculado pelos insumos: R$ {insumosCost.toFixed(2)} — clique para usar
                 </p>
               )}
@@ -258,10 +279,12 @@ export default function VariationForm({
             ) : (
               <div className="px-4 py-3 space-y-2">
                 {insumoRows.map((row) => {
-                  const selectedInsumo = row.insumoId !== '' ? allInsumos.find((i) => i.id === row.insumoId) : null
-                  const rowCost = selectedInsumo && parseFloat(row.quantity)
-                    ? selectedInsumo.costPerUnit * parseFloat(row.quantity)
-                    : null
+                  const selectedInsumo =
+                    row.insumoId !== '' ? allInsumos.find((i) => i.id === row.insumoId) : null
+                  const rowCost =
+                    selectedInsumo && parseFloat(row.quantity)
+                      ? selectedInsumo.costPerUnit * parseFloat(row.quantity)
+                      : null
 
                   return (
                     <div key={row.key} className="flex gap-2 items-center">
@@ -273,7 +296,8 @@ export default function VariationForm({
                         <option value="">Selecione o insumo…</option>
                         {allInsumos.map((i) => (
                           <option key={i.id} value={i.id}>
-                            {i.name} (R${i.costPerUnit.toFixed(4)}/{i.unit === 'unidade' ? 'un.' : i.unit})
+                            {i.name} (R${i.costPerUnit.toFixed(4)}/
+                            {i.unit === 'unidade' ? 'un.' : i.unit})
                           </option>
                         ))}
                         <option value="__new__">+ Cadastrar novo insumo…</option>
@@ -338,7 +362,8 @@ export default function VariationForm({
               <div className="px-4 py-3 space-y-3">
                 {hasInsumos && (
                   <p className="text-xs text-blush-600">
-                    Usando custo calculado pelos insumos (R$ {insumosCost.toFixed(2)}) como base de materiais.
+                    Usando custo calculado pelos insumos (R$ {insumosCost.toFixed(2)}) como base de
+                    materiais.
                   </p>
                 )}
 
@@ -354,7 +379,9 @@ export default function VariationForm({
                     </button>
                   </div>
                   <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm pointer-events-none">R$</span>
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm pointer-events-none">
+                      R$
+                    </span>
                     <input
                       className="input pl-8"
                       type="number"
@@ -371,15 +398,27 @@ export default function VariationForm({
                   <div className="bg-blush-50 rounded-xl p-3 space-y-1 text-xs text-gray-500">
                     <div className="flex justify-between">
                       <span>Materiais × 3</span>
-                      <span>{(materialsForCalc * 3).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
+                      <span>
+                        {(materialsForCalc * 3).toLocaleString('pt-BR', {
+                          style: 'currency',
+                          currency: 'BRL'
+                        })}
+                      </span>
                     </div>
                     <div className="flex justify-between">
                       <span>+ Mão de obra</span>
-                      <span>{labor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
+                      <span>
+                        {labor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                      </span>
                     </div>
                     <div className="flex justify-between">
                       <span>× 1,10 (margem)</span>
-                      <span>{((materialsForCalc * 3 + labor) * 1.1).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
+                      <span>
+                        {((materialsForCalc * 3 + labor) * 1.1).toLocaleString('pt-BR', {
+                          style: 'currency',
+                          currency: 'BRL'
+                        })}
+                      </span>
                     </div>
                     <div className="flex justify-between">
                       <span>+ Embalagem</span>
@@ -387,13 +426,22 @@ export default function VariationForm({
                     </div>
                     <div className="flex justify-between font-semibold text-blush-700 pt-1 border-t border-blush-200">
                       <span>Preço sugerido</span>
-                      <span>{suggestedPrice.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
+                      <span>
+                        {suggestedPrice.toLocaleString('pt-BR', {
+                          style: 'currency',
+                          currency: 'BRL'
+                        })}
+                      </span>
                     </div>
                   </div>
                 )}
 
                 {hasCalcResult && (
-                  <button type="button" onClick={useSuggestedPrice} className="btn-secondary w-full text-sm">
+                  <button
+                    type="button"
+                    onClick={useSuggestedPrice}
+                    className="btn-secondary w-full text-sm"
+                  >
                     Usar R$ {suggestedPrice},00 como preço de venda
                   </button>
                 )}
@@ -443,7 +491,10 @@ export default function VariationForm({
       {showInsumoForm && (
         <InsumoForm
           onSave={handleNewInsumoCreated}
-          onClose={() => { setShowInsumoForm(false); setPendingRowKey(null) }}
+          onClose={() => {
+            setShowInsumoForm(false)
+            setPendingRowKey(null)
+          }}
         />
       )}
     </>

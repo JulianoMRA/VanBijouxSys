@@ -15,7 +15,12 @@ const UNITS: { value: InsumoUnit; label: string }[] = [
   { value: 'g', label: 'Grama (g)' }
 ]
 
-export default function InsumoForm({ insumo, initialName = '', onSave, onClose }: InsumoFormProps): JSX.Element {
+export default function InsumoForm({
+  insumo,
+  initialName = '',
+  onSave,
+  onClose
+}: InsumoFormProps): JSX.Element {
   const [name, setName] = useState(insumo?.name ?? initialName)
   const [unit, setUnit] = useState<InsumoUnit>(insumo?.unit ?? 'unidade')
   const [costPerUnit, setCostPerUnit] = useState(insumo?.costPerUnit.toString() ?? '')
@@ -28,13 +33,25 @@ export default function InsumoForm({ insumo, initialName = '', onSave, onClose }
 
   async function handleSubmit(e: React.FormEvent): Promise<void> {
     e.preventDefault()
-    if (!name.trim()) { setError('O nome é obrigatório.'); return }
+    if (!name.trim()) {
+      setError('O nome é obrigatório.')
+      return
+    }
     const cost = parseFloat(costPerUnit)
     const stock = parseFloat(stockQuantity)
     const minStock = parseFloat(minimumStock)
-    if (isNaN(cost) || cost < 0) { setError('Custo por unidade inválido.'); return }
-    if (isNaN(stock) || stock < 0) { setError('Quantidade em estoque inválida.'); return }
-    if (isNaN(minStock) || minStock < 0) { setError('Estoque mínimo inválido.'); return }
+    if (isNaN(cost) || cost < 0) {
+      setError('Custo por unidade inválido.')
+      return
+    }
+    if (isNaN(stock) || stock < 0) {
+      setError('Quantidade em estoque inválida.')
+      return
+    }
+    if (isNaN(minStock) || minStock < 0) {
+      setError('Estoque mínimo inválido.')
+      return
+    }
 
     setSaving(true)
     try {
@@ -47,7 +64,14 @@ export default function InsumoForm({ insumo, initialName = '', onSave, onClose }
           stockQuantity: stock,
           minimumStock: minStock
         })
-        onSave({ ...insumo, name: name.trim(), unit, costPerUnit: cost, stockQuantity: stock, minimumStock: minStock })
+        onSave({
+          ...insumo,
+          name: name.trim(),
+          unit,
+          costPerUnit: cost,
+          stockQuantity: stock,
+          minimumStock: minStock
+        })
       } else {
         const result = await window.api.insumos.create({
           name: name.trim(),
@@ -113,7 +137,9 @@ export default function InsumoForm({ insumo, initialName = '', onSave, onClose }
         <div>
           <label className="label">Custo por {unitLabel}</label>
           <div className="relative">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm pointer-events-none">R$</span>
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm pointer-events-none">
+              R$
+            </span>
             <input
               className="input pl-8"
               type="number"

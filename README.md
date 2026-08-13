@@ -56,14 +56,14 @@ O `postinstall` recompila o `better-sqlite3` para o Electron automaticamente. O 
 
 ## Scripts
 
-| Comando | O que faz |
-|---|---|
-| `npm run dev` | App em modo dev com HMR |
-| `npm run build` | Compila main, preload e renderer |
-| `npm run preview` | Roda o build empacotado sem gerar instalador |
-| `npm run build:win` | Gera instalador `.exe` (NSIS) em `dist/` |
-| `npm test` | Roda a suíte Vitest uma vez |
-| `npm run test:watch` | Vitest em modo watch |
+| Comando               | O que faz                                               |
+| --------------------- | ------------------------------------------------------- |
+| `npm run dev`         | App em modo dev com HMR                                 |
+| `npm run build`       | Compila main, preload e renderer                        |
+| `npm run preview`     | Roda o build empacotado sem gerar instalador            |
+| `npm run build:win`   | Gera instalador `.exe` (NSIS) em `dist/`                |
+| `npm test`            | Roda a suíte Vitest uma vez                             |
+| `npm run test:watch`  | Vitest em modo watch                                    |
 | `npm run postinstall` | Recompila `better-sqlite3` para o Electron (automático) |
 
 ## Banco de dados

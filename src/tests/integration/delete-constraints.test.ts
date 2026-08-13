@@ -7,7 +7,9 @@ let db: Database
 
 beforeEach(async () => {
   db = await createTestDb()
-  db.run(`INSERT INTO fairs (name, location, date) VALUES ('Feira do Bosque', 'Praça', '2026-03-10')`)
+  db.run(
+    `INSERT INTO fairs (name, location, date) VALUES ('Feira do Bosque', 'Praça', '2026-03-10')`
+  )
   db.run(`INSERT INTO products (name, category_id) VALUES ('Colar Lua', 1)`)
   db.run(
     `INSERT INTO product_variations (product_id, identifier, cost_price, sale_price, stock_quantity)

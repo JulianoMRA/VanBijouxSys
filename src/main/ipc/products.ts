@@ -1,6 +1,12 @@
 import { eq } from 'drizzle-orm'
 import { getDb, getSqlite } from '../database'
-import { products, productVariations, categories, variationInsumos, insumos } from '../database/schema'
+import {
+  products,
+  productVariations,
+  categories,
+  variationInsumos,
+  insumos
+} from '../database/schema'
 import { sql } from 'drizzle-orm'
 import { ErroDeNegocio, handleIpc } from './handle'
 import type {

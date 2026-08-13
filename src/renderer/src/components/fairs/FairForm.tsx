@@ -40,9 +40,7 @@ export default function FairForm({ fair, onSave, onClose }: FairFormProps): JSX.
   const [location, setLocation] = useState(fair?.location ?? '')
   const [organizer, setOrganizer] = useState(fair?.organizer ?? '')
   const [startDate, setStartDate] = useState(fair?.date ?? '')
-  const [duration, setDuration] = useState(
-    fair ? getDurationDays(fair.date, fair.endDate) : 1
-  )
+  const [duration, setDuration] = useState(fair ? getDurationDays(fair.date, fair.endDate) : 1)
   const [enrollmentCost, setEnrollmentCost] = useState(fair?.enrollmentCost.toString() ?? '0')
   const [additionalCosts, setAdditionalCosts] = useState<CostRow[]>(
     fair?.additionalCosts.map((c) => ({
@@ -66,9 +64,7 @@ export default function FairForm({ fair, onSave, onClose }: FairFormProps): JSX.
   }
 
   function updateCost(key: number, field: 'description' | 'amount', value: string): void {
-    setAdditionalCosts((prev) =>
-      prev.map((c) => (c.key === key ? { ...c, [field]: value } : c))
-    )
+    setAdditionalCosts((prev) => prev.map((c) => (c.key === key ? { ...c, [field]: value } : c)))
   }
 
   const enrollmentValue = parseFloat(enrollmentCost) || 0
@@ -80,16 +76,34 @@ export default function FairForm({ fair, onSave, onClose }: FairFormProps): JSX.
 
   async function handleSubmit(e: React.FormEvent): Promise<void> {
     e.preventDefault()
-    if (!name.trim()) { setError('O nome da feira é obrigatório.'); return }
-    if (!location.trim()) { setError('O local é obrigatório.'); return }
-    if (!startDate) { setError('A data de início é obrigatória.'); return }
+    if (!name.trim()) {
+      setError('O nome da feira é obrigatório.')
+      return
+    }
+    if (!location.trim()) {
+      setError('O local é obrigatório.')
+      return
+    }
+    if (!startDate) {
+      setError('A data de início é obrigatória.')
+      return
+    }
     const cost = parseFloat(enrollmentCost)
-    if (isNaN(cost) || cost < 0) { setError('Custo de inscrição inválido.'); return }
+    if (isNaN(cost) || cost < 0) {
+      setError('Custo de inscrição inválido.')
+      return
+    }
 
     for (const c of additionalCosts) {
-      if (!c.description.trim()) { setError('Preencha a descrição de todos os custos adicionais.'); return }
+      if (!c.description.trim()) {
+        setError('Preencha a descrição de todos os custos adicionais.')
+        return
+      }
       const val = parseFloat(c.amount)
-      if (isNaN(val) || val < 0) { setError('Valor inválido em custos adicionais.'); return }
+      if (isNaN(val) || val < 0) {
+        setError('Valor inválido em custos adicionais.')
+        return
+      }
     }
 
     const parsedCosts = additionalCosts.map((c) => ({
@@ -155,7 +169,9 @@ export default function FairForm({ fair, onSave, onClose }: FairFormProps): JSX.
             />
           </div>
           <div>
-            <label className="label">Organizador <span className="text-gray-400 font-normal">(opcional)</span></label>
+            <label className="label">
+              Organizador <span className="text-gray-400 font-normal">(opcional)</span>
+            </label>
             <input
               className="input"
               value={organizer}
@@ -228,9 +244,7 @@ export default function FairForm({ fair, onSave, onClose }: FairFormProps): JSX.
           </div>
 
           {additionalCosts.length === 0 ? (
-            <p className="text-xs text-gray-400">
-              Ex: combustível, alimentação, estacionamento…
-            </p>
+            <p className="text-xs text-gray-400">Ex: combustível, alimentação, estacionamento…</p>
           ) : (
             <div className="space-y-2">
               {additionalCosts.map((cost) => (
@@ -274,7 +288,9 @@ export default function FairForm({ fair, onSave, onClose }: FairFormProps): JSX.
             {enrollmentValue > 0 && (
               <div className="flex justify-between text-gray-500">
                 <span>Inscrição</span>
-                <span>{enrollmentValue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
+                <span>
+                  {enrollmentValue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                </span>
               </div>
             )}
             {additionalCosts.map((c) => {
@@ -289,7 +305,9 @@ export default function FairForm({ fair, onSave, onClose }: FairFormProps): JSX.
             })}
             <div className="flex justify-between font-semibold text-gray-700 pt-1 border-t border-cream-200">
               <span>Custo total da feira</span>
-              <span>{totalFairCost.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
+              <span>
+                {totalFairCost.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+              </span>
             </div>
           </div>
         )}

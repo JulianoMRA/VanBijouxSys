@@ -56,8 +56,8 @@ describe('calcSaleTotals', () => {
       { quantity: 3, unitPrice: 25, unitCost: 8 }
     ])
     expect(result.totalAmount).toBe(115) // 40 + 75
-    expect(result.totalCost).toBe(36)    // 12 + 24
-    expect(result.profit).toBe(79)       // 115 - 36
+    expect(result.totalCost).toBe(36) // 12 + 24
+    expect(result.profit).toBe(79) // 115 - 36
   })
 
   it('should calculate profit as totalAmount minus totalCost', () => {

@@ -66,8 +66,14 @@ function dateParams(fromDate: string | null, toDate: string | null): string[] {
 
 describe('dashboard: normalização de datas em sold_at', () => {
   it('inclui venda com timestamp completo (HH:MM:SS) no toDate', () => {
-    insertSale({ soldAt: '2026-05-14 23:59:59', items: [{ variationId: 1, qty: 1, unitPrice: 30, unitCost: 5 }] })
-    insertSale({ soldAt: '2026-05-14', items: [{ variationId: 2, qty: 1, unitPrice: 25, unitCost: 4 }] })
+    insertSale({
+      soldAt: '2026-05-14 23:59:59',
+      items: [{ variationId: 1, qty: 1, unitPrice: 30, unitCost: 5 }]
+    })
+    insertSale({
+      soldAt: '2026-05-14',
+      items: [{ variationId: 2, qty: 1, unitPrice: 25, unitCost: 4 }]
+    })
 
     const from = '2026-05-01'
     const to = '2026-05-14'
@@ -85,8 +91,14 @@ describe('dashboard: normalização de datas em sold_at', () => {
   })
 
   it('exclui venda do dia seguinte ao toDate', () => {
-    insertSale({ soldAt: '2026-05-14 10:00:00', items: [{ variationId: 1, qty: 1, unitPrice: 30, unitCost: 5 }] })
-    insertSale({ soldAt: '2026-05-15 00:00:01', items: [{ variationId: 2, qty: 1, unitPrice: 25, unitCost: 4 }] })
+    insertSale({
+      soldAt: '2026-05-14 10:00:00',
+      items: [{ variationId: 1, qty: 1, unitPrice: 30, unitCost: 5 }]
+    })
+    insertSale({
+      soldAt: '2026-05-15 00:00:01',
+      items: [{ variationId: 2, qty: 1, unitPrice: 25, unitCost: 4 }]
+    })
 
     const params = dateParams('2026-05-01', '2026-05-14')
     const overview = queryOne<{ totalSales: number }>(
@@ -98,7 +110,10 @@ describe('dashboard: normalização de datas em sold_at', () => {
   })
 
   it('cashFlow (sold_at via soldAtClause) também inclui timestamps completos', () => {
-    insertSale({ soldAt: '2026-05-14 18:30:00', items: [{ variationId: 1, qty: 2, unitPrice: 30, unitCost: 5 }] })
+    insertSale({
+      soldAt: '2026-05-14 18:30:00',
+      items: [{ variationId: 1, qty: 2, unitPrice: 30, unitCost: 5 }]
+    })
 
     const from = '2026-05-01'
     const to = '2026-05-14'
@@ -113,8 +128,14 @@ describe('dashboard: normalização de datas em sold_at', () => {
 
 describe('dashboard: salesByCategory consistente com totalRevenue', () => {
   it('soma das categorias == totalRevenue para dados regulares', () => {
-    insertSale({ soldAt: '2026-05-10', items: [{ variationId: 1, qty: 1, unitPrice: 30, unitCost: 5 }] })
-    insertSale({ soldAt: '2026-05-11', items: [{ variationId: 2, qty: 2, unitPrice: 25, unitCost: 4 }] })
+    insertSale({
+      soldAt: '2026-05-10',
+      items: [{ variationId: 1, qty: 1, unitPrice: 30, unitCost: 5 }]
+    })
+    insertSale({
+      soldAt: '2026-05-11',
+      items: [{ variationId: 2, qty: 2, unitPrice: 25, unitCost: 4 }]
+    })
     insertSale({
       soldAt: '2026-05-12',
       items: [
@@ -206,8 +227,14 @@ describe('dashboard: salesByCategory consistente com totalRevenue', () => {
 
 describe('dashboard: previousOverview usa mesma normalização do overview', () => {
   it('compara consistentemente períodos atual e anterior', () => {
-    insertSale({ soldAt: '2026-04-30 23:30:00', items: [{ variationId: 1, qty: 1, unitPrice: 30, unitCost: 5 }] })
-    insertSale({ soldAt: '2026-05-14 20:00:00', items: [{ variationId: 2, qty: 1, unitPrice: 25, unitCost: 4 }] })
+    insertSale({
+      soldAt: '2026-04-30 23:30:00',
+      items: [{ variationId: 1, qty: 1, unitPrice: 30, unitCost: 5 }]
+    })
+    insertSale({
+      soldAt: '2026-05-14 20:00:00',
+      items: [{ variationId: 2, qty: 1, unitPrice: 25, unitCost: 4 }]
+    })
 
     const currParams = dateParams('2026-05-01', '2026-05-14')
     const prevParams = dateParams('2026-04-01', '2026-04-30')
@@ -232,7 +259,10 @@ describe('dashboard: previousOverview usa mesma normalização do overview', () 
 // Servem como guarda de regressão — se o código voltar a usar comparação crua, falham.
 describe('dashboard: REGRESSÃO — comparação crua exclui timestamps', () => {
   it('comparação crua s.sold_at <= ? EXCLUI venda do mesmo dia com HH:MM:SS (bug)', () => {
-    insertSale({ soldAt: '2026-05-14 23:59:59', items: [{ variationId: 1, qty: 1, unitPrice: 30, unitCost: 5 }] })
+    insertSale({
+      soldAt: '2026-05-14 23:59:59',
+      items: [{ variationId: 1, qty: 1, unitPrice: 30, unitCost: 5 }]
+    })
 
     const result = queryOne<{ count: number }>(
       db,

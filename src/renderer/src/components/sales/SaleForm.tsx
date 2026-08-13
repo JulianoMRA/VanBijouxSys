@@ -1,6 +1,14 @@
 import { useEffect, useState } from 'react'
 import Modal from '../ui/Modal'
-import type { Fair, Product, ProductVariation, Sale, SaleChannel, PaymentMethod, CreateSaleItemInput } from '../../types'
+import type {
+  Fair,
+  Product,
+  ProductVariation,
+  Sale,
+  SaleChannel,
+  PaymentMethod,
+  CreateSaleItemInput
+} from '../../types'
 
 interface SaleFormProps {
   sale?: Sale
@@ -45,19 +53,28 @@ export default function SaleForm({ sale, onSave, onClose }: SaleFormProps): JSX.
     const d = new Date()
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
   })
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>(sale?.paymentMethod ?? 'dinheiro')
-  const [feePercentage, setFeePercentage] = useState<string>(sale ? String(sale.feePercentage) : '0')
-  const [items, setItems] = useState<ItemRow[]>([{ key: 0, productId: '', variationId: '', quantity: '1', unitPrice: '' }])
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>(
+    sale?.paymentMethod ?? 'dinheiro'
+  )
+  const [feePercentage, setFeePercentage] = useState<string>(
+    sale ? String(sale.feePercentage) : '0'
+  )
+  const [items, setItems] = useState<ItemRow[]>([
+    { key: 0, productId: '', variationId: '', quantity: '1', unitPrice: '' }
+  ])
   const [products, setProducts] = useState<Product[]>([])
   const [fairs, setFairs] = useState<Fair[]>([])
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
   const originalQuantities: Record<number, number> = sale
-    ? sale.items.reduce((acc, item) => {
-        acc[item.variationId] = (acc[item.variationId] ?? 0) + item.quantity
-        return acc
-      }, {} as Record<number, number>)
+    ? sale.items.reduce(
+        (acc, item) => {
+          acc[item.variationId] = (acc[item.variationId] ?? 0) + item.quantity
+          return acc
+        },
+        {} as Record<number, number>
+      )
     : {}
 
   useEffect(() => {
@@ -151,12 +168,11 @@ export default function SaleForm({ sale, onSave, onClose }: SaleFormProps): JSX.
   const profit = totalAmount - totalCost
 
   const feePercent = parseFloat(feePercentage) || 0
-  const feeAmount = totalAmount * feePercent / 100
+  const feeAmount = (totalAmount * feePercent) / 100
   const netAmount = totalAmount - feeAmount
 
-  const selectedFair = channel === 'Feira' && fairId !== ''
-    ? fairs.find((f) => f.id === fairId)
-    : undefined
+  const selectedFair =
+    channel === 'Feira' && fairId !== '' ? fairs.find((f) => f.id === fairId) : undefined
 
   async function handleSubmit(e: React.FormEvent): Promise<void> {
     e.preventDefault()
@@ -198,7 +214,11 @@ export default function SaleForm({ sale, onSave, onClose }: SaleFormProps): JSX.
       onSave()
       onClose()
     } catch {
-      setError(sale ? 'Erro ao atualizar venda. Tente novamente.' : 'Erro ao registrar venda. Tente novamente.')
+      setError(
+        sale
+          ? 'Erro ao atualizar venda. Tente novamente.'
+          : 'Erro ao registrar venda. Tente novamente.'
+      )
     } finally {
       setSaving(false)
     }
@@ -216,7 +236,10 @@ export default function SaleForm({ sale, onSave, onClose }: SaleFormProps): JSX.
                 <button
                   key={ch}
                   type="button"
-                  onClick={() => { setChannel(ch); setFairId('') }}
+                  onClick={() => {
+                    setChannel(ch)
+                    setFairId('')
+                  }}
                   className={`px-3 py-1.5 rounded-xl text-sm font-medium transition-all ${
                     channel === ch
                       ? 'bg-blush-500 text-white'
@@ -260,19 +283,22 @@ export default function SaleForm({ sale, onSave, onClose }: SaleFormProps): JSX.
               <option value="">Selecione a feira…</option>
               {fairs.map((f) => {
                 const start = `${f.date.slice(8, 10)}/${f.date.slice(5, 7)}/${f.date.slice(0, 4)}`
-                const end = f.endDate && f.endDate !== f.date
-                  ? ` a ${f.endDate.slice(8, 10)}/${f.endDate.slice(5, 7)}`
-                  : ''
+                const end =
+                  f.endDate && f.endDate !== f.date
+                    ? ` a ${f.endDate.slice(8, 10)}/${f.endDate.slice(5, 7)}`
+                    : ''
                 return (
                   <option key={f.id} value={f.id}>
-                    {f.name} — {start}{end}
+                    {f.name} — {start}
+                    {end}
                   </option>
                 )
               })}
             </select>
             {selectedFair?.endDate && selectedFair.endDate !== selectedFair.date && (
               <p className="text-xs text-gray-400 mt-1">
-                Escolha o dia da venda dentro do período da feira ({selectedFair.date.slice(8, 10)} a {selectedFair.endDate.slice(8, 10)}/{selectedFair.date.slice(5, 7)}).
+                Escolha o dia da venda dentro do período da feira ({selectedFair.date.slice(8, 10)}{' '}
+                a {selectedFair.endDate.slice(8, 10)}/{selectedFair.date.slice(5, 7)}).
               </p>
             )}
           </div>
@@ -302,7 +328,13 @@ export default function SaleForm({ sale, onSave, onClose }: SaleFormProps): JSX.
           {paymentMethod !== 'dinheiro' && paymentMethod !== 'areceber' && (
             <div>
               <label className="label">
-                Taxa ({paymentMethod === 'pix' ? 'sugerido: 0,99%' : paymentMethod === 'debito' ? 'sugerido: 1,69%' : 'variável'})
+                Taxa (
+                {paymentMethod === 'pix'
+                  ? 'sugerido: 0,99%'
+                  : paymentMethod === 'debito'
+                    ? 'sugerido: 1,69%'
+                    : 'variável'}
+                )
               </label>
               <div className="relative">
                 <input
@@ -315,7 +347,9 @@ export default function SaleForm({ sale, onSave, onClose }: SaleFormProps): JSX.
                   onChange={(e) => setFeePercentage(e.target.value)}
                   placeholder="0,00"
                 />
-                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-400">%</span>
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-400">
+                  %
+                </span>
               </div>
               {feePercent > 0 && totalAmount > 0 && (
                 <p className="text-xs text-gray-500 mt-1">
@@ -419,13 +453,17 @@ export default function SaleForm({ sale, onSave, onClose }: SaleFormProps): JSX.
                         step="0.01"
                         value={item.unitPrice}
                         onChange={(e) => updateItem(item.key, { unitPrice: e.target.value })}
-                        placeholder={selectedVariation ? selectedVariation.salePrice.toString() : '0,00'}
+                        placeholder={
+                          selectedVariation ? selectedVariation.salePrice.toString() : '0,00'
+                        }
                       />
                     </div>
                     <div className="flex justify-between items-center">
                       {item.unitPrice !== '' && item.quantity !== '' ? (
                         <span className="text-sm font-medium text-gray-700">
-                          {formatCurrency(parseFloat(item.unitPrice || '0') * parseInt(item.quantity || '0'))}
+                          {formatCurrency(
+                            parseFloat(item.unitPrice || '0') * parseInt(item.quantity || '0')
+                          )}
                         </span>
                       ) : (
                         <span />
@@ -442,14 +480,17 @@ export default function SaleForm({ sale, onSave, onClose }: SaleFormProps): JSX.
                     </div>
                   </div>
 
-                  {selectedVariation && (() => {
-                    const effectiveStock = selectedVariation.stockQuantity + (originalQuantities[selectedVariation.id] ?? 0)
-                    return parseInt(item.quantity) > effectiveStock ? (
-                      <p className="text-xs text-amber-600">
-                        ⚠ Quantidade maior que o estoque disponível ({effectiveStock} un.)
-                      </p>
-                    ) : null
-                  })()}
+                  {selectedVariation &&
+                    (() => {
+                      const effectiveStock =
+                        selectedVariation.stockQuantity +
+                        (originalQuantities[selectedVariation.id] ?? 0)
+                      return parseInt(item.quantity) > effectiveStock ? (
+                        <p className="text-xs text-amber-600">
+                          ⚠ Quantidade maior que o estoque disponível ({effectiveStock} un.)
+                        </p>
+                      ) : null
+                    })()}
                 </div>
               )
             })}
@@ -497,7 +538,13 @@ export default function SaleForm({ sale, onSave, onClose }: SaleFormProps): JSX.
             Cancelar
           </button>
           <button type="submit" className="btn-primary" disabled={saving}>
-            {saving ? (sale ? 'Salvando…' : 'Registrando…') : (sale ? 'Salvar alterações' : 'Registrar venda')}
+            {saving
+              ? sale
+                ? 'Salvando…'
+                : 'Registrando…'
+              : sale
+                ? 'Salvar alterações'
+                : 'Registrar venda'}
           </button>
         </div>
       </form>

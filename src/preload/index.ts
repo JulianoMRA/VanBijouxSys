@@ -49,8 +49,7 @@ const api = {
     create: (data: CreateVariationInput) => invoke('variations:create', data),
     update: (data: UpdateVariationInput) => invoke('variations:update', data),
     delete: (id: number) => invoke('variations:delete', id),
-    addStock: (id: number, quantity: number) =>
-      invoke('variations:addStock', id, quantity)
+    addStock: (id: number, quantity: number) => invoke('variations:addStock', id, quantity)
   },
   fairs: {
     getAll: () => invoke('fairs:getAll'),
@@ -63,8 +62,7 @@ const api = {
     create: (data: CreateSaleInput) => invoke('sales:create', data),
     update: (data: UpdateSaleInput) => invoke('sales:update', data),
     delete: (id: number) => invoke('sales:delete', id),
-    markAsReceived: (data: MarkSaleReceivedInput) =>
-      invoke('sales:markAsReceived', data),
+    markAsReceived: (data: MarkSaleReceivedInput) => invoke('sales:markAsReceived', data),
     unmarkAsReceived: (id: number) => invoke('sales:unmarkAsReceived', id)
   },
   dashboard: {

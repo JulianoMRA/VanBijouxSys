@@ -28,7 +28,11 @@ function loadLastFee(method: ReceivedPaymentMethod): string {
   return localStorage.getItem(`lastFee_${method}`) ?? ''
 }
 
-export default function MarkReceivedModal({ sale, onSave, onClose }: MarkReceivedModalProps): JSX.Element {
+export default function MarkReceivedModal({
+  sale,
+  onSave,
+  onClose
+}: MarkReceivedModalProps): JSX.Element {
   const [paymentMethod, setPaymentMethod] = useState<ReceivedPaymentMethod>('dinheiro')
   const [feePercentage, setFeePercentage] = useState<string>('0')
   const [receivedAt, setReceivedAt] = useState<string>(todayIso())
@@ -41,7 +45,7 @@ export default function MarkReceivedModal({ sale, onSave, onClose }: MarkReceive
   }
 
   const feePercent = parseFloat(feePercentage) || 0
-  const feeAmount = sale.totalAmount * feePercent / 100
+  const feeAmount = (sale.totalAmount * feePercent) / 100
   const netAmount = sale.totalAmount - feeAmount
 
   async function handleSubmit(e: React.FormEvent): Promise<void> {
@@ -77,8 +81,10 @@ export default function MarkReceivedModal({ sale, onSave, onClose }: MarkReceive
       <form onSubmit={handleSubmit} className="space-y-5">
         <div className="bg-cream-50 rounded-xl px-4 py-3 text-sm text-gray-600">
           <p>
-            Venda de <span className="font-semibold text-gray-800">{formatCurrency(sale.totalAmount)}</span>
-            {' '}registrada em {sale.soldAt.slice(8, 10)}/{sale.soldAt.slice(5, 7)}/{sale.soldAt.slice(0, 4)}.
+            Venda de{' '}
+            <span className="font-semibold text-gray-800">{formatCurrency(sale.totalAmount)}</span>{' '}
+            registrada em {sale.soldAt.slice(8, 10)}/{sale.soldAt.slice(5, 7)}/
+            {sale.soldAt.slice(0, 4)}.
           </p>
         </div>
 
@@ -105,7 +111,13 @@ export default function MarkReceivedModal({ sale, onSave, onClose }: MarkReceive
         {paymentMethod !== 'dinheiro' && (
           <div>
             <label className="label">
-              Taxa ({paymentMethod === 'pix' ? 'sugerido: 0,99%' : paymentMethod === 'debito' ? 'sugerido: 1,69%' : 'variável'})
+              Taxa (
+              {paymentMethod === 'pix'
+                ? 'sugerido: 0,99%'
+                : paymentMethod === 'debito'
+                  ? 'sugerido: 1,69%'
+                  : 'variável'}
+              )
             </label>
             <div className="relative">
               <input
@@ -118,7 +130,9 @@ export default function MarkReceivedModal({ sale, onSave, onClose }: MarkReceive
                 onChange={(e) => setFeePercentage(e.target.value)}
                 placeholder="0,00"
               />
-              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-400">%</span>
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-400">
+                %
+              </span>
             </div>
             {feePercent > 0 && (
               <p className="text-xs text-gray-500 mt-1">

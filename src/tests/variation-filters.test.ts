@@ -1,8 +1,13 @@
 import { describe, it, expect } from 'vitest'
-import { filterAndSortVariations, VariationFilterParams } from '../renderer/src/utils/variation-filters'
+import {
+  filterAndSortVariations,
+  VariationFilterParams
+} from '../renderer/src/utils/variation-filters'
 import type { ProductVariation } from '../renderer/src/types'
 
-function makeVariation(overrides: Partial<ProductVariation> & { id: number; identifier: string }): ProductVariation {
+function makeVariation(
+  overrides: Partial<ProductVariation> & { id: number; identifier: string }
+): ProductVariation {
   return {
     productId: 1,
     costPrice: 10,
@@ -28,7 +33,7 @@ const variations: ProductVariation[] = [
   makeVariation({ id: 1, identifier: 'Rosa', salePrice: 15, stockQuantity: 0, minimumStock: 2 }),
   makeVariation({ id: 2, identifier: 'Dourado', salePrice: 30, stockQuantity: 1, minimumStock: 3 }),
   makeVariation({ id: 3, identifier: 'Azul', salePrice: 20, stockQuantity: 10, minimumStock: 5 }),
-  makeVariation({ id: 4, identifier: 'Prata', salePrice: 50, stockQuantity: 5, minimumStock: 2 }),
+  makeVariation({ id: 4, identifier: 'Prata', salePrice: 50, stockQuantity: 5, minimumStock: 2 })
 ]
 
 describe('filterAndSortVariations', () => {
@@ -58,19 +63,28 @@ describe('filterAndSortVariations', () => {
 
   describe('filtro por estoque', () => {
     it('should filter sem-estoque (quantity === 0)', () => {
-      const result = filterAndSortVariations(variations, { ...defaultParams, stockFilter: 'sem-estoque' })
+      const result = filterAndSortVariations(variations, {
+        ...defaultParams,
+        stockFilter: 'sem-estoque'
+      })
       expect(result).toHaveLength(1)
       expect(result[0].identifier).toBe('Rosa')
     })
 
     it('should filter estoque-baixo (quantity > 0 and < minimum)', () => {
-      const result = filterAndSortVariations(variations, { ...defaultParams, stockFilter: 'estoque-baixo' })
+      const result = filterAndSortVariations(variations, {
+        ...defaultParams,
+        stockFilter: 'estoque-baixo'
+      })
       expect(result).toHaveLength(1)
       expect(result[0].identifier).toBe('Dourado')
     })
 
     it('should filter estoque normal (quantity >= minimum)', () => {
-      const result = filterAndSortVariations(variations, { ...defaultParams, stockFilter: 'normal' })
+      const result = filterAndSortVariations(variations, {
+        ...defaultParams,
+        stockFilter: 'normal'
+      })
       expect(result).toHaveLength(2)
       const ids = result.map((v) => v.identifier)
       expect(ids).toContain('Azul')
@@ -97,7 +111,11 @@ describe('filterAndSortVariations', () => {
     })
 
     it('should filter by price range', () => {
-      const result = filterAndSortVariations(variations, { ...defaultParams, priceMin: '20', priceMax: '35' })
+      const result = filterAndSortVariations(variations, {
+        ...defaultParams,
+        priceMin: '20',
+        priceMax: '35'
+      })
       expect(result).toHaveLength(2)
       const ids = result.map((v) => v.identifier)
       expect(ids).toContain('Azul')
@@ -105,7 +123,11 @@ describe('filterAndSortVariations', () => {
     })
 
     it('should ignore empty price strings', () => {
-      const result = filterAndSortVariations(variations, { ...defaultParams, priceMin: '', priceMax: '' })
+      const result = filterAndSortVariations(variations, {
+        ...defaultParams,
+        priceMin: '',
+        priceMax: ''
+      })
       expect(result).toHaveLength(4)
     })
   })
@@ -127,22 +149,34 @@ describe('filterAndSortVariations', () => {
     })
 
     it('should sort by highest price first', () => {
-      const result = filterAndSortVariations(variations, { ...defaultParams, sortBy: 'preco-maior' })
+      const result = filterAndSortVariations(variations, {
+        ...defaultParams,
+        sortBy: 'preco-maior'
+      })
       expect(result.map((v) => v.salePrice)).toEqual([50, 30, 20, 15])
     })
 
     it('should sort by lowest price first', () => {
-      const result = filterAndSortVariations(variations, { ...defaultParams, sortBy: 'preco-menor' })
+      const result = filterAndSortVariations(variations, {
+        ...defaultParams,
+        sortBy: 'preco-menor'
+      })
       expect(result.map((v) => v.salePrice)).toEqual([15, 20, 30, 50])
     })
 
     it('should sort by highest stock first', () => {
-      const result = filterAndSortVariations(variations, { ...defaultParams, sortBy: 'estoque-maior' })
+      const result = filterAndSortVariations(variations, {
+        ...defaultParams,
+        sortBy: 'estoque-maior'
+      })
       expect(result.map((v) => v.stockQuantity)).toEqual([10, 5, 1, 0])
     })
 
     it('should sort by lowest stock first', () => {
-      const result = filterAndSortVariations(variations, { ...defaultParams, sortBy: 'estoque-menor' })
+      const result = filterAndSortVariations(variations, {
+        ...defaultParams,
+        sortBy: 'estoque-menor'
+      })
       expect(result.map((v) => v.stockQuantity)).toEqual([0, 1, 5, 10])
     })
   })

@@ -25,13 +25,8 @@ export default function VariationDetailsModal({
   const margin = variation.salePrice > 0 ? (profit / variation.salePrice) * 100 : 0
 
   return (
-    <Modal
-      title={`${product.name} — ${variation.identifier}`}
-      onClose={onClose}
-      size="lg"
-    >
+    <Modal title={`${product.name} — ${variation.identifier}`} onClose={onClose} size="lg">
       <div className="space-y-5">
-
         {/* Composição */}
         <section>
           <h3 className="label mb-2">Composição</h3>
@@ -56,7 +51,10 @@ export default function VariationDetailsModal({
                         {i.quantity} {i.unit === 'unidade' ? 'un.' : i.unit}
                       </td>
                       <td className="px-4 py-2.5 text-right text-gray-500">
-                        {i.costPerUnit.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                        {i.costPerUnit.toLocaleString('pt-BR', {
+                          style: 'currency',
+                          currency: 'BRL'
+                        })}
                       </td>
                       <td className="px-4 py-2.5 text-right text-gray-700">
                         {fmt(i.costPerUnit * i.quantity)}
@@ -66,7 +64,10 @@ export default function VariationDetailsModal({
                 </tbody>
                 <tfoot>
                   <tr className="bg-cream-50 border-t border-cream-200">
-                    <td colSpan={3} className="px-4 py-2.5 text-xs font-semibold text-blush-700 uppercase tracking-wide">
+                    <td
+                      colSpan={3}
+                      className="px-4 py-2.5 text-xs font-semibold text-blush-700 uppercase tracking-wide"
+                    >
                       Total materiais
                     </td>
                     <td className="px-4 py-2.5 text-right text-sm font-semibold text-blush-700">
@@ -94,10 +95,11 @@ export default function VariationDetailsModal({
             <div className="flex justify-between text-gray-600">
               <span>+ Mão de obra</span>
               <span>
-                {labor > 0
-                  ? fmt(labor)
-                  : <span className="text-gray-400 italic">Não informada</span>
-                }
+                {labor > 0 ? (
+                  fmt(labor)
+                ) : (
+                  <span className="text-gray-400 italic">Não informada</span>
+                )}
               </span>
             </div>
             <div className="flex justify-between text-gray-600">
@@ -127,9 +129,13 @@ export default function VariationDetailsModal({
               <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">Venda</p>
               <p className="text-lg font-semibold text-gray-800">{fmt(variation.salePrice)}</p>
             </div>
-            <div className={`rounded-xl p-3 text-center ${profit >= 0 ? 'bg-emerald-50' : 'bg-rose-50'}`}>
+            <div
+              className={`rounded-xl p-3 text-center ${profit >= 0 ? 'bg-emerald-50' : 'bg-rose-50'}`}
+            >
               <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">Lucro/un.</p>
-              <p className={`text-lg font-semibold ${profit >= 0 ? 'text-emerald-700' : 'text-rose-600'}`}>
+              <p
+                className={`text-lg font-semibold ${profit >= 0 ? 'text-emerald-700' : 'text-rose-600'}`}
+              >
                 {fmt(profit)}
               </p>
               <p className={`text-xs mt-0.5 ${profit >= 0 ? 'text-emerald-500' : 'text-rose-400'}`}>
@@ -138,7 +144,6 @@ export default function VariationDetailsModal({
             </div>
           </div>
         </section>
-
       </div>
     </Modal>
   )

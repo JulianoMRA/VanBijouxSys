@@ -6,10 +6,7 @@ import { useToast } from '../hooks/useToast'
 import { formatCurrency, formatDate, formatDateRange } from '../utils/format'
 import type { Fair, Sale } from '../types'
 
-type Modal =
-  | { type: 'new' }
-  | { type: 'edit'; fair: Fair }
-  | { type: 'delete'; fair: Fair }
+type Modal = { type: 'new' } | { type: 'edit'; fair: Fair } | { type: 'delete'; fair: Fair }
 
 function isFuture(fair: Fair): boolean {
   const lastDay = fair.endDate ?? fair.date
@@ -80,7 +77,12 @@ export default function Fairs(): JSX.Element {
       {errorMessage && (
         <div className="bg-rose-50 border border-rose-200 rounded-2xl px-5 py-3 mb-4 flex items-start justify-between gap-3">
           <p className="text-sm text-rose-700">{errorMessage}</p>
-          <button onClick={() => setErrorMessage('')} className="text-rose-400 hover:text-rose-600 shrink-0 text-lg leading-none">×</button>
+          <button
+            onClick={() => setErrorMessage('')}
+            className="text-rose-400 hover:text-rose-600 shrink-0 text-lg leading-none"
+          >
+            ×
+          </button>
         </div>
       )}
 
@@ -142,10 +144,23 @@ export default function Fairs(): JSX.Element {
       {toastMsg && <Toast message={toastMsg} onDismiss={dismissToast} />}
 
       {modal?.type === 'new' && (
-        <FairForm onSave={() => { loadFairs(); showToast('Feira salva!') }} onClose={() => setModal(null)} />
+        <FairForm
+          onSave={() => {
+            loadFairs()
+            showToast('Feira salva!')
+          }}
+          onClose={() => setModal(null)}
+        />
       )}
       {modal?.type === 'edit' && (
-        <FairForm fair={modal.fair} onSave={() => { loadFairs(); showToast('Feira atualizada!') }} onClose={() => setModal(null)} />
+        <FairForm
+          fair={modal.fair}
+          onSave={() => {
+            loadFairs()
+            showToast('Feira atualizada!')
+          }}
+          onClose={() => setModal(null)}
+        />
       )}
       {modal?.type === 'delete' && (
         <ConfirmDialog
@@ -219,7 +234,9 @@ function FairCard({
                 </span>
               </span>
               <span className="text-xs text-gray-300">·</span>
-              <span className="text-xs text-gray-400">{formatDateRange(fair.date, fair.endDate)}</span>
+              <span className="text-xs text-gray-400">
+                {formatDateRange(fair.date, fair.endDate)}
+              </span>
               {!upcoming && fairSales.length > 0 && (
                 <>
                   <span className="text-xs text-gray-300">·</span>
@@ -273,20 +290,32 @@ function FairCard({
                 <tr key={sale.id}>
                   <td className="py-2 text-gray-500">{formatDate(sale.soldAt)}</td>
                   <td className="py-2 text-gray-500">
-                    {sale.items.map((i) => `${i.productName} — ${i.variationIdentifier} (${i.quantity}x)`).join(', ')}
+                    {sale.items
+                      .map((i) => `${i.productName} — ${i.variationIdentifier} (${i.quantity}x)`)
+                      .join(', ')}
                   </td>
-                  <td className="py-2 text-right font-medium text-gray-800">{formatCurrency(sale.totalAmount)}</td>
-                  <td className="py-2 text-right text-emerald-600">{formatCurrency(sale.totalAmount - sale.totalCost)}</td>
+                  <td className="py-2 text-right font-medium text-gray-800">
+                    {formatCurrency(sale.totalAmount)}
+                  </td>
+                  <td className="py-2 text-right text-emerald-600">
+                    {formatCurrency(sale.totalAmount - sale.totalCost)}
+                  </td>
                 </tr>
               ))}
             </tbody>
             <tfoot>
               <tr className="border-t border-cream-300">
                 <td colSpan={2} className="pt-2 text-xs text-gray-400">
-                  Lucro bruto: {formatCurrency(totalProfit)} · Custo da feira: {formatCurrency(totalFairCost)} · Lucro líquido: {formatCurrency(totalProfit - totalFairCost)}
+                  Lucro bruto: {formatCurrency(totalProfit)} · Custo da feira:{' '}
+                  {formatCurrency(totalFairCost)} · Lucro líquido:{' '}
+                  {formatCurrency(totalProfit - totalFairCost)}
                 </td>
-                <td className="pt-2 text-right font-semibold text-blush-700">{formatCurrency(totalRevenue)}</td>
-                <td className="pt-2 text-right font-semibold text-emerald-600">{formatCurrency(totalProfit)}</td>
+                <td className="pt-2 text-right font-semibold text-blush-700">
+                  {formatCurrency(totalRevenue)}
+                </td>
+                <td className="pt-2 text-right font-semibold text-emerald-600">
+                  {formatCurrency(totalProfit)}
+                </td>
               </tr>
             </tfoot>
           </table>

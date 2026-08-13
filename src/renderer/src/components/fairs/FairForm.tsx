@@ -170,7 +170,7 @@ export default function FairForm({ fair, onSave, onClose }: FairFormProps): JSX.
           </div>
           <div>
             <label className="label">
-              Organizador <span className="text-gray-400 font-normal">(opcional)</span>
+              Organizador <span className="text-ink-200 font-normal">(opcional)</span>
             </label>
             <input
               className="input"
@@ -205,7 +205,7 @@ export default function FairForm({ fair, onSave, onClose }: FairFormProps): JSX.
         </div>
 
         {duration > 1 && startDate && (
-          <p className="text-xs text-blush-600 -mt-2">
+          <p className="-mt-2 text-micro text-wine-500">
             Término: <span className="font-medium">{formatDate(endDate)}</span>
           </p>
         )}
@@ -214,7 +214,7 @@ export default function FairForm({ fair, onSave, onClose }: FairFormProps): JSX.
         <div>
           <label className="label">Custo de inscrição (R$)</label>
           <div className="relative">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm pointer-events-none">
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-300 text-body pointer-events-none">
               R$
             </span>
             <input
@@ -231,20 +231,20 @@ export default function FairForm({ fair, onSave, onClose }: FairFormProps): JSX.
         {/* Custos adicionais */}
         <div>
           <div className="flex items-center justify-between mb-2">
-            <label className="text-sm font-medium text-gray-700">
-              Custos adicionais <span className="text-gray-400 font-normal">(opcional)</span>
+            <label className="text-body font-semibold text-ink-900">
+              Custos adicionais <span className="text-ink-200 font-normal">(opcional)</span>
             </label>
             <button
               type="button"
               onClick={addCost}
-              className="text-xs text-blush-600 hover:text-blush-800 font-medium transition-colors"
+              className="text-aux font-semibold text-wine-500 transition-colors hover:text-wine-600"
             >
               + Adicionar custo
             </button>
           </div>
 
           {additionalCosts.length === 0 ? (
-            <p className="text-xs text-gray-400">Ex: combustível, alimentação, estacionamento…</p>
+            <p className="text-micro text-ink-300">Ex: combustível, alimentação, estacionamento…</p>
           ) : (
             <div className="space-y-2">
               {additionalCosts.map((cost) => (
@@ -256,7 +256,7 @@ export default function FairForm({ fair, onSave, onClose }: FairFormProps): JSX.
                     onChange={(e) => updateCost(cost.key, 'description', e.target.value)}
                   />
                   <div className="relative w-32 shrink-0">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm pointer-events-none">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-300 text-body pointer-events-none">
                       R$
                     </span>
                     <input
@@ -272,7 +272,7 @@ export default function FairForm({ fair, onSave, onClose }: FairFormProps): JSX.
                   <button
                     type="button"
                     onClick={() => removeCost(cost.key)}
-                    className="text-gray-300 hover:text-rose-400 transition-colors text-lg leading-none shrink-0"
+                    className="shrink-0 text-lg leading-none text-ink-200 transition-colors hover:text-clay-500"
                   >
                     ×
                   </button>
@@ -284,9 +284,9 @@ export default function FairForm({ fair, onSave, onClose }: FairFormProps): JSX.
 
         {/* Total de custos */}
         {(enrollmentValue > 0 || additionalTotal > 0) && (
-          <div className="bg-cream-50 rounded-xl px-4 py-3 text-sm space-y-1">
+          <div className="space-y-1 rounded-control bg-bone-200 px-4 py-3 text-body tabular-nums">
             {enrollmentValue > 0 && (
-              <div className="flex justify-between text-gray-500">
+              <div className="flex justify-between text-ink-500">
                 <span>Inscrição</span>
                 <span>
                   {enrollmentValue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
@@ -297,13 +297,13 @@ export default function FairForm({ fair, onSave, onClose }: FairFormProps): JSX.
               const val = parseFloat(c.amount)
               if (!c.description || isNaN(val)) return null
               return (
-                <div key={c.key} className="flex justify-between text-gray-500">
+                <div key={c.key} className="flex justify-between text-ink-500">
                   <span>{c.description}</span>
                   <span>{val.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
                 </div>
               )
             })}
-            <div className="flex justify-between font-semibold text-gray-700 pt-1 border-t border-cream-200">
+            <div className="flex justify-between border-t border-bone-400 pt-1 font-semibold text-ink-900">
               <span>Custo total da feira</span>
               <span>
                 {totalFairCost.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
@@ -312,7 +312,7 @@ export default function FairForm({ fair, onSave, onClose }: FairFormProps): JSX.
           </div>
         )}
 
-        {error && <p className="text-sm text-rose-500">{error}</p>}
+        {error && <p className="text-body text-clay-500">{error}</p>}
 
         <div className="flex justify-end gap-3 pt-2">
           <button type="button" className="btn-secondary" onClick={onClose}>

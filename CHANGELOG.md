@@ -1,5 +1,20 @@
 # Changelog
 
+## [1.7.1] - 2026-08-13
+
+### Adicionado
+
+- **Backup**: quando uma atualização precisa alterar a estrutura do banco, a cópia de segurança passa a ser feita **antes** da alteração, e não depois. É o único momento em que ainda é possível voltar atrás.
+
+### Interno
+
+- Estrutura do banco passa a ser versionada (`PRAGMA user_version`), com cada alteração aplicada em transação própria: se falhar no meio, o banco volta ao estado anterior e a tentativa se repete no próximo boot, em vez de ficar pela metade.
+- Cálculos do Caixa (período, filtros, somatórios e lista de movimentações) extraídos para módulo próprio e cobertos por testes.
+- Insights do Dashboard extraídos e cobertos por testes, incluindo regressão para a categoria mais vendida por unidade e para o plural de "itens esgotados".
+- Suíte de testes vai de 110 para 174.
+
+---
+
 ## [1.7.0] - 2026-08-12
 
 ### Adicionado

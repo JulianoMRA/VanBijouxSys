@@ -1,5 +1,32 @@
 # Changelog
 
+## [1.7.0] - 2026-08-12
+
+### Adicionado
+
+- **Backup**: cópia automática do banco a cada dia de uso, mantendo os 10 backups mais recentes em `%APPDATA%/van-bijoux-sys/backups`. Até então o histórico inteiro vivia num único arquivo sem nenhuma cópia.
+- **Backup**: painel "Backup e dados" na barra lateral, com data do último backup, exportação para um local à escolha, atalho para a pasta de backups e restauração a partir de um arquivo.
+- **Backup**: a restauração valida a integridade do arquivo, pede confirmação, guarda o estado atual numa cópia antes de sobrescrever e reinicia o aplicativo.
+- **Atualização**: o aplicativo verifica atualizações sozinho ao abrir e traz um botão "Verificar atualizações" no painel. Um backup do banco é feito antes de qualquer atualização ser aplicada.
+
+### Corrigido
+
+- **Produtos, Feiras**: excluir um produto, uma variação ou uma feira com vendas registradas não faz mais nada em silêncio. Antes a confirmação era aceita, a exclusão falhava por vínculo com o histórico de vendas e nenhuma mensagem aparecia na tela.
+- **Caixa**: mensagens de erro deixam de exibir texto técnico do Electron (`Error invoking remote method...`).
+- **Dashboard**: a tela avisa quando as estatísticas não carregam, em vez de ficar presa em "Carregando…".
+- **Dashboard**: corrige o plural do insight de estoque, que escrevia "itemns esgotados".
+- **Estoque**: cadastrar variação com estoque inicial e dar entrada de estoque passaram a rodar em transação — uma falha no meio não deixa mais o estoque de insumos inconsistente.
+- **Offline**: as fontes passam a ser empacotadas com o aplicativo. Sem internet, a tipografia caía em fontes de sistema.
+
+### Interno
+
+- Hooks de git locais (husky): lint e formatação no commit, padrão de mensagem no commit, verificação de tipos e testes antes do push.
+- ESLint 9, Prettier e verificação de tipos configurados — antes estavam instalados sem configuração e não rodavam.
+- Corrigidos 3 erros de tipo que o build nunca revelava, e adicionada Content-Security-Policy no build de produção.
+- Dependabot removido; atualização de dependências passa a ser manual.
+
+---
+
 ## [1.6.1] - 2026-05-14
 
 ### Corrigido

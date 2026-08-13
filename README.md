@@ -108,13 +108,18 @@ Backup na mesma máquina não protege contra defeito de disco. A exportação ma
 
 ## Publicando uma versão
 
-O app se atualiza pelas releases do GitHub via electron-updater. Para publicar:
+O app se atualiza pelas releases do GitHub via electron-updater. O fluxo é:
+
+1. Subir a versão do `package.json` (`npm version patch|minor|major`, que já cria o commit e a tag) e registrar as mudanças no CHANGELOG.
+2. Gerar e publicar:
 
 ```bash
-npm version minor && npm run build && npx electron-builder --win --publish always
+npm run build && npx electron-builder --win --publish always
 ```
 
-O `electron-builder` precisa de um token no ambiente (`GH_TOKEN`) com permissão de escrita em releases. O repositório é público, então o app baixa a atualização sem token nenhum. O instalador não é assinado: o SmartScreen alerta na primeira instalação.
+O `electron-builder` precisa de um token no ambiente (`GH_TOKEN`) com permissão de escrita em releases; ele sobe o instalador e o `latest.yml`, que é o arquivo lido pelo updater. O repositório é público, então o app baixa a atualização sem token nenhum.
+
+Duas ressalvas: o instalador não é assinado, então o SmartScreen alerta na instalação; e o `artifactName` precisa continuar sem espaços, senão o nome do arquivo diverge do que o `latest.yml` referencia e a atualização falha com 404.
 
 ## Erros no IPC
 

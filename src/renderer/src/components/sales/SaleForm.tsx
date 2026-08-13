@@ -240,10 +240,10 @@ export default function SaleForm({ sale, onSave, onClose }: SaleFormProps): JSX.
                     setChannel(ch)
                     setFairId('')
                   }}
-                  className={`px-3 py-1.5 rounded-xl text-sm font-medium transition-all ${
+                  className={`rounded-control px-3 py-1.5 text-body font-medium transition-colors ${
                     channel === ch
-                      ? 'bg-blush-500 text-white'
-                      : 'bg-cream-100 text-gray-600 hover:bg-cream-200'
+                      ? 'bg-wine-500 text-bone-50'
+                      : 'bg-bone-200 text-ink-600 hover:bg-bone-300'
                   }`}
                 >
                   {ch}
@@ -296,7 +296,7 @@ export default function SaleForm({ sale, onSave, onClose }: SaleFormProps): JSX.
               })}
             </select>
             {selectedFair?.endDate && selectedFair.endDate !== selectedFair.date && (
-              <p className="text-xs text-gray-400 mt-1">
+              <p className="mt-1 text-micro text-ink-300">
                 Escolha o dia da venda dentro do período da feira ({selectedFair.date.slice(8, 10)}{' '}
                 a {selectedFair.endDate.slice(8, 10)}/{selectedFair.date.slice(5, 7)}).
               </p>
@@ -314,10 +314,10 @@ export default function SaleForm({ sale, onSave, onClose }: SaleFormProps): JSX.
                   key={value}
                   type="button"
                   onClick={() => handlePaymentMethodChange(value)}
-                  className={`px-3 py-1.5 rounded-xl text-sm font-medium transition-all ${
+                  className={`rounded-control px-3 py-1.5 text-body font-medium transition-colors ${
                     paymentMethod === value
-                      ? 'bg-blush-500 text-white'
-                      : 'bg-cream-100 text-gray-600 hover:bg-cream-200'
+                      ? 'bg-wine-500 text-bone-50'
+                      : 'bg-bone-200 text-ink-600 hover:bg-bone-300'
                   }`}
                 >
                   {label}
@@ -347,12 +347,12 @@ export default function SaleForm({ sale, onSave, onClose }: SaleFormProps): JSX.
                   onChange={(e) => setFeePercentage(e.target.value)}
                   placeholder="0,00"
                 />
-                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-400">
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-body text-ink-300">
                   %
                 </span>
               </div>
               {feePercent > 0 && totalAmount > 0 && (
-                <p className="text-xs text-gray-500 mt-1">
+                <p className="mt-1 text-micro tabular-nums text-ink-500">
                   Taxa: {formatCurrency(feeAmount)} · Líquido: {formatCurrency(netAmount)}
                 </p>
               )}
@@ -360,7 +360,7 @@ export default function SaleForm({ sale, onSave, onClose }: SaleFormProps): JSX.
           )}
         </div>
         {paymentMethod === 'areceber' && (
-          <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-xs text-amber-800">
+          <div className="rounded-control border border-honey-200 bg-honey-100 px-4 py-3 text-micro text-honey-600">
             Esta venda não entra no caixa até ser marcada como recebida na lista de vendas.
           </div>
         )}
@@ -368,11 +368,11 @@ export default function SaleForm({ sale, onSave, onClose }: SaleFormProps): JSX.
         {/* Itens */}
         <div>
           <div className="flex items-center justify-between mb-2">
-            <label className="text-sm font-medium text-gray-700">Itens vendidos</label>
+            <label className="text-body font-semibold text-ink-900">Itens vendidos</label>
             <button
               type="button"
               onClick={addItem}
-              className="text-xs text-blush-600 hover:text-blush-800 font-medium transition-colors"
+              className="text-aux font-semibold text-wine-500 transition-colors hover:text-wine-600"
             >
               + Adicionar item
             </button>
@@ -387,7 +387,10 @@ export default function SaleForm({ sale, onSave, onClose }: SaleFormProps): JSX.
                   : undefined
 
               return (
-                <div key={item.key} className="bg-cream-50 rounded-xl p-3 space-y-2">
+                <div
+                  key={item.key}
+                  className="space-y-2 rounded-control border border-bone-400 bg-bone-100 p-3"
+                >
                   <div className="grid grid-cols-2 gap-2">
                     <div>
                       <label className="label">Produto</label>
@@ -460,7 +463,7 @@ export default function SaleForm({ sale, onSave, onClose }: SaleFormProps): JSX.
                     </div>
                     <div className="flex justify-between items-center">
                       {item.unitPrice !== '' && item.quantity !== '' ? (
-                        <span className="text-sm font-medium text-gray-700">
+                        <span className="text-body font-semibold tabular-nums text-ink-900">
                           {formatCurrency(
                             parseFloat(item.unitPrice || '0') * parseInt(item.quantity || '0')
                           )}
@@ -472,7 +475,7 @@ export default function SaleForm({ sale, onSave, onClose }: SaleFormProps): JSX.
                         <button
                           type="button"
                           onClick={() => removeItem(item.key)}
-                          className="text-rose-400 hover:text-rose-600 text-lg leading-none transition-colors"
+                          className="text-lg leading-none text-ink-200 transition-colors hover:text-clay-500"
                         >
                           ×
                         </button>
@@ -486,7 +489,7 @@ export default function SaleForm({ sale, onSave, onClose }: SaleFormProps): JSX.
                         selectedVariation.stockQuantity +
                         (originalQuantities[selectedVariation.id] ?? 0)
                       return parseInt(item.quantity) > effectiveStock ? (
-                        <p className="text-xs text-amber-600">
+                        <p className="text-micro font-medium text-honey-500">
                           ⚠ Quantidade maior que o estoque disponível ({effectiveStock} un.)
                         </p>
                       ) : null
@@ -499,39 +502,43 @@ export default function SaleForm({ sale, onSave, onClose }: SaleFormProps): JSX.
 
         {/* Resumo */}
         {saleItems && saleItems.length > 0 && (
-          <div className="bg-blush-50 rounded-xl p-4 space-y-1.5 text-sm">
-            <div className="flex justify-between text-gray-600">
+          <div className="space-y-1.5 rounded-control bg-wine-50 p-4 text-body">
+            <div className="flex justify-between text-ink-600">
               <span>Total de itens</span>
-              <span className="font-medium">{saleItems.reduce((s, i) => s + i.quantity, 0)}</span>
+              <span className="font-medium tabular-nums">
+                {saleItems.reduce((s, i) => s + i.quantity, 0)}
+              </span>
             </div>
-            <div className="flex justify-between text-gray-600">
+            <div className="flex justify-between text-ink-600">
               <span>Custo total</span>
-              <span className="font-medium">{formatCurrency(totalCost)}</span>
+              <span className="font-medium tabular-nums">{formatCurrency(totalCost)}</span>
             </div>
-            <div className="flex justify-between font-semibold text-gray-800 pt-1 border-t border-blush-200">
+            <div className="flex justify-between border-t border-wine-100 pt-1 font-semibold text-ink-900">
               <span>Total da venda</span>
-              <span className="text-blush-700 text-base">{formatCurrency(totalAmount)}</span>
+              <span className="text-base tabular-nums text-wine-500">
+                {formatCurrency(totalAmount)}
+              </span>
             </div>
             {paymentMethod !== 'dinheiro' && feePercent > 0 && (
-              <div className="flex justify-between text-rose-600 text-xs">
+              <div className="flex justify-between text-micro text-clay-500">
                 <span>Taxa ({feePercent}%)</span>
-                <span className="font-medium">− {formatCurrency(feeAmount)}</span>
+                <span className="font-medium tabular-nums">− {formatCurrency(feeAmount)}</span>
               </div>
             )}
             {paymentMethod !== 'dinheiro' && feePercent > 0 && (
-              <div className="flex justify-between text-emerald-800 text-xs font-semibold">
+              <div className="flex justify-between text-micro font-semibold text-sage-600">
                 <span>Valor líquido recebido</span>
-                <span>{formatCurrency(netAmount)}</span>
+                <span className="tabular-nums">{formatCurrency(netAmount)}</span>
               </div>
             )}
-            <div className="flex justify-between text-emerald-700 text-xs">
+            <div className="flex justify-between text-micro text-sage-500">
               <span>Lucro estimado</span>
-              <span className="font-medium">{formatCurrency(profit - feeAmount)}</span>
+              <span className="font-medium tabular-nums">{formatCurrency(profit - feeAmount)}</span>
             </div>
           </div>
         )}
 
-        {error && <p className="text-sm text-rose-500">{error}</p>}
+        {error && <p className="text-body text-clay-500">{error}</p>}
 
         <div className="flex justify-end gap-3 pt-1">
           <button type="button" className="btn-secondary" onClick={onClose}>

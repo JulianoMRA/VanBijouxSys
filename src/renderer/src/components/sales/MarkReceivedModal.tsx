@@ -79,10 +79,12 @@ export default function MarkReceivedModal({
   return (
     <Modal title="Marcar venda como recebida" onClose={onClose} size="md">
       <form onSubmit={handleSubmit} className="space-y-5">
-        <div className="bg-cream-50 rounded-xl px-4 py-3 text-sm text-gray-600">
+        <div className="rounded-control bg-bone-200 px-4 py-3 text-body text-ink-600">
           <p>
             Venda de{' '}
-            <span className="font-semibold text-gray-800">{formatCurrency(sale.totalAmount)}</span>{' '}
+            <span className="font-semibold tabular-nums text-ink-900">
+              {formatCurrency(sale.totalAmount)}
+            </span>{' '}
             registrada em {sale.soldAt.slice(8, 10)}/{sale.soldAt.slice(5, 7)}/
             {sale.soldAt.slice(0, 4)}.
           </p>
@@ -96,10 +98,10 @@ export default function MarkReceivedModal({
                 key={value}
                 type="button"
                 onClick={() => handleMethodChange(value)}
-                className={`px-3 py-1.5 rounded-xl text-sm font-medium transition-all ${
+                className={`rounded-control px-3 py-1.5 text-body font-medium transition-colors ${
                   paymentMethod === value
-                    ? 'bg-blush-500 text-white'
-                    : 'bg-cream-100 text-gray-600 hover:bg-cream-200'
+                    ? 'bg-wine-500 text-bone-50'
+                    : 'bg-bone-200 text-ink-600 hover:bg-bone-300'
                 }`}
               >
                 {label}
@@ -130,12 +132,12 @@ export default function MarkReceivedModal({
                 onChange={(e) => setFeePercentage(e.target.value)}
                 placeholder="0,00"
               />
-              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-400">
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-body text-ink-300">
                 %
               </span>
             </div>
             {feePercent > 0 && (
-              <p className="text-xs text-gray-500 mt-1">
+              <p className="mt-1 text-micro tabular-nums text-ink-500">
                 Taxa: {formatCurrency(feeAmount)} · Líquido: {formatCurrency(netAmount)}
               </p>
             )}
@@ -154,18 +156,13 @@ export default function MarkReceivedModal({
         </div>
 
         {error && (
-          <div className="bg-rose-50 border border-rose-200 rounded-xl px-3 py-2 text-sm text-rose-700">
+          <div className="rounded-control border border-bone-500 bg-clay-100 px-3 py-2 text-body text-clay-600">
             {error}
           </div>
         )}
 
         <div className="flex justify-end gap-2 pt-2">
-          <button
-            type="button"
-            onClick={onClose}
-            className="px-4 py-2 rounded-xl text-sm font-medium text-gray-600 hover:bg-cream-100 transition-colors"
-            disabled={saving}
-          >
+          <button type="button" onClick={onClose} className="btn-secondary" disabled={saving}>
             Cancelar
           </button>
           <button type="submit" className="btn-primary" disabled={saving}>

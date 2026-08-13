@@ -8,7 +8,7 @@ import ErrorBoundary from '../ui/ErrorBoundary'
  * migradas continuam recebendo o padding do Layout e saem desta lista conforme
  * forem refeitas — quando a lista esvaziar, a condição some.
  */
-const ROTAS_VISUAL_ANTIGO = ['/sales', '/fairs', '/cash']
+const ROTAS_VISUAL_ANTIGO = ['/fairs', '/cash']
 
 export default function Layout(): JSX.Element {
   const { pathname } = useLocation()

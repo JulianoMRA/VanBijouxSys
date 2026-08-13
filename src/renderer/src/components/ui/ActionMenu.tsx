@@ -5,9 +5,22 @@ export interface ActionMenuItem {
   label: string
   onClick: () => void
   danger?: boolean
+  disabled?: boolean
+  hint?: string
 }
 
-export default function ActionMenu({ items }: { items: ActionMenuItem[] }): JSX.Element {
+interface ActionMenuProps {
+  items: ActionMenuItem[]
+  /** Conteúdo do gatilho. Sem isto o menu usa o botão "···" das tabelas. */
+  trigger?: React.ReactNode
+  triggerClassName?: string
+}
+
+export default function ActionMenu({
+  items,
+  trigger,
+  triggerClassName
+}: ActionMenuProps): JSX.Element {
   const [aberto, setAberto] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
 
@@ -33,12 +46,17 @@ export default function ActionMenu({ items }: { items: ActionMenuItem[] }): JSX.
     <div className="relative" ref={ref}>
       <button
         type="button"
-        aria-label="Mais ações"
+        aria-label={trigger ? undefined : 'Mais ações'}
         aria-expanded={aberto}
         onClick={() => setAberto((v) => !v)}
-        className="flex items-center rounded-lg px-2 py-1.5 text-ink-500 transition-colors hover:bg-bone-300 hover:text-ink-800"
+        className={
+          triggerClassName ??
+          (trigger
+            ? 'btn-secondary'
+            : 'flex items-center rounded-lg px-2 py-1.5 text-ink-500 transition-colors hover:bg-bone-300 hover:text-ink-800')
+        }
       >
-        <MoreHorizontal size={16} />
+        {trigger ?? <MoreHorizontal size={16} />}
       </button>
 
       {aberto && (
@@ -47,15 +65,17 @@ export default function ActionMenu({ items }: { items: ActionMenuItem[] }): JSX.
             <button
               key={item.label}
               type="button"
+              disabled={item.disabled}
               onClick={() => {
                 setAberto(false)
                 item.onClick()
               }}
-              className={`block w-full px-3.5 py-2 text-left text-body transition-colors hover:bg-bone-200 ${
+              className={`block w-full px-3.5 py-2 text-left text-body transition-colors hover:bg-bone-200 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent ${
                 item.danger ? 'text-clay-500' : 'text-ink-800'
               }`}
             >
               {item.label}
+              {item.hint && <span className="ml-1.5 text-micro text-ink-300">{item.hint}</span>}
             </button>
           ))}
         </div>

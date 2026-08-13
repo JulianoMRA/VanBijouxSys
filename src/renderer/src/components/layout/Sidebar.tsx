@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react'
-import { NavLink } from 'react-router-dom'
+import { useCallback, useEffect, useState } from 'react'
+import { NavLink, useLocation } from 'react-router-dom'
 import {
   LayoutDashboard,
   Gem,
@@ -12,6 +12,7 @@ import {
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import SystemPanel from './SystemPanel'
+import { EVENTO_INSUMOS_ALTERADOS } from '../../utils/eventos'
 
 const navItems: { to: string; label: string; Icon: LucideIcon }[] = [
   { to: '/', label: 'Dashboard', Icon: LayoutDashboard },
@@ -26,6 +27,8 @@ const navItems: { to: string; label: string; Icon: LucideIcon }[] = [
 export default function Sidebar(): JSX.Element {
   const [versao, setVersao] = useState('')
   const [painelAberto, setPainelAberto] = useState(false)
+  const [insumosParaRepor, setInsumosParaRepor] = useState(0)
+  const { pathname } = useLocation()
 
   useEffect(() => {
     window.api.app
@@ -33,6 +36,27 @@ export default function Sidebar(): JSX.Element {
       .then(setVersao)
       .catch(() => setVersao(''))
   }, [])
+
+  const contarReposicao = useCallback(async (): Promise<void> => {
+    try {
+      const insumos = await window.api.insumos.getAll()
+      setInsumosParaRepor(
+        insumos.filter(
+          (i) => i.stockQuantity <= 0 || (i.minimumStock > 0 && i.stockQuantity < i.minimumStock)
+        ).length
+      )
+    } catch {
+      setInsumosParaRepor(0)
+    }
+  }, [])
+
+  // Recontagem a cada navegação cobre o que muda fora da tela de Estoque; o
+  // evento cobre as alterações feitas sem sair dela.
+  useEffect(() => {
+    contarReposicao()
+    window.addEventListener(EVENTO_INSUMOS_ALTERADOS, contarReposicao)
+    return () => window.removeEventListener(EVENTO_INSUMOS_ALTERADOS, contarReposicao)
+  }, [pathname, contarReposicao])
 
   return (
     <aside className="w-[236px] shrink-0 flex flex-col bg-bone-50 border-r border-bone-400">
@@ -59,6 +83,14 @@ export default function Sidebar(): JSX.Element {
               >
                 <Icon size={15} className={isActive ? '' : 'text-ink-200'} />
                 {label}
+                {to === '/stock' && insumosParaRepor > 0 && (
+                  <span
+                    className="ml-auto rounded-full bg-honey-100 px-[7px] py-px text-meta font-bold tabular-nums text-honey-500"
+                    title={`${insumosParaRepor} insumo${insumosParaRepor !== 1 ? 's' : ''} para repor`}
+                  >
+                    {insumosParaRepor}
+                  </span>
+                )}
               </div>
             )}
           </NavLink>

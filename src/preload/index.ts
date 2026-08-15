@@ -43,13 +43,15 @@ const api = {
     getAll: () => invoke('products:getAll'),
     create: (data: CreateProductInput) => invoke('products:create', data),
     update: (data: UpdateProductInput) => invoke('products:update', data),
-    delete: (id: number) => invoke('products:delete', id)
+    delete: (id: number) => invoke('products:delete', id),
+    setArchived: (id: number, archived: boolean) => invoke('products:setArchived', id, archived)
   },
   variations: {
     create: (data: CreateVariationInput) => invoke('variations:create', data),
     update: (data: UpdateVariationInput) => invoke('variations:update', data),
     delete: (id: number) => invoke('variations:delete', id),
-    addStock: (id: number, quantity: number) => invoke('variations:addStock', id, quantity)
+    addStock: (id: number, quantity: number) => invoke('variations:addStock', id, quantity),
+    setArchived: (id: number, archived: boolean) => invoke('variations:setArchived', id, archived)
   },
   fairs: {
     getAll: () => invoke('fairs:getAll'),
@@ -75,6 +77,7 @@ const api = {
     update: (data: UpdateInsumoInput) => invoke('insumos:update', data),
     addStock: (id: number, quantity: number) => invoke('insumos:addStock', id, quantity),
     delete: (id: number) => invoke('insumos:delete', id),
+    setArchived: (id: number, archived: boolean) => invoke('insumos:setArchived', id, archived),
     exportCsv: (csvContent: string, defaultFileName: string) =>
       invoke('insumos:exportCsv', csvContent, defaultFileName)
   },

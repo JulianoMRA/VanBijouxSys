@@ -12,7 +12,9 @@ export const products = sqliteTable('products', {
     .notNull()
     .references(() => categories.id),
   description: text('description'),
-  createdAt: text('created_at').notNull().default('CURRENT_TIMESTAMP')
+  createdAt: text('created_at').notNull().default('CURRENT_TIMESTAMP'),
+  /** Nulo = ativo. Ver a migração 2 para a regra de derivação nas variações. */
+  archivedAt: text('archived_at')
 })
 
 export const productVariations = sqliteTable('product_variations', {
@@ -26,7 +28,8 @@ export const productVariations = sqliteTable('product_variations', {
   stockQuantity: integer('stock_quantity').notNull().default(0),
   minimumStock: integer('minimum_stock').notNull().default(1),
   laborCost: real('labor_cost').notNull().default(0),
-  createdAt: text('created_at').notNull().default('CURRENT_TIMESTAMP')
+  createdAt: text('created_at').notNull().default('CURRENT_TIMESTAMP'),
+  archivedAt: text('archived_at')
 })
 
 export const fairs = sqliteTable('fairs', {
@@ -56,7 +59,8 @@ export const insumos = sqliteTable('insumos', {
   costPerUnit: real('cost_per_unit').notNull().default(0),
   stockQuantity: real('stock_quantity').notNull().default(0),
   minimumStock: real('minimum_stock').notNull().default(0),
-  createdAt: text('created_at').notNull().default('CURRENT_TIMESTAMP')
+  createdAt: text('created_at').notNull().default('CURRENT_TIMESTAMP'),
+  archivedAt: text('archived_at')
 })
 
 export const variationInsumos = sqliteTable('variation_insumos', {

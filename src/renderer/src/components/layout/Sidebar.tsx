@@ -13,6 +13,7 @@ import {
 import type { LucideIcon } from 'lucide-react'
 import SystemPanel from './SystemPanel'
 import { EVENTO_INSUMOS_ALTERADOS } from '../../utils/eventos'
+import { insumosAtivos } from '../../utils/arquivamento'
 
 const navItems: { to: string; label: string; Icon: LucideIcon }[] = [
   { to: '/', label: 'Dashboard', Icon: LayoutDashboard },
@@ -41,7 +42,7 @@ export default function Sidebar(): JSX.Element {
     try {
       const insumos = await window.api.insumos.getAll()
       setInsumosParaRepor(
-        insumos.filter(
+        insumosAtivos(insumos).filter(
           (i) => i.stockQuantity <= 0 || (i.minimumStock > 0 && i.stockQuantity < i.minimumStock)
         ).length
       )

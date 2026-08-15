@@ -87,7 +87,9 @@ export default function InsumoForm({
           costPerUnit: cost,
           stockQuantity: stock,
           minimumStock: minStock,
-          createdAt: new Date().toISOString()
+          createdAt: new Date().toISOString(),
+          archivedAt: null,
+          usadoPorVariacoesAtivas: 0
         })
       }
       onClose()

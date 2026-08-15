@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import Modal from '../ui/Modal'
 import InsumoForm from '../insumos/InsumoForm'
+import { opcoesComSelecionados } from '../../utils/arquivamento'
 import type { Insumo, ProductVariation } from '../../types'
 
 const LABOR_COST_KEY = 'pricing_default_labor_cost'
@@ -64,6 +65,13 @@ export default function VariationForm({
     }
     load()
   }, [])
+
+  // Insumo arquivado sai do seletor, mas continua listado se a receita já usa
+  // ele — do contrário editar a variação apagaria o item da receita.
+  const insumosDisponiveis = opcoesComSelecionados(
+    allInsumos,
+    insumoRows.map((row) => row.insumoId).filter((id): id is number => id !== '')
+  )
 
   // Custo de materiais: prioridade para insumos se cadastrados, senão usa campo manual
   const insumosCost = insumoRows.reduce((sum, row) => {
@@ -294,7 +302,7 @@ export default function VariationForm({
                         onChange={(e) => handleInsumoSelect(row.key, e.target.value)}
                       >
                         <option value="">Selecione o insumo…</option>
-                        {allInsumos.map((i) => (
+                        {insumosDisponiveis.map((i) => (
                           <option key={i.id} value={i.id}>
                             {i.name} (R${i.costPerUnit.toFixed(4)}/
                             {i.unit === 'unidade' ? 'un.' : i.unit})

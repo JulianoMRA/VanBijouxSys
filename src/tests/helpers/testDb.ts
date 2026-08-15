@@ -16,7 +16,8 @@ export async function createTestDb(): Promise<Database> {
       name TEXT NOT NULL,
       category_id INTEGER NOT NULL REFERENCES categories(id),
       description TEXT,
-      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      archived_at TEXT
     );
     CREATE TABLE product_variations (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -27,7 +28,8 @@ export async function createTestDb(): Promise<Database> {
       stock_quantity INTEGER NOT NULL DEFAULT 0,
       minimum_stock INTEGER NOT NULL DEFAULT 1,
       labor_cost REAL NOT NULL DEFAULT 0,
-      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      archived_at TEXT
     );
     CREATE TABLE insumos (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -36,7 +38,8 @@ export async function createTestDb(): Promise<Database> {
       cost_per_unit REAL NOT NULL DEFAULT 0,
       stock_quantity REAL NOT NULL DEFAULT 0,
       minimum_stock REAL NOT NULL DEFAULT 0,
-      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      archived_at TEXT
     );
     CREATE TABLE variation_insumos (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -104,6 +107,54 @@ export async function createTestDb(): Promise<Database> {
     INSERT INTO categories (name) VALUES ('Colar'), ('Pulseira'), ('Brinco');
   `)
 
+  return db
+}
+
+/**
+ * As migrações rodam sobre better-sqlite3, que é binário nativo compilado para
+ * o Electron e não carrega dentro do vitest. Este adaptador expõe, sobre o
+ * sql.js, o pedaço da API que as migrações usam — assim o teste exercita o
+ * código real que toca o banco da cliente, em vez de uma cópia do SQL dele.
+ */
+export interface MigrationSqlite {
+  exec(sql: string): void
+  prepare(sql: string): { all(): unknown[] }
+  pragma(source: string, options?: { simple?: boolean }): unknown
+  transaction<T extends (...args: never[]) => unknown>(fn: T): T
+}
+
+export function asMigrationTarget(db: Database): MigrationSqlite {
+  return {
+    exec: (sql) => db.run(sql),
+    prepare: (sql) => ({ all: () => queryAll(db, sql) }),
+    pragma: (source, options) => {
+      if (source.includes('=')) {
+        db.run(`PRAGMA ${source}`)
+        return undefined
+      }
+      const valor = db.exec(`PRAGMA ${source}`)[0]?.values?.[0]?.[0] ?? 0
+      return options?.simple ? valor : [{ [source]: valor }]
+    },
+    transaction: ((fn: (...args: never[]) => unknown) =>
+      ((...args: never[]) => {
+        db.run('BEGIN')
+        try {
+          const resultado = fn(...args)
+          db.run('COMMIT')
+          return resultado
+        } catch (err) {
+          db.run('ROLLBACK')
+          throw err
+        }
+      }) as never) as MigrationSqlite['transaction']
+  }
+}
+
+/** Banco cru, sem nenhuma tabela — ponto de partida de um banco novo. */
+export async function createEmptyDb(): Promise<Database> {
+  const SQL = await initSqlJs()
+  const db = new SQL.Database()
+  db.run('PRAGMA foreign_keys = ON')
   return db
 }
 

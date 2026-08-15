@@ -2,6 +2,7 @@ import { useEffect, useState, useMemo } from 'react'
 import { ChevronDown } from 'lucide-react'
 import { formatCurrency } from '../utils/format'
 import { avisarInsumosAlterados } from '../utils/eventos'
+import { estaArquivado, insumosAtivos, mensagemDeArquivamento } from '../utils/arquivamento'
 import InsumoForm from '../components/insumos/InsumoForm'
 import AddInsumoStockForm from '../components/insumos/AddInsumoStockForm'
 import ActionMenu from '../components/ui/ActionMenu'
@@ -15,6 +16,7 @@ type Modal =
   | { type: 'edit'; insumo: Insumo }
   | { type: 'addStock'; insumo: Insumo }
   | { type: 'delete'; insumo: Insumo }
+  | { type: 'archive'; insumo: Insumo }
 
 type StatusFilter = 'todos' | 'low' | 'out'
 type SortOption =
@@ -83,6 +85,7 @@ export default function Stock(): JSX.Element {
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('todos')
   const [sortBy, setSortBy] = useState<SortOption>('reposicao')
+  const [mostrandoArquivados, setMostrandoArquivados] = useState(false)
 
   async function loadInsumos(): Promise<void> {
     try {
@@ -124,7 +127,8 @@ export default function Stock(): JSX.Element {
     let rows: Insumo[]
     let fileName: string
     if (mode === 'todos') {
-      rows = insumos
+      // "Todos" é a lista de trabalho: o que foi arquivado não entra na compra.
+      rows = ativos
       fileName = 'insumos_todos.csv'
     } else if (mode === 'baixo') {
       rows = precisamReposicao
@@ -145,6 +149,17 @@ export default function Stock(): JSX.Element {
     }
   }
 
+  async function arquivarInsumo(insumo: Insumo, arquivar: boolean): Promise<void> {
+    setErrorMessage('')
+    try {
+      await window.api.insumos.setArchived(insumo.id, arquivar)
+      await loadInsumos()
+      showToast(arquivar ? 'Insumo arquivado.' : 'Insumo desarquivado.')
+    } catch {
+      setErrorMessage(`Não foi possível ${arquivar ? 'arquivar' : 'desarquivar'} "${insumo.name}".`)
+    }
+  }
+
   async function handleDelete(insumo: Insumo): Promise<void> {
     try {
       await window.api.insumos.delete(insumo.id)
@@ -158,14 +173,18 @@ export default function Stock(): JSX.Element {
     }
   }
 
-  const precisamReposicao = insumos.filter((i) => stockStatus(i) !== 'ok')
-  const esgotados = insumos.filter((i) => stockStatus(i) === 'out')
-  const baixos = insumos.filter((i) => stockStatus(i) === 'low')
-  const totalStockValue = insumos.reduce((s, i) => s + i.stockQuantity * i.costPerUnit, 0)
+  const ativos = insumosAtivos(insumos)
+  const arquivados = insumos.filter(estaArquivado)
+  const precisamReposicao = ativos.filter((i) => stockStatus(i) !== 'ok')
+  const esgotados = ativos.filter((i) => stockStatus(i) === 'out')
+  const baixos = ativos.filter((i) => stockStatus(i) === 'low')
+  const totalStockValue = ativos.reduce((s, i) => s + i.stockQuantity * i.costPerUnit, 0)
+  const valorArquivado = arquivados.reduce((s, i) => s + i.stockQuantity * i.costPerUnit, 0)
   const valorReposicao = custoDeReposicao(precisamReposicao)
 
   const displayedInsumos = useMemo(() => {
-    let result = insumos
+    // A aba de arquivados é excludente: ou o que está em uso, ou o que saiu.
+    let result = insumos.filter((i) => estaArquivado(i) === mostrandoArquivados)
 
     if (search.trim()) {
       const q = search.trim().toLowerCase()
@@ -207,12 +226,12 @@ export default function Stock(): JSX.Element {
           return 0
       }
     })
-  }, [insumos, search, statusFilter, sortBy])
+  }, [insumos, search, statusFilter, sortBy, mostrandoArquivados])
 
   const isFiltering = search.trim() !== '' || statusFilter !== 'todos'
 
   const chips: { valor: StatusFilter; rotulo: string; contagem: number }[] = [
-    { valor: 'todos', rotulo: 'Todos', contagem: insumos.length },
+    { valor: 'todos', rotulo: 'Todos', contagem: ativos.length },
     { valor: 'low', rotulo: 'Baixo', contagem: baixos.length },
     { valor: 'out', rotulo: 'Esgotado', contagem: esgotados.length }
   ]
@@ -225,9 +244,11 @@ export default function Stock(): JSX.Element {
             <p className="label mb-1">
               {insumos.length === 0
                 ? 'Nenhum insumo cadastrado'
-                : isFiltering
-                  ? `${displayedInsumos.length} de ${insumos.length} insumos`
-                  : `${insumos.length} insumo${insumos.length !== 1 ? 's' : ''} · ${formatCurrency(totalStockValue)} em estoque`}
+                : mostrandoArquivados
+                  ? `${displayedInsumos.length} de ${arquivados.length} arquivados · ${formatCurrency(valorArquivado)} parados`
+                  : isFiltering
+                    ? `${displayedInsumos.length} de ${ativos.length} insumos`
+                    : `${ativos.length} insumo${ativos.length !== 1 ? 's' : ''} · ${formatCurrency(totalStockValue)} em estoque`}
             </p>
             <h2 className="font-display text-[30px] font-semibold leading-none text-ink-900">
               Insumos
@@ -273,22 +294,47 @@ export default function Stock(): JSX.Element {
             onChange={(e) => setSearch(e.target.value)}
           />
           <div className="mx-1 h-[22px] w-px bg-bone-500" />
-          {chips.map((chip) => (
-            <button
-              key={chip.valor}
-              onClick={() => setStatusFilter(chip.valor)}
-              className={`rounded-lg px-3 py-1.5 text-body transition-colors ${
-                statusFilter === chip.valor
-                  ? 'bg-ink-900 font-semibold text-bone-50'
-                  : 'font-medium text-ink-600 hover:bg-bone-300'
-              }`}
-            >
-              {chip.rotulo}{' '}
-              <span className={statusFilter === chip.valor ? 'opacity-55' : 'text-ink-200'}>
-                {chip.contagem}
-              </span>
-            </button>
-          ))}
+          {chips.map((chip) => {
+            const ativo = statusFilter === chip.valor && !mostrandoArquivados
+            return (
+              <button
+                key={chip.valor}
+                onClick={() => {
+                  setStatusFilter(chip.valor)
+                  setMostrandoArquivados(false)
+                }}
+                className={`rounded-lg px-3 py-1.5 text-body transition-colors ${
+                  ativo
+                    ? 'bg-ink-900 font-semibold text-bone-50'
+                    : 'font-medium text-ink-600 hover:bg-bone-300'
+                }`}
+              >
+                {chip.rotulo}{' '}
+                <span className={ativo ? 'opacity-55' : 'text-ink-200'}>{chip.contagem}</span>
+              </button>
+            )
+          })}
+          {arquivados.length > 0 && (
+            <>
+              <div className="mx-1 h-[22px] w-px bg-bone-500" />
+              <button
+                onClick={() => {
+                  setMostrandoArquivados((v) => !v)
+                  setStatusFilter('todos')
+                }}
+                className={`rounded-lg px-3 py-1.5 text-body transition-colors ${
+                  mostrandoArquivados
+                    ? 'bg-ink-900 font-semibold text-bone-50'
+                    : 'font-medium text-ink-600 hover:bg-bone-300'
+                }`}
+              >
+                Arquivados{' '}
+                <span className={mostrandoArquivados ? 'opacity-55' : 'text-ink-200'}>
+                  {arquivados.length}
+                </span>
+              </button>
+            </>
+          )}
           <label className="ml-auto flex items-center gap-1 text-aux text-ink-300">
             Ordenar:
             <select
@@ -338,7 +384,7 @@ export default function Stock(): JSX.Element {
           </div>
         ) : (
           <>
-            {precisamReposicao.length > 0 && (
+            {!mostrandoArquivados && precisamReposicao.length > 0 && (
               <div className="mb-4 flex items-center gap-3.5 rounded-[11px] border border-honey-200 bg-honey-100 px-4 py-3">
                 <span className="shrink-0 rounded-md bg-honey-200 px-2.5 py-[3px] text-micro font-bold text-honey-500">
                   REPOR
@@ -391,6 +437,8 @@ export default function Stock(): JSX.Element {
                             ? 100
                             : 0
 
+                      const arquivado = estaArquivado(insumo)
+
                       return (
                         <tr
                           key={insumo.id}
@@ -400,12 +448,24 @@ export default function Stock(): JSX.Element {
                             <div className="flex items-center gap-2.5">
                               <span
                                 className="h-[26px] w-1.5 shrink-0 rounded-full"
-                                style={{ background: cores.marcador }}
+                                style={{ background: arquivado ? '#d5c8c2' : cores.marcador }}
                               />
                               <div>
-                                <p className="font-medium text-ink-900">{insumo.name}</p>
+                                <p
+                                  className={`font-medium ${arquivado ? 'text-ink-400' : 'text-ink-900'}`}
+                                >
+                                  {insumo.name}
+                                </p>
                                 <p className="mt-px text-micro text-ink-300">
                                   {nomeUnidade(insumo.unit)}
+                                  {arquivado && insumo.usadoPorVariacoesAtivas > 0 && (
+                                    <span className="text-honey-500">
+                                      {' '}
+                                      · em {insumo.usadoPorVariacoesAtivas} variaç
+                                      {insumo.usadoPorVariacoesAtivas !== 1 ? 'ões' : 'ão'} ativa
+                                      {insumo.usadoPorVariacoesAtivas !== 1 ? 's' : ''}
+                                    </span>
+                                  )}
                                 </p>
                               </div>
                             </div>
@@ -443,18 +503,39 @@ export default function Stock(): JSX.Element {
                           </td>
                           <td className="py-3 pl-3 pr-[22px]">
                             <div className="flex items-center justify-end gap-2">
-                              <button
-                                className="whitespace-nowrap text-aux font-semibold text-wine-500 hover:text-wine-600"
-                                onClick={() => setModal({ type: 'addStock', insumo })}
-                              >
-                                + Estoque
-                              </button>
+                              {arquivado ? (
+                                <button
+                                  className="whitespace-nowrap text-aux font-semibold text-wine-500 hover:text-wine-600"
+                                  onClick={() => arquivarInsumo(insumo, false)}
+                                >
+                                  Desarquivar
+                                </button>
+                              ) : (
+                                <button
+                                  className="whitespace-nowrap text-aux font-semibold text-wine-500 hover:text-wine-600"
+                                  onClick={() => setModal({ type: 'addStock', insumo })}
+                                >
+                                  + Estoque
+                                </button>
+                              )}
                               <ActionMenu
                                 items={[
-                                  {
-                                    label: 'Editar insumo',
-                                    onClick: () => setModal({ type: 'edit', insumo })
-                                  },
+                                  ...(arquivado
+                                    ? []
+                                    : [
+                                        {
+                                          label: 'Editar insumo',
+                                          onClick: () => setModal({ type: 'edit' as const, insumo })
+                                        },
+                                        {
+                                          label: 'Arquivar insumo',
+                                          onClick: () =>
+                                            insumo.usadoPorVariacoesAtivas > 0 ||
+                                            insumo.stockQuantity > 0
+                                              ? setModal({ type: 'archive' as const, insumo })
+                                              : arquivarInsumo(insumo, true)
+                                        }
+                                      ]),
                                   {
                                     label: 'Excluir insumo',
                                     danger: true,
@@ -513,6 +594,15 @@ export default function Stock(): JSX.Element {
           confirmLabel="Excluir"
           danger
           onConfirm={() => handleDelete(modal.insumo)}
+          onClose={() => setModal(null)}
+        />
+      )}
+      {modal?.type === 'archive' && (
+        <ConfirmDialog
+          title="Arquivar insumo"
+          message={mensagemDeArquivamento(modal.insumo, unitLabel(modal.insumo.unit))}
+          confirmLabel="Arquivar"
+          onConfirm={() => arquivarInsumo(modal.insumo, true)}
           onClose={() => setModal(null)}
         />
       )}

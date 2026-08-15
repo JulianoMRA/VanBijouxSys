@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { calcSuggestedPrice } from '../utils/pricing'
 import { formatCurrency } from '../utils/format'
+import { estaArquivado, opcoesComSelecionados, variacoesAtivas } from '../utils/arquivamento'
 import type { Insumo, Product } from '../types'
 
 const LABOR_COST_KEY = 'pricing_default_labor_cost'
@@ -32,8 +33,10 @@ function ApplyToVariation({
   const [saving, setSaving] = useState(false)
   const [success, setSuccess] = useState(false)
 
-  const selectedProduct = products.find((p) => p.id === productId)
-  const variations = selectedProduct?.variations ?? []
+  // Aplicar preço a algo arquivado não faz sentido: se ela quiser, desarquiva.
+  const produtosAtivos = products.filter((p) => !estaArquivado(p))
+  const selectedProduct = produtosAtivos.find((p) => p.id === productId)
+  const variations = selectedProduct ? variacoesAtivas(selectedProduct) : []
   const selectedVariation = variations.find((v) => v.id === variationId)
 
   const diferenca =
@@ -81,7 +84,7 @@ function ApplyToVariation({
           }}
         >
           <option value="">Produto…</option>
-          {products.map((p) => (
+          {produtosAtivos.map((p) => (
             <option key={p.id} value={p.id}>
               {p.name} ({p.categoryName})
             </option>
@@ -208,6 +211,13 @@ export default function PriceCalculator(): JSX.Element {
     return isNaN(val) ? 0 : val
   }
 
+  // Insumo arquivado sai da lista, mas continua visível se já foi escolhido
+  // numa linha aberta — trocar a opção embaixo do dedo dela seria pior.
+  const insumosDisponiveis = opcoesComSelecionados(
+    insumos,
+    materials.map((m) => m.insumoId).filter((id): id is number => id !== null)
+  )
+
   const totalMaterials = materials.reduce((sum, m) => sum + rowCost(m), 0)
   const labor = parseFloat(laborCost)
   const laborValue = isNaN(labor) ? 0 : labor
@@ -287,9 +297,9 @@ export default function PriceCalculator(): JSX.Element {
                       }
                     >
                       <option value="">Inserir manualmente…</option>
-                      {insumos.length > 0 && (
+                      {insumosDisponiveis.length > 0 && (
                         <optgroup label="Insumos cadastrados">
-                          {insumos.map((i) => (
+                          {insumosDisponiveis.map((i) => (
                             <option key={i.id} value={i.id}>
                               {i.name} ({i.unit === 'unidade' ? 'un.' : i.unit} ·{' '}
                               {formatCurrency(i.costPerUnit)})

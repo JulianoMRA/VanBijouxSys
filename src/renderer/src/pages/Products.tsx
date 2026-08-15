@@ -1,6 +1,12 @@
 import { useEffect, useState, useMemo } from 'react'
 import { ChevronDown, ChevronUp } from 'lucide-react'
 import { formatCurrency } from '../utils/format'
+import {
+  contarAlertasDeEstoque,
+  estaArquivado,
+  estoqueAtivo,
+  variacoesAtivas
+} from '../utils/arquivamento'
 import ActionMenu from '../components/ui/ActionMenu'
 import ConfirmDialog from '../components/ui/ConfirmDialog'
 import ProductForm from '../components/products/ProductForm'
@@ -24,6 +30,8 @@ type Modal =
   | { type: 'deleteVariation'; product: Product; variation: ProductVariation }
   | { type: 'addStock'; product: Product; variation: ProductVariation }
   | { type: 'detailsVariation'; product: Product; variation: ProductVariation }
+  | { type: 'archiveProduct'; product: Product }
+  | { type: 'archiveVariation'; product: Product; variation: ProductVariation }
 
 interface EstoqueInfo {
   pct: number
@@ -63,12 +71,13 @@ function Tag({
   tom
 }: {
   texto: string
-  tom: 'categoria' | 'alerta' | 'critico'
+  tom: 'categoria' | 'alerta' | 'critico' | 'neutro'
 }): JSX.Element {
   const estilos = {
     categoria: 'bg-plum-100 text-plum-500',
     alerta: 'bg-honey-100 text-honey-500',
-    critico: 'bg-clay-100 text-clay-600'
+    critico: 'bg-clay-100 text-clay-600',
+    neutro: 'bg-bone-300 text-ink-400'
   }
   return (
     <span
@@ -97,6 +106,8 @@ export default function Products(): JSX.Element {
   const [loading, setLoading] = useState(true)
   const [errorMessage, setErrorMessage] = useState('')
   const [toastMsg, showToast, dismissToast] = useToast()
+  const [mostrandoArquivados, setMostrandoArquivados] = useState(false)
+  const [mostrarVariacoesArquivadas, setMostrarVariacoesArquivadas] = useState(false)
 
   async function loadData(): Promise<void> {
     try {
@@ -120,6 +131,9 @@ export default function Products(): JSX.Element {
 
   const filtered = useMemo(() => {
     const result = products.filter((p) => {
+      // A aba de arquivados é excludente: ou se está trabalhando, ou se está
+      // revisando o que saiu de circulação.
+      if (estaArquivado(p) !== mostrandoArquivados) return false
       const matchesSearch = p.name.toLowerCase().includes(search.toLowerCase())
       const matchesCategory = selectedCategory === null || p.categoryId === selectedCategory
       return matchesSearch && matchesCategory
@@ -141,19 +155,13 @@ export default function Products(): JSX.Element {
           return 0
       }
     })
-  }, [products, search, selectedCategory, sortBy])
+  }, [products, search, selectedCategory, sortBy, mostrandoArquivados])
 
-  const totalVariacoes = products.reduce((acc, p) => acc + p.variations.length, 0)
-  const totalEsgotadas = products.reduce(
-    (acc, p) => acc + p.variations.filter((v) => v.stockQuantity === 0).length,
-    0
-  )
-  const totalBaixas = products.reduce(
-    (acc, p) =>
-      acc +
-      p.variations.filter((v) => v.stockQuantity > 0 && v.stockQuantity < v.minimumStock).length,
-    0
-  )
+  const ativos = products.filter((p) => !estaArquivado(p))
+  const arquivados = products.filter(estaArquivado)
+  const totalVariacoes = ativos.reduce((acc, p) => acc + variacoesAtivas(p).length, 0)
+  const { esgotadas: totalEsgotadas, abaixoDoMinimo: totalBaixas } =
+    contarAlertasDeEstoque(products)
   const filtrando = search !== '' || selectedCategory !== null
 
   function resetVariationFilters(): void {
@@ -172,8 +180,18 @@ export default function Products(): JSX.Element {
     })
   }
 
-  function getFilteredVariations(variations: ProductVariation[]): ProductVariation[] {
-    return filterAndSortVariations(variations, {
+  function getFilteredVariations(
+    produto: Product,
+    variations: ProductVariation[]
+  ): ProductVariation[] {
+    // Num produto arquivado tudo já está fora de circulação: esconder as
+    // variações ali não ajudaria ninguém.
+    const visiveis =
+      estaArquivado(produto) || mostrarVariacoesArquivadas
+        ? variations
+        : variations.filter((v) => !estaArquivado(v))
+
+    return filterAndSortVariations(visiveis, {
       search: variationSearch,
       stockFilter: variationStockFilter,
       priceMin: variationPriceMin,
@@ -193,6 +211,33 @@ export default function Products(): JSX.Element {
         err instanceof Error
           ? `"${product.name}": ${err.message}`
           : `"${product.name}" não pode ser excluído.`
+      )
+    }
+  }
+
+  async function arquivarProduto(product: Product, arquivar: boolean): Promise<void> {
+    setErrorMessage('')
+    try {
+      await window.api.products.setArchived(product.id, arquivar)
+      if (arquivar && expandedProduct === product.id) setExpandedProduct(null)
+      await loadData()
+      showToast(arquivar ? 'Produto arquivado.' : 'Produto desarquivado.')
+    } catch {
+      setErrorMessage(
+        `Não foi possível ${arquivar ? 'arquivar' : 'desarquivar'} "${product.name}".`
+      )
+    }
+  }
+
+  async function arquivarVariacao(variation: ProductVariation, arquivar: boolean): Promise<void> {
+    setErrorMessage('')
+    try {
+      await window.api.variations.setArchived(variation.id, arquivar)
+      await loadData()
+      showToast(arquivar ? 'Variação arquivada.' : 'Variação desarquivada.')
+    } catch {
+      setErrorMessage(
+        `Não foi possível ${arquivar ? 'arquivar' : 'desarquivar'} a variação "${variation.identifier}".`
       )
     }
   }
@@ -217,16 +262,18 @@ export default function Products(): JSX.Element {
         <div className="mb-4 flex items-end justify-between gap-6">
           <div>
             <p className="label mb-1">
-              {filtrando
-                ? `${filtered.length} de ${products.length} produtos`
-                : `${products.length} produto${products.length !== 1 ? 's' : ''} · ${totalVariacoes} variaç${totalVariacoes !== 1 ? 'ões' : 'ão'}`}
-              {totalEsgotadas > 0 && (
+              {mostrandoArquivados
+                ? `${filtered.length} de ${arquivados.length} arquivados`
+                : filtrando
+                  ? `${filtered.length} de ${ativos.length} produtos`
+                  : `${ativos.length} produto${ativos.length !== 1 ? 's' : ''} · ${totalVariacoes} variaç${totalVariacoes !== 1 ? 'ões' : 'ão'}`}
+              {!mostrandoArquivados && totalEsgotadas > 0 && (
                 <span className="text-clay-500">
                   {' '}
                   · {totalEsgotadas} esgotada{totalEsgotadas !== 1 ? 's' : ''}
                 </span>
               )}
-              {totalBaixas > 0 && (
+              {!mostrandoArquivados && totalBaixas > 0 && (
                 <span className="text-honey-500"> · {totalBaixas} abaixo do mínimo</span>
               )}
             </p>
@@ -248,9 +295,12 @@ export default function Products(): JSX.Element {
           />
           <div className="mx-1 h-[22px] w-px bg-bone-500" />
           <button
-            onClick={() => setSelectedCategory(null)}
+            onClick={() => {
+              setSelectedCategory(null)
+              setMostrandoArquivados(false)
+            }}
             className={`rounded-lg px-3 py-1.5 text-body transition-colors ${
-              selectedCategory === null
+              selectedCategory === null && !mostrandoArquivados
                 ? 'bg-ink-900 font-semibold text-bone-50'
                 : 'font-medium text-ink-600 hover:bg-bone-300'
             }`}
@@ -270,6 +320,27 @@ export default function Products(): JSX.Element {
               {cat.name}
             </button>
           ))}
+          {arquivados.length > 0 && (
+            <>
+              <div className="mx-1 h-[22px] w-px bg-bone-500" />
+              <button
+                onClick={() => {
+                  setMostrandoArquivados((v) => !v)
+                  setExpandedProduct(null)
+                }}
+                className={`rounded-lg px-3 py-1.5 text-body transition-colors ${
+                  mostrandoArquivados
+                    ? 'bg-ink-900 font-semibold text-bone-50'
+                    : 'font-medium text-ink-600 hover:bg-bone-300'
+                }`}
+              >
+                Arquivados{' '}
+                <span className={mostrandoArquivados ? 'opacity-55' : 'text-ink-200'}>
+                  {arquivados.length}
+                </span>
+              </button>
+            </>
+          )}
           <label className="ml-auto flex items-center gap-1 text-aux text-ink-300">
             Ordenar:
             <select
@@ -317,16 +388,20 @@ export default function Products(): JSX.Element {
           <div className="space-y-2">
             {filtered.map((product) => {
               const isExpanded = expandedProduct === product.id
-              const esgotadas = product.variations.filter((v) => v.stockQuantity === 0).length
-              const baixas = product.variations.filter(
+              const arquivado = estaArquivado(product)
+              const ativas = variacoesAtivas(product)
+              const esgotadas = ativas.filter((v) => v.stockQuantity === 0).length
+              const baixas = ativas.filter(
                 (v) => v.stockQuantity > 0 && v.stockQuantity < v.minimumStock
               ).length
-              const estoqueTotal = product.variations.reduce((s, v) => s + v.stockQuantity, 0)
+              const arquivadasNoProduto = product.variations.filter(estaArquivado).length
 
               return (
                 <div
                   key={product.id}
-                  className="overflow-hidden rounded-card border border-bone-400 bg-bone-50"
+                  className={`overflow-hidden rounded-card border border-bone-400 ${
+                    arquivado ? 'bg-bone-100' : 'bg-bone-50'
+                  }`}
                 >
                   <div
                     className={`flex cursor-pointer items-center gap-4 px-[22px] py-4 transition-colors ${
@@ -336,29 +411,48 @@ export default function Products(): JSX.Element {
                   >
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2.5">
-                        <span className="text-[15px] font-semibold text-ink-900">
+                        <span
+                          className={`text-[15px] font-semibold ${
+                            arquivado ? 'text-ink-500' : 'text-ink-900'
+                          }`}
+                        >
                           {product.name}
                         </span>
                         <Tag texto={product.categoryName.toUpperCase()} tom="categoria" />
-                        {esgotadas > 0 && (
+                        {arquivado && <Tag texto="ARQUIVADO" tom="neutro" />}
+                        {!arquivado && esgotadas > 0 && (
                           <Tag
                             texto={`${esgotadas} esgotada${esgotadas !== 1 ? 's' : ''}`}
                             tom="critico"
                           />
                         )}
-                        {baixas > 0 && <Tag texto={`${baixas} abaixo do mínimo`} tom="alerta" />}
+                        {!arquivado && baixas > 0 && (
+                          <Tag texto={`${baixas} abaixo do mínimo`} tom="alerta" />
+                        )}
                       </div>
                       <p className="mt-0.5 truncate text-aux text-ink-300">
                         {product.description ? `${product.description} · ` : ''}
-                        {product.variations.length} variaç
-                        {product.variations.length !== 1 ? 'ões' : 'ão'}
+                        {arquivado ? product.variations.length : ativas.length} variaç
+                        {(arquivado ? product.variations.length : ativas.length) !== 1
+                          ? 'ões'
+                          : 'ão'}
+                        {!arquivado &&
+                          arquivadasNoProduto > 0 &&
+                          ` · ${arquivadasNoProduto} arquivada${arquivadasNoProduto !== 1 ? 's' : ''}`}
                       </p>
                     </div>
 
                     <div className="shrink-0 text-right">
                       <p className="label mb-0">Estoque</p>
-                      <p className="text-sm font-semibold tabular-nums text-ink-900">
-                        {estoqueTotal} un.
+                      <p
+                        className={`text-sm font-semibold tabular-nums ${
+                          arquivado ? 'text-ink-400' : 'text-ink-900'
+                        }`}
+                      >
+                        {arquivado
+                          ? product.variations.reduce((s, v) => s + v.stockQuantity, 0)
+                          : estoqueAtivo(product)}{' '}
+                        un.
                       </p>
                     </div>
 
@@ -366,21 +460,41 @@ export default function Products(): JSX.Element {
                       className="flex shrink-0 items-center gap-1.5"
                       onClick={(e) => e.stopPropagation()}
                     >
-                      <button
-                        className="btn-secondary px-2.5 py-1.5 text-aux"
-                        onClick={() => {
-                          setExpandedProduct(product.id)
-                          setModal({ type: 'newVariation', product })
-                        }}
-                      >
-                        + Variação
-                      </button>
+                      {arquivado ? (
+                        <button
+                          className="btn-secondary px-2.5 py-1.5 text-aux"
+                          onClick={() => arquivarProduto(product, false)}
+                        >
+                          Desarquivar
+                        </button>
+                      ) : (
+                        <button
+                          className="btn-secondary px-2.5 py-1.5 text-aux"
+                          onClick={() => {
+                            setExpandedProduct(product.id)
+                            setModal({ type: 'newVariation', product })
+                          }}
+                        >
+                          + Variação
+                        </button>
+                      )}
                       <ActionMenu
                         items={[
-                          {
-                            label: 'Editar produto',
-                            onClick: () => setModal({ type: 'editProduct', product })
-                          },
+                          ...(arquivado
+                            ? []
+                            : [
+                                {
+                                  label: 'Editar produto',
+                                  onClick: () => setModal({ type: 'editProduct', product })
+                                },
+                                {
+                                  label: 'Arquivar produto',
+                                  onClick: () =>
+                                    estoqueAtivo(product) > 0
+                                      ? setModal({ type: 'archiveProduct', product })
+                                      : arquivarProduto(product, true)
+                                }
+                              ]),
                           {
                             label: 'Excluir produto',
                             danger: true,
@@ -409,7 +523,7 @@ export default function Products(): JSX.Element {
                       </div>
                     ) : (
                       (() => {
-                        const variacoes = getFilteredVariations(product.variations)
+                        const variacoes = getFilteredVariations(product, product.variations)
                         const filtrosAtivos =
                           variationSearch !== '' ||
                           variationStockFilter !== 'todos' ||
@@ -479,11 +593,20 @@ export default function Products(): JSX.Element {
                                   Limpar filtros
                                 </button>
                               )}
+                              {!arquivado && arquivadasNoProduto > 0 && (
+                                <label className="flex cursor-pointer items-center gap-1.5 text-aux text-ink-400">
+                                  <input
+                                    type="checkbox"
+                                    checked={mostrarVariacoesArquivadas}
+                                    onChange={(e) =>
+                                      setMostrarVariacoesArquivadas(e.target.checked)
+                                    }
+                                  />
+                                  mostrar arquivadas ({arquivadasNoProduto})
+                                </label>
+                              )}
                               <span className="ml-auto text-aux text-ink-300">
-                                {filtrosAtivos
-                                  ? `${variacoes.length} de ${product.variations.length}`
-                                  : `${product.variations.length}`}{' '}
-                                variaç{product.variations.length !== 1 ? 'ões' : 'ão'}
+                                {variacoes.length} variaç{variacoes.length !== 1 ? 'ões' : 'ão'}
                               </span>
                             </div>
 
@@ -506,6 +629,7 @@ export default function Products(): JSX.Element {
                                 <tbody>
                                   {variacoes.map((v) => {
                                     const estoque = estoqueInfo(v)
+                                    const variacaoArquivada = estaArquivado(v)
                                     const custoInsumos = v.insumos.reduce(
                                       (s, i) => s + i.costPerUnit * i.quantity,
                                       0
@@ -514,10 +638,19 @@ export default function Products(): JSX.Element {
                                     return (
                                       <tr
                                         key={v.id}
-                                        className="border-t border-bone-300 transition-colors hover:bg-bone-100"
+                                        className={`border-t border-bone-300 transition-colors hover:bg-bone-100 ${
+                                          variacaoArquivada ? 'bg-bone-100/60' : ''
+                                        }`}
                                       >
                                         <td className="py-3 pl-[22px] pr-3 font-medium text-ink-900">
-                                          {v.identifier}
+                                          <span className={variacaoArquivada ? 'text-ink-400' : ''}>
+                                            {v.identifier}
+                                          </span>
+                                          {variacaoArquivada && (
+                                            <span className="ml-2">
+                                              <Tag texto="ARQUIVADA" tom="neutro" />
+                                            </span>
+                                          )}
                                         </td>
                                         <td className="px-3 py-3">
                                           <div
@@ -559,18 +692,27 @@ export default function Products(): JSX.Element {
                                         </td>
                                         <td className="py-3 pl-3 pr-[22px]">
                                           <div className="flex items-center justify-end gap-2">
-                                            <button
-                                              className="text-aux font-semibold text-wine-500 hover:text-wine-600"
-                                              onClick={() =>
-                                                setModal({
-                                                  type: 'addStock',
-                                                  product,
-                                                  variation: v
-                                                })
-                                              }
-                                            >
-                                              + Estoque
-                                            </button>
+                                            {variacaoArquivada ? (
+                                              <button
+                                                className="text-aux font-semibold text-wine-500 hover:text-wine-600"
+                                                onClick={() => arquivarVariacao(v, false)}
+                                              >
+                                                Desarquivar
+                                              </button>
+                                            ) : (
+                                              <button
+                                                className="text-aux font-semibold text-wine-500 hover:text-wine-600"
+                                                onClick={() =>
+                                                  setModal({
+                                                    type: 'addStock',
+                                                    product,
+                                                    variation: v
+                                                  })
+                                                }
+                                              >
+                                                + Estoque
+                                              </button>
+                                            )}
                                             <ActionMenu
                                               items={[
                                                 {
@@ -582,15 +724,30 @@ export default function Products(): JSX.Element {
                                                       variation: v
                                                     })
                                                 },
-                                                {
-                                                  label: 'Editar variação',
-                                                  onClick: () =>
-                                                    setModal({
-                                                      type: 'editVariation',
-                                                      product,
-                                                      variation: v
-                                                    })
-                                                },
+                                                ...(variacaoArquivada
+                                                  ? []
+                                                  : [
+                                                      {
+                                                        label: 'Editar variação',
+                                                        onClick: () =>
+                                                          setModal({
+                                                            type: 'editVariation' as const,
+                                                            product,
+                                                            variation: v
+                                                          })
+                                                      },
+                                                      {
+                                                        label: 'Arquivar variação',
+                                                        onClick: () =>
+                                                          v.stockQuantity > 0
+                                                            ? setModal({
+                                                                type: 'archiveVariation' as const,
+                                                                product,
+                                                                variation: v
+                                                              })
+                                                            : arquivarVariacao(v, true)
+                                                      }
+                                                    ]),
                                                 {
                                                   label: 'Excluir variação',
                                                   danger: true,
@@ -703,6 +860,24 @@ export default function Products(): JSX.Element {
         <VariationDetailsModal
           product={modal.product}
           variation={modal.variation}
+          onClose={() => setModal(null)}
+        />
+      )}
+      {modal?.type === 'archiveProduct' && (
+        <ConfirmDialog
+          title="Arquivar produto"
+          message={`"${modal.product.name}" ainda tem ${estoqueAtivo(modal.product)} unidades em estoque. Arquivar tira ele dos avisos, das listas e do registro de vendas, mas não apaga nada — dá para desarquivar depois.`}
+          confirmLabel="Arquivar"
+          onConfirm={() => arquivarProduto(modal.product, true)}
+          onClose={() => setModal(null)}
+        />
+      )}
+      {modal?.type === 'archiveVariation' && (
+        <ConfirmDialog
+          title="Arquivar variação"
+          message={`"${modal.variation.identifier}" ainda tem ${modal.variation.stockQuantity} unidades em estoque. Arquivar tira ela dos avisos e do registro de vendas, mas não apaga nada — dá para desarquivar depois.`}
+          confirmLabel="Arquivar"
+          onConfirm={() => arquivarVariacao(modal.variation, true)}
           onClose={() => setModal(null)}
         />
       )}

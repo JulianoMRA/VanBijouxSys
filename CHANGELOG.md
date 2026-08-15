@@ -1,5 +1,25 @@
 # Changelog
 
+## [1.9.0] - 2026-08-15
+
+### Adicionado
+
+- **Arquivar produtos, variações e insumos**: o que saiu de circulação e você não pretende repor pode ser arquivado. O item sai dos avisos de estoque, das listas e dos seletores de venda e de receita — sem ser excluído. Era o único caminho até agora: excluir não era permitido, porque o histórico de vendas depende desses cadastros.
+- **Nada muda no histórico**: vendas antigas continuam mostrando o que foi vendido, e faturamento, lucro, custos e "mais vendidas" ficam exatamente como estavam. Arquivar é sobre o que aparece na sua frente hoje, não sobre o que aconteceu.
+- **Produtos**: "Arquivar" no menu do produto e no da variação, e um chip "Arquivados" para rever o que saiu. A variação arquivada some da tabela do produto, com a opção de exibir. Arquivar com estoque em mãos pede confirmação dizendo quantas unidades restam.
+- **Estoque**: mesma coisa para insumos. Se o insumo ainda for usado por variações ativas, o aviso diz em quantas antes de confirmar — você decide. O valor parado em insumos arquivados aparece separado, para não inflar o valor em estoque.
+- Arquivar um produto silencia as variações dele; desarquivar devolve exatamente o estado anterior, sem trazer de volta variação que você já tinha arquivado sozinha.
+- Uma venda antiga que contém um item arquivado continua editável com o item no lugar.
+
+### Interno
+
+- Estrutura do banco na versão 2: coluna `archived_at` em produtos, variações e insumos, aplicada em transação como as demais.
+- Consultas de alerta saem do handler do Dashboard para um módulo próprio, e os testes passam a executar o SQL real em vez de uma cópia dele.
+- Testes de migração passam a aplicar as migrações de verdade sobre um banco em memória, cobrindo idempotência e preservação dos dados existentes.
+- Suíte de testes vai de 174 para 213.
+
+---
+
 ## [1.8.0] - 2026-08-15
 
 ### Alterado

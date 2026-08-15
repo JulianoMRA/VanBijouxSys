@@ -1,5 +1,21 @@
 # Changelog
 
+## [1.10.0] - 2026-08-15
+
+### Corrigido
+
+- **Menu de ações ("···")**: com a lista curta — depois de uma pesquisa, por exemplo — o menu abria para fora do card e as opções ficavam cortadas, impedindo escolher "Arquivar". Agora ele se posiciona pela tela e abre para cima quando não há espaço embaixo. O problema valia para as cinco telas que usam esse menu.
+
+### Adicionado
+
+- **Produtos**: variação cuja receita usa um insumo arquivado ganha a marca "insumo arquivado", e o card do produto mostra quantas estão nessa situação. Arquivar um insumo continua não arquivando o que é feito com ele — a marca existe justamente para você decidir caso a caso se vale trocar o material ou tirar a peça de circulação.
+
+### Interno
+
+- Suíte de testes vai de 213 para 218.
+
+---
+
 ## [1.9.0] - 2026-08-15
 
 ### Adicionado

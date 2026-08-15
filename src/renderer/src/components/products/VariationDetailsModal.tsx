@@ -27,50 +27,57 @@ export default function VariationDetailsModal({
   return (
     <Modal title={`${product.name} — ${variation.identifier}`} onClose={onClose} size="lg">
       <div className="space-y-5">
-        {/* Composição */}
         <section>
           <h3 className="label mb-2">Composição</h3>
           {variation.insumos.length === 0 ? (
-            <p className="text-sm text-gray-400">Nenhum insumo vinculado a esta variação.</p>
+            <p className="text-body text-ink-300">Nenhum insumo vinculado a esta variação.</p>
           ) : (
-            <div className="border border-cream-200 rounded-xl overflow-hidden">
-              <table className="w-full text-sm">
+            <div className="overflow-hidden rounded-control border border-bone-400">
+              <table className="w-full text-body">
                 <thead>
-                  <tr className="text-xs text-gray-400 uppercase tracking-wide bg-cream-50">
-                    <th className="text-left px-4 py-2 font-medium">Insumo</th>
-                    <th className="text-right px-4 py-2 font-medium">Qtd.</th>
-                    <th className="text-right px-4 py-2 font-medium">Custo/un.</th>
-                    <th className="text-right px-4 py-2 font-medium">Subtotal</th>
+                  <tr className="bg-bone-100">
+                    <th className="px-4 py-2 text-left text-meta font-bold uppercase tracking-[0.1em] text-ink-200">
+                      Insumo
+                    </th>
+                    <th className="px-4 py-2 text-right text-meta font-bold uppercase tracking-[0.1em] text-ink-200">
+                      Qtd.
+                    </th>
+                    <th className="px-4 py-2 text-right text-meta font-bold uppercase tracking-[0.1em] text-ink-200">
+                      Custo/un.
+                    </th>
+                    <th className="px-4 py-2 text-right text-meta font-bold uppercase tracking-[0.1em] text-ink-200">
+                      Subtotal
+                    </th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-cream-100">
+                <tbody>
                   {variation.insumos.map((i) => (
-                    <tr key={i.id} className="hover:bg-cream-50 transition-colors">
-                      <td className="px-4 py-2.5 text-gray-700 font-medium">{i.insumoName}</td>
-                      <td className="px-4 py-2.5 text-right text-gray-500">
+                    <tr
+                      key={i.id}
+                      className="border-t border-bone-300 transition-colors hover:bg-bone-100"
+                    >
+                      <td className="px-4 py-2.5 font-medium text-ink-900">{i.insumoName}</td>
+                      <td className="px-4 py-2.5 text-right tabular-nums text-ink-400">
                         {i.quantity} {i.unit === 'unidade' ? 'un.' : i.unit}
                       </td>
-                      <td className="px-4 py-2.5 text-right text-gray-500">
-                        {i.costPerUnit.toLocaleString('pt-BR', {
-                          style: 'currency',
-                          currency: 'BRL'
-                        })}
+                      <td className="px-4 py-2.5 text-right tabular-nums text-ink-400">
+                        {fmt(i.costPerUnit)}
                       </td>
-                      <td className="px-4 py-2.5 text-right text-gray-700">
+                      <td className="px-4 py-2.5 text-right tabular-nums text-ink-800">
                         {fmt(i.costPerUnit * i.quantity)}
                       </td>
                     </tr>
                   ))}
                 </tbody>
                 <tfoot>
-                  <tr className="bg-cream-50 border-t border-cream-200">
+                  <tr className="border-t border-bone-400 bg-bone-100">
                     <td
                       colSpan={3}
-                      className="px-4 py-2.5 text-xs font-semibold text-blush-700 uppercase tracking-wide"
+                      className="px-4 py-2.5 text-meta font-bold uppercase tracking-[0.1em] text-wine-500"
                     >
                       Total materiais
                     </td>
-                    <td className="px-4 py-2.5 text-right text-sm font-semibold text-blush-700">
+                    <td className="px-4 py-2.5 text-right text-body font-semibold tabular-nums text-wine-500">
                       {fmt(insumosCost)}
                     </td>
                   </tr>
@@ -80,65 +87,67 @@ export default function VariationDetailsModal({
           )}
         </section>
 
-        {/* Precificação */}
         <section>
           <h3 className="label mb-2">Precificação</h3>
-          <div className="bg-blush-50 rounded-xl p-4 space-y-2 text-sm">
-            <div className="flex justify-between text-gray-600">
+          <div className="space-y-2 rounded-control bg-wine-50 p-4 text-body">
+            <div className="flex justify-between text-ink-600">
               <span>Materiais {hasMaterials ? '(insumos)' : '(custo manual)'}</span>
-              <span>{fmt(materialsForCalc)}</span>
+              <span className="tabular-nums">{fmt(materialsForCalc)}</span>
             </div>
-            <div className="flex justify-between text-gray-600">
+            <div className="flex justify-between text-ink-600">
               <span>Materiais × 3</span>
-              <span>{fmt(materialsForCalc * 3)}</span>
+              <span className="tabular-nums">{fmt(materialsForCalc * 3)}</span>
             </div>
-            <div className="flex justify-between text-gray-600">
+            <div className="flex justify-between text-ink-600">
               <span>+ Mão de obra</span>
-              <span>
+              <span className="tabular-nums">
                 {labor > 0 ? (
                   fmt(labor)
                 ) : (
-                  <span className="text-gray-400 italic">Não informada</span>
+                  <span className="italic text-ink-300">Não informada</span>
                 )}
               </span>
             </div>
-            <div className="flex justify-between text-gray-600">
+            <div className="flex justify-between text-ink-600">
               <span>× 1,10 (margem)</span>
-              <span>{fmt((materialsForCalc * 3 + labor) * 1.1)}</span>
+              <span className="tabular-nums">{fmt((materialsForCalc * 3 + labor) * 1.1)}</span>
             </div>
-            <div className="flex justify-between text-gray-600">
+            <div className="flex justify-between text-ink-600">
               <span>+ Embalagem</span>
-              <span>R$ 1,00</span>
+              <span className="tabular-nums">R$ 1,00</span>
             </div>
-            <div className="flex justify-between font-semibold text-blush-700 pt-2 border-t border-blush-200 text-base">
+            <div className="flex justify-between border-t border-wine-100 pt-2 text-[15px] font-semibold text-wine-500">
               <span>Preço sugerido</span>
-              <span>{fmt(suggestedPrice)}</span>
+              <span className="tabular-nums">{fmt(suggestedPrice)}</span>
             </div>
           </div>
         </section>
 
-        {/* Resumo financeiro */}
         <section>
           <h3 className="label mb-2">Resumo financeiro</h3>
           <div className="grid grid-cols-3 gap-3">
-            <div className="bg-cream-50 rounded-xl p-3 text-center">
-              <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">Custo</p>
-              <p className="text-lg font-semibold text-gray-700">{fmt(variation.costPrice)}</p>
+            <div className="rounded-control bg-bone-100 p-3 text-center">
+              <p className="label mb-1">Custo</p>
+              <p className="text-lg font-semibold tabular-nums text-ink-800">
+                {fmt(variation.costPrice)}
+              </p>
             </div>
-            <div className="bg-cream-50 rounded-xl p-3 text-center">
-              <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">Venda</p>
-              <p className="text-lg font-semibold text-gray-800">{fmt(variation.salePrice)}</p>
+            <div className="rounded-control bg-bone-100 p-3 text-center">
+              <p className="label mb-1">Venda</p>
+              <p className="text-lg font-semibold tabular-nums text-ink-900">
+                {fmt(variation.salePrice)}
+              </p>
             </div>
             <div
-              className={`rounded-xl p-3 text-center ${profit >= 0 ? 'bg-emerald-50' : 'bg-rose-50'}`}
+              className={`rounded-control p-3 text-center ${profit >= 0 ? 'bg-sage-100' : 'bg-clay-100'}`}
             >
-              <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">Lucro/un.</p>
+              <p className="label mb-1">Lucro/un.</p>
               <p
-                className={`text-lg font-semibold ${profit >= 0 ? 'text-emerald-700' : 'text-rose-600'}`}
+                className={`text-lg font-semibold tabular-nums ${profit >= 0 ? 'text-sage-500' : 'text-clay-500'}`}
               >
                 {fmt(profit)}
               </p>
-              <p className={`text-xs mt-0.5 ${profit >= 0 ? 'text-emerald-500' : 'text-rose-400'}`}>
+              <p className={`mt-0.5 text-micro ${profit >= 0 ? 'text-sage-600' : 'text-clay-500'}`}>
                 {margin.toFixed(1)}% margem
               </p>
             </div>

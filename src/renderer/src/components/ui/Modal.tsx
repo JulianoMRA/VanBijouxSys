@@ -20,18 +20,18 @@ export default function Modal({ title, onClose, children, size = 'md' }: ModalPr
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-ink-900/35 backdrop-blur-sm"
       onClick={onClose}
     >
       <div
-        className={`bg-white rounded-2xl shadow-xl w-full ${widths[size]} mx-4 flex flex-col max-h-[90vh]`}
+        className={`bg-bone-50 rounded-card shadow-pop w-full ${widths[size]} mx-4 flex flex-col max-h-[90vh] border border-bone-400`}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between px-6 py-4 border-b border-cream-200 shrink-0">
-          <h3 className="font-display text-lg font-semibold text-gray-800">{title}</h3>
+        <div className="flex items-center justify-between px-6 py-4 border-b border-bone-300 shrink-0">
+          <h3 className="font-display text-[17px] font-semibold text-ink-900">{title}</h3>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 transition-colors text-xl leading-none"
+            className="text-ink-300 hover:text-ink-700 transition-colors text-xl leading-none"
           >
             ×
           </button>

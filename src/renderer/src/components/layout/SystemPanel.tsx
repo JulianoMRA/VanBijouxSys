@@ -83,77 +83,69 @@ export default function SystemPanel({ onClose }: { onClose: () => void }): JSX.E
   return (
     <Modal title="Backup e dados" onClose={onClose}>
       <div className="space-y-4">
-        <div className="bg-cream-50 rounded-xl px-4 py-3">
-          <p className="text-sm text-gray-700">
+        <div className="bg-bone-200 rounded-control px-4 py-3">
+          <p className="text-body text-ink-800">
             {ultimoBackup
               ? `Último backup automático: ${formatarDataHora(ultimoBackup)}`
               : 'Nenhum backup automático ainda — o primeiro é criado na próxima abertura do app.'}
           </p>
-          <p className="text-xs text-gray-400 mt-1">
+          <p className="text-micro text-ink-300 mt-1">
             O aplicativo guarda uma cópia por dia e mantém as 10 mais recentes.
           </p>
         </div>
 
         {erro && (
-          <div className="bg-rose-50 border border-rose-200 rounded-xl px-4 py-3">
-            <p className="text-sm text-rose-700">{erro}</p>
+          <div className="bg-clay-100 border border-bone-500 rounded-control px-4 py-3">
+            <p className="text-body text-clay-600">{erro}</p>
           </div>
         )}
 
         <div className="space-y-2">
-          <button
-            className="btn-primary w-full flex items-center justify-center gap-2"
-            onClick={handleExportar}
-            disabled={ocupado}
-          >
+          <button className="btn-primary w-full" onClick={handleExportar} disabled={ocupado}>
             <Save size={16} />
             Salvar backup agora
           </button>
-          <p className="text-xs text-gray-400 px-1">
+          <p className="text-micro text-ink-300 px-1">
             Guarde a cópia num pendrive ou na nuvem — um backup no mesmo computador não protege
             contra defeito no disco.
           </p>
 
-          <button
-            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-cream-300 text-sm font-medium text-gray-600 hover:bg-cream-100 transition-colors disabled:opacity-50"
-            onClick={handleAbrirPasta}
-            disabled={ocupado}
-          >
+          <button className="btn-secondary w-full" onClick={handleAbrirPasta} disabled={ocupado}>
             <FolderOpen size={16} />
             Abrir pasta de backups
           </button>
 
           <button
-            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-rose-200 text-sm font-medium text-rose-600 hover:bg-rose-50 transition-colors disabled:opacity-50"
+            className="w-full inline-flex items-center justify-center gap-2 px-3.5 py-2 rounded-control border border-clay-100 text-body font-medium text-clay-500 hover:bg-clay-100 transition-colors duration-150 disabled:opacity-50"
             onClick={handleRestaurar}
             disabled={ocupado}
           >
             <RotateCcw size={16} />
             Restaurar de um backup
           </button>
-          <p className="text-xs text-gray-400 px-1">
+          <p className="text-micro text-ink-300 px-1">
             Substitui todos os dados atuais pelos do arquivo escolhido. O app pede confirmação e
             reinicia.
           </p>
         </div>
 
-        <div className="border-t border-cream-200 pt-4 space-y-2">
+        <div className="border-t border-bone-300 pt-4 space-y-2">
           <button
-            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-cream-300 text-sm font-medium text-gray-600 hover:bg-cream-100 transition-colors disabled:opacity-50"
+            className="btn-secondary w-full"
             onClick={handleVerificarAtualizacoes}
             disabled={ocupado}
           >
             <Download size={16} />
             Verificar atualizações
           </button>
-          <p className="text-xs text-gray-400 px-1">
+          <p className="text-micro text-ink-300 px-1">
             O aplicativo também procura atualizações sozinho ao abrir. Um backup é feito antes de
             qualquer atualização ser aplicada.
           </p>
         </div>
 
         {pasta && (
-          <p className="text-[11px] text-gray-300 break-all pt-1 flex items-center gap-1.5">
+          <p className="text-meta text-ink-200 break-all pt-1 flex items-center gap-1.5">
             <DatabaseBackup size={12} className="shrink-0" />
             {pasta}
           </p>

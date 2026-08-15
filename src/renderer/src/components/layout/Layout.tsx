@@ -4,9 +4,9 @@ import ErrorBoundary from '../ui/ErrorBoundary'
 
 export default function Layout(): JSX.Element {
   return (
-    <div className="flex h-full" style={{ background: '#faf5f2' }}>
+    <div className="flex h-full bg-bone-200">
       <Sidebar />
-      <main className="flex-1 overflow-auto p-8">
+      <main className="flex-1 overflow-auto">
         <ErrorBoundary>
           <Outlet />
         </ErrorBoundary>

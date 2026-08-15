@@ -42,10 +42,10 @@ export default function AddInsumoStockForm({
   return (
     <Modal title={`Adicionar estoque — ${insumo.name}`} onClose={onClose} size="sm">
       <form onSubmit={handleSubmit} className="space-y-4">
-        <p className="text-sm text-gray-500">
+        <p className="text-body text-ink-600">
           Estoque atual:{' '}
-          <span className="font-medium text-gray-700">
-            {insumo.stockQuantity} {unitLabel}
+          <span className="font-semibold tabular-nums text-ink-900">
+            {insumo.stockQuantity.toLocaleString('pt-BR')} {unitLabel}
           </span>
         </p>
 
@@ -64,13 +64,13 @@ export default function AddInsumoStockForm({
         </div>
 
         {quantity && !isNaN(parseFloat(quantity)) && (
-          <p className="text-xs text-blush-600">
+          <p className="text-micro font-medium text-wine-500">
             Novo estoque: {(insumo.stockQuantity + parseFloat(quantity)).toLocaleString('pt-BR')}{' '}
             {unitLabel}
           </p>
         )}
 
-        {error && <p className="text-sm text-rose-500">{error}</p>}
+        {error && <p className="text-body text-clay-500">{error}</p>}
 
         <div className="flex justify-end gap-3 pt-2">
           <button type="button" className="btn-secondary" onClick={onClose}>

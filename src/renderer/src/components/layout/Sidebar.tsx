@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react'
-import { NavLink } from 'react-router-dom'
+import { useCallback, useEffect, useState } from 'react'
+import { NavLink, useLocation } from 'react-router-dom'
 import {
   LayoutDashboard,
   Gem,
@@ -12,6 +12,7 @@ import {
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import SystemPanel from './SystemPanel'
+import { EVENTO_INSUMOS_ALTERADOS } from '../../utils/eventos'
 
 const navItems: { to: string; label: string; Icon: LucideIcon }[] = [
   { to: '/', label: 'Dashboard', Icon: LayoutDashboard },
@@ -26,6 +27,8 @@ const navItems: { to: string; label: string; Icon: LucideIcon }[] = [
 export default function Sidebar(): JSX.Element {
   const [versao, setVersao] = useState('')
   const [painelAberto, setPainelAberto] = useState(false)
+  const [insumosParaRepor, setInsumosParaRepor] = useState(0)
+  const { pathname } = useLocation()
 
   useEffect(() => {
     window.api.app
@@ -34,62 +37,75 @@ export default function Sidebar(): JSX.Element {
       .catch(() => setVersao(''))
   }, [])
 
+  const contarReposicao = useCallback(async (): Promise<void> => {
+    try {
+      const insumos = await window.api.insumos.getAll()
+      setInsumosParaRepor(
+        insumos.filter(
+          (i) => i.stockQuantity <= 0 || (i.minimumStock > 0 && i.stockQuantity < i.minimumStock)
+        ).length
+      )
+    } catch {
+      setInsumosParaRepor(0)
+    }
+  }, [])
+
+  // Recontagem a cada navegação cobre o que muda fora da tela de Estoque; o
+  // evento cobre as alterações feitas sem sair dela.
+  useEffect(() => {
+    contarReposicao()
+    window.addEventListener(EVENTO_INSUMOS_ALTERADOS, contarReposicao)
+    return () => window.removeEventListener(EVENTO_INSUMOS_ALTERADOS, contarReposicao)
+  }, [pathname, contarReposicao])
+
   return (
-    <aside
-      className="w-60 flex flex-col shrink-0"
-      style={{
-        background: 'linear-gradient(180deg, #1a0d17 0%, #251020 50%, #1e0c1a 100%)',
-        borderRight: '1px solid rgba(255,255,255,0.06)',
-        boxShadow: '4px 0 24px rgba(0,0,0,0.25)'
-      }}
-    >
-      <div className="px-6 py-7" style={{ borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
-        <h1
-          className="font-display text-xl font-semibold leading-tight"
-          style={{ color: '#f9eef3', letterSpacing: '0.02em' }}
-        >
-          Van Bijoux
-        </h1>
-        <p className="text-xs mt-1" style={{ color: '#7a4a60', letterSpacing: '0.05em' }}>
-          GESTÃO DE BIJOUTERIAS
-        </p>
+    <aside className="w-[236px] shrink-0 flex flex-col bg-bone-50 border-r border-bone-400">
+      <div className="flex items-center gap-2.5 px-[22px] pt-[26px] pb-5">
+        <div className="w-[26px] h-[26px] shrink-0 rounded-lg bg-wine-500" />
+        <div>
+          <h1 className="font-display text-base font-semibold leading-tight text-ink-900">
+            Van Bijoux
+          </h1>
+          <p className="text-meta text-ink-300 tracking-[0.04em]">Gestão</p>
+        </div>
       </div>
 
-      <nav className="flex-1 px-3 py-5 space-y-0.5">
+      <nav className="flex-1 px-3 space-y-px">
         {navItems.map(({ to, label, Icon }) => (
           <NavLink key={to} to={to} end={to === '/'}>
             {({ isActive }) => (
               <div
-                className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 cursor-pointer"
-                style={{
-                  color: isActive ? '#f5aacb' : 'rgba(255,255,255,0.42)',
-                  background: isActive ? 'rgba(228,77,138,0.15)' : 'transparent',
-                  boxShadow: isActive ? 'inset 0 0 0 1px rgba(228,77,138,0.2)' : 'none'
-                }}
+                className={`flex items-center gap-[11px] px-3 py-[9px] rounded-control text-body transition-colors duration-150 ${
+                  isActive
+                    ? 'font-semibold text-wine-500 bg-wine-50'
+                    : 'font-medium text-ink-600 hover:bg-bone-200'
+                }`}
               >
-                <Icon size={16} />
+                <Icon size={15} className={isActive ? '' : 'text-ink-200'} />
                 {label}
+                {to === '/stock' && insumosParaRepor > 0 && (
+                  <span
+                    className="ml-auto rounded-full bg-honey-100 px-[7px] py-px text-meta font-bold tabular-nums text-honey-500"
+                    title={`${insumosParaRepor} insumo${insumosParaRepor !== 1 ? 's' : ''} para repor`}
+                  >
+                    {insumosParaRepor}
+                  </span>
+                )}
               </div>
             )}
           </NavLink>
         ))}
       </nav>
 
-      <div
-        className="px-3 py-4 space-y-1"
-        style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}
-      >
+      <div className="px-3 py-3.5 border-t border-bone-300">
         <button
           onClick={() => setPainelAberto(true)}
-          className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-medium transition-all duration-200"
-          style={{ color: 'rgba(255,255,255,0.42)' }}
+          className="w-full flex items-center gap-[11px] px-3 py-2 rounded-control text-aux font-medium text-ink-400 hover:bg-bone-200 hover:text-ink-700 transition-colors duration-150"
         >
           <ShieldCheck size={14} />
           Backup e dados
         </button>
-        <p className="text-xs px-3" style={{ color: '#4a2438' }}>
-          {versao ? `v${versao}` : ''}
-        </p>
+        <p className="px-3 pt-0.5 text-meta text-ink-100">{versao ? `v${versao}` : ''}</p>
       </div>
 
       {painelAberto && <SystemPanel onClose={() => setPainelAberto(false)} />}

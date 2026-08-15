@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Wallet, TrendingUp, TrendingDown, Settings, Plus, Pencil, Trash2 } from 'lucide-react'
+import { Pencil, Trash2 } from 'lucide-react'
 import Modal from '../components/ui/Modal'
 import ConfirmDialog from '../components/ui/ConfirmDialog'
+import ActionMenu from '../components/ui/ActionMenu'
 import Toast from '../components/ui/Toast'
 import ExpenseForm from '../components/cash/ExpenseForm'
 import { useToast } from '../hooks/useToast'
@@ -18,18 +19,38 @@ import type { PeriodKey, TransactionRow } from '../utils/cash-calculations'
 import type { Sale, CashExpense, ExpenseCategory, Fair } from '../types'
 
 const PERIODS: { label: string; value: PeriodKey }[] = [
-  { label: 'Este mês', value: 'mes' },
-  { label: '3 meses', value: '3meses' },
-  { label: '6 meses', value: '6meses' },
-  { label: 'Este ano', value: 'ano' },
+  { label: 'Mês', value: 'mes' },
+  { label: '3M', value: '3meses' },
+  { label: '6M', value: '6meses' },
+  { label: 'Ano', value: 'ano' },
   { label: 'Tudo', value: 'tudo' },
   { label: 'Personalizado', value: 'custom' }
 ]
+
+const PERIOD_CAPTIONS: Record<PeriodKey, string> = {
+  mes: 'Este mês',
+  '3meses': 'Últimos 3 meses',
+  '6meses': 'Últimos 6 meses',
+  ano: 'Este ano',
+  tudo: 'Todo o período',
+  custom: 'Período personalizado'
+}
 
 type ExpenseModal =
   | { type: 'new' }
   | { type: 'edit'; expense: CashExpense }
   | { type: 'delete'; expense: CashExpense }
+
+/** Saldo depois de cada movimentação, da mais recente para a mais antiga. */
+function saldosAcumulados(transactions: TransactionRow[], saldoFinal: number): number[] {
+  let acc = saldoFinal
+  return transactions.map((tx) => {
+    const saldo = acc
+    const delta = tx.kind === 'income' ? tx.netAmount : -tx.amount
+    acc = acc - delta
+    return saldo
+  })
+}
 
 export default function Cash(): JSX.Element {
   const [period, setPeriod] = useState<PeriodKey>('mes')
@@ -49,14 +70,12 @@ export default function Cash(): JSX.Element {
   const [toastMsg, showToast, dismissToast] = useToast()
   const [errorMessage, setErrorMessage] = useState('')
 
-  // ── Categorias modal state ───────────────────────────────────────────────
   const [newCategoryName, setNewCategoryName] = useState('')
   const [editingCategory, setEditingCategory] = useState<ExpenseCategory | null>(null)
   const [editCategoryName, setEditCategoryName] = useState('')
   const [categoryToDelete, setCategoryToDelete] = useState<ExpenseCategory | null>(null)
   const [categoryError, setCategoryError] = useState('')
 
-  // ── Opening balance modal state ──────────────────────────────────────────
   const [balanceInput, setBalanceInput] = useState('')
 
   async function loadAll(): Promise<void> {
@@ -79,16 +98,13 @@ export default function Cash(): JSX.Element {
     loadAll()
   }, [])
 
-  // ── Filtering ────────────────────────────────────────────────────────────
   const dateRange = useMemo(
     () => resolveDateRange(period, customStart, customEnd),
     [period, customStart, customEnd]
   )
 
   const filteredSales = useMemo(() => filterCashSales(sales, dateRange), [sales, dateRange])
-
   const filteredExpenses = useMemo(() => filterExpenses(expenses, dateRange), [expenses, dateRange])
-
   const filteredFairExpenses = useMemo(
     () => buildFairExpenses(fairs, dateRange),
     [fairs, dateRange]
@@ -107,7 +123,11 @@ export default function Cash(): JSX.Element {
     [filteredSales, filteredExpenses, filteredFairExpenses]
   )
 
-  // ── Handlers: despesas ───────────────────────────────────────────────────
+  const saldos = useMemo(
+    () => saldosAcumulados(transactions, currentBalance),
+    [transactions, currentBalance]
+  )
+
   async function handleDeleteExpense(expense: CashExpense): Promise<void> {
     try {
       await window.api.cashExpenses.delete(expense.id)
@@ -118,7 +138,6 @@ export default function Cash(): JSX.Element {
     }
   }
 
-  // ── Handlers: categorias ─────────────────────────────────────────────────
   async function handleCreateCategory(): Promise<void> {
     const name = newCategoryName.trim()
     if (!name) return
@@ -162,7 +181,6 @@ export default function Cash(): JSX.Element {
     }
   }
 
-  // ── Handlers: saldo de abertura ──────────────────────────────────────────
   async function handleSaveOpeningBalance(): Promise<void> {
     const value = parseFloat(balanceInput.replace(',', '.'))
     if (isNaN(value) || value < 0) return
@@ -172,79 +190,74 @@ export default function Cash(): JSX.Element {
     showToast('Saldo de abertura atualizado.')
   }
 
+  function abrirSaldoDeAbertura(): void {
+    setShowOpeningBalance(true)
+    setBalanceInput(openingBalance.toString())
+  }
+
   return (
-    <div>
-      <div className="flex items-center justify-between mb-6">
-        <h2 className="font-display text-2xl font-semibold text-gray-800">Caixa</h2>
-        <div className="flex gap-2">
-          <button
-            className="btn-secondary flex items-center gap-1.5 text-sm"
-            onClick={() => {
-              setShowOpeningBalance(true)
-              setBalanceInput(openingBalance.toString())
-            }}
-          >
-            <Wallet size={14} />
-            Saldo de abertura
-          </button>
-          <button
-            className="btn-secondary flex items-center gap-1.5 text-sm"
-            onClick={() => {
-              setShowCategories(true)
-              setCategoryError('')
-            }}
-          >
-            <Settings size={14} />
-            Categorias
-          </button>
-          <button
-            className="btn-primary flex items-center gap-1.5"
-            onClick={() => setExpenseModal({ type: 'new' })}
-          >
-            <Plus size={14} />
-            Nova despesa
-          </button>
-        </div>
-      </div>
-
-      {errorMessage && (
-        <div className="bg-rose-50 border border-rose-200 rounded-2xl px-5 py-3 mb-4 flex items-start justify-between gap-3">
-          <p className="text-sm text-rose-700">{errorMessage}</p>
-          <button
-            onClick={() => setErrorMessage('')}
-            className="text-rose-400 hover:text-rose-600 shrink-0 text-lg leading-none"
-          >
-            ×
-          </button>
-        </div>
-      )}
-
-      {/* Filtro de período */}
-      <div className="mb-5">
-        <div className="flex gap-2 flex-wrap">
-          {PERIODS.map((p) => (
-            <button
-              key={p.value}
-              onClick={() => setPeriod(p.value)}
-              className={`px-3 py-2 rounded-xl text-sm font-medium transition-all ${
-                period === p.value
-                  ? 'bg-blush-500 text-white'
-                  : 'bg-white border border-cream-300 text-gray-600 hover:bg-cream-100'
-              }`}
-            >
-              {p.label}
+    <div className="pb-10">
+      <div className="sticky top-0 z-10 border-b border-bone-400 bg-bone-200 px-8 pb-3.5 pt-[26px]">
+        <div className="mb-4 flex items-end justify-between gap-6">
+          <div>
+            <p className="label mb-1">
+              {PERIOD_CAPTIONS[period]} · {transactions.length} movimenta
+              {transactions.length !== 1 ? 'ções' : 'ção'}
+            </p>
+            <h2 className="font-display text-[30px] font-semibold leading-none text-ink-900">
+              Caixa
+            </h2>
+          </div>
+          <div className="flex gap-2">
+            <button className="btn-secondary" onClick={abrirSaldoDeAbertura}>
+              Saldo de abertura
             </button>
-          ))}
+            <button
+              className="btn-secondary"
+              onClick={() => {
+                setShowCategories(true)
+                setCategoryError('')
+              }}
+            >
+              Categorias
+            </button>
+            <button className="btn-primary" onClick={() => setExpenseModal({ type: 'new' })}>
+              + Nova despesa
+            </button>
+          </div>
         </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="flex gap-0.5 rounded-control bg-bone-400 p-[3px]">
+            {PERIODS.map((p) => (
+              <button
+                key={p.value}
+                onClick={() => setPeriod(p.value)}
+                className={`rounded-[7px] px-3 py-[5px] text-aux transition-colors ${
+                  period === p.value
+                    ? 'bg-bone-50 font-semibold text-ink-900 shadow-raised'
+                    : 'font-medium text-ink-500 hover:text-ink-800'
+                }`}
+              >
+                {p.label}
+              </button>
+            ))}
+          </div>
+          <p className="ml-auto text-aux text-ink-300">
+            Entradas contam vendas <strong className="font-semibold text-ink-800">recebidas</strong>
+            ; “a receber” fica fora
+          </p>
+        </div>
+
         {period === 'custom' && (
-          <div className="flex items-center gap-2 mt-3">
+          <div className="mt-3 flex items-center gap-2">
             <input
               type="date"
               className="input w-auto"
               value={customStart}
               onChange={(e) => setCustomStart(e.target.value)}
             />
-            <span className="text-gray-400 text-sm">até</span>
+            <span className="text-body text-ink-400">até</span>
             <input
               type="date"
               className="input w-auto"
@@ -256,143 +269,166 @@ export default function Cash(): JSX.Element {
         )}
       </div>
 
-      {/* Cards de resumo */}
-      <div className="grid grid-cols-4 gap-4 mb-6">
-        <div className="card py-4">
-          <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">Saldo de abertura</p>
-          <p className="font-display text-xl font-semibold text-gray-700">
-            {formatCurrency(openingBalance)}
-          </p>
-          <button
-            className="text-xs text-blush-500 hover:text-blush-700 mt-1 transition-colors"
-            onClick={() => {
-              setShowOpeningBalance(true)
-              setBalanceInput(openingBalance.toString())
-            }}
-          >
-            Alterar
-          </button>
-        </div>
-        <div className="card py-4">
-          <p className="text-xs text-gray-400 uppercase tracking-wide mb-1 flex items-center gap-1">
-            <TrendingUp size={12} className="text-emerald-500" /> Entradas
-          </p>
-          <p className="font-display text-xl font-semibold text-emerald-600">
-            {formatCurrency(totalIncome)}
-          </p>
-          <p className="text-xs text-gray-400 mt-0.5">
-            {filteredSales.length} venda{filteredSales.length !== 1 ? 's' : ''}
-          </p>
-        </div>
-        <div className="card py-4">
-          <p className="text-xs text-gray-400 uppercase tracking-wide mb-1 flex items-center gap-1">
-            <TrendingDown size={12} className="text-rose-500" /> Saídas
-          </p>
-          <p className="font-display text-xl font-semibold text-rose-600">
-            {formatCurrency(totalExpenses)}
-          </p>
-          <p className="text-xs text-gray-400 mt-0.5">
-            {filteredExpenses.length} despesa{filteredExpenses.length !== 1 ? 's' : ''}
-            {filteredFairExpenses.length > 0 &&
-              ` · ${filteredFairExpenses.length} feira${filteredFairExpenses.length !== 1 ? 's' : ''}`}
-          </p>
-        </div>
-        <div
-          className={`card py-4 ${currentBalance >= 0 ? 'bg-emerald-50 border-emerald-200' : 'bg-rose-50 border-rose-200'}`}
-        >
-          <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">Saldo atual</p>
-          <p
-            className={`font-display text-xl font-semibold ${currentBalance >= 0 ? 'text-emerald-700' : 'text-rose-700'}`}
-          >
-            {formatCurrency(currentBalance)}
-          </p>
-          <p className="text-xs text-gray-400 mt-0.5">abertura + entradas − saídas</p>
-        </div>
-      </div>
-
-      {/* Lista de movimentações */}
-      {loading ? (
-        <div className="card flex items-center justify-center h-40">
-          <p className="text-gray-400 text-sm">Carregando…</p>
-        </div>
-      ) : transactions.length === 0 ? (
-        <div className="card flex flex-col items-center justify-center h-48 text-center">
-          <p className="text-gray-500 text-sm">Nenhuma movimentação no período.</p>
-          <button className="btn-primary mt-3" onClick={() => setExpenseModal({ type: 'new' })}>
-            Registrar primeira despesa
-          </button>
-        </div>
-      ) : (
-        <div className="space-y-2">
-          {transactions.map((tx, idx) => (
-            <div
-              key={`${tx.kind}-${tx.kind === 'fair-expense' ? tx.fairId : tx.id}-${idx}`}
-              className="bg-white rounded-2xl border border-cream-200 shadow-card px-5 py-3.5 flex items-center gap-4"
+      <div className="px-8 pt-5">
+        {errorMessage && (
+          <div className="mb-4 flex items-start justify-between gap-3 rounded-[11px] border border-bone-500 bg-clay-100 px-4 py-3">
+            <p className="text-body text-clay-600">{errorMessage}</p>
+            <button
+              onClick={() => setErrorMessage('')}
+              className="shrink-0 text-lg leading-none text-clay-500 hover:text-clay-600"
             >
-              {/* Indicador */}
-              <div
-                className={`w-1.5 h-10 rounded-full shrink-0 ${tx.kind === 'income' ? 'bg-emerald-400' : 'bg-rose-400'}`}
-              />
+              ×
+            </button>
+          </div>
+        )}
 
-              {/* Data */}
-              <div className="text-xs text-gray-400 w-20 shrink-0">{formatDate(tx.date)}</div>
+        <div className="mb-4 grid grid-cols-4 gap-3.5">
+          <div className="card px-[22px] py-[18px]">
+            <p className="label">Abertura</p>
+            <p className="text-[22px] font-semibold tabular-nums text-ink-800">
+              {formatCurrency(openingBalance)}
+            </p>
+            <button
+              className="mt-1.5 text-aux font-semibold text-wine-500 hover:text-wine-600"
+              onClick={abrirSaldoDeAbertura}
+            >
+              Alterar
+            </button>
+          </div>
 
-              {/* Descrição */}
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-gray-800 truncate">{tx.label}</p>
-                <p className="text-xs text-gray-400 truncate">{tx.sub}</p>
-              </div>
+          <div className="card px-[22px] py-[18px]">
+            <p className="label">Entradas</p>
+            <p className="text-[22px] font-semibold tabular-nums text-sage-500">
+              + {formatCurrency(totalIncome)}
+            </p>
+            <p className="mt-1.5 text-aux text-ink-400">
+              {filteredSales.length} venda{filteredSales.length !== 1 ? 's' : ''} recebida
+              {filteredSales.length !== 1 ? 's' : ''}
+            </p>
+          </div>
 
-              {/* Valor */}
-              <div className="text-right shrink-0">
-                {tx.kind === 'income' ? (
-                  <>
-                    <p className="text-sm font-semibold text-emerald-600">
-                      + {formatCurrency(tx.netAmount)}
-                    </p>
-                    {tx.feeAmount > 0 && (
-                      <p className="text-xs text-gray-400">bruto {formatCurrency(tx.amount)}</p>
-                    )}
-                  </>
-                ) : (
-                  <p className="text-sm font-semibold text-rose-600">
-                    − {formatCurrency(tx.amount)}
-                  </p>
-                )}
-              </div>
+          <div className="card px-[22px] py-[18px]">
+            <p className="label">Saídas</p>
+            <p className="text-[22px] font-semibold tabular-nums text-clay-500">
+              − {formatCurrency(totalExpenses)}
+            </p>
+            <p className="mt-1.5 text-aux text-ink-400">
+              {filteredExpenses.length} despesa{filteredExpenses.length !== 1 ? 's' : ''}
+              {filteredFairExpenses.length > 0 &&
+                ` · ${filteredFairExpenses.length} feira${filteredFairExpenses.length !== 1 ? 's' : ''}`}
+            </p>
+          </div>
 
-              {/* Ações (só despesas manuais) */}
-              {tx.kind === 'expense' && (
-                <div className="flex items-center gap-1 shrink-0">
-                  <button
-                    className="p-1.5 text-gray-400 hover:text-blush-600 hover:bg-blush-50 rounded-lg transition-colors"
-                    onClick={() => setExpenseModal({ type: 'edit', expense: tx.raw })}
-                    title="Editar"
-                  >
-                    <Pencil size={14} />
-                  </button>
-                  <button
-                    className="p-1.5 text-gray-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
-                    onClick={() => setExpenseModal({ type: 'delete', expense: tx.raw })}
-                    title="Excluir"
-                  >
-                    <Trash2 size={14} />
-                  </button>
-                </div>
-              )}
-              {tx.kind === 'fair-expense' && (
-                <div className="w-16 shrink-0 flex justify-end">
-                  <span className="text-xs text-gray-300 italic">feira</span>
-                </div>
-              )}
-            </div>
-          ))}
+          <div className="rounded-card border border-ink-900 bg-ink-900 px-[22px] py-[18px]">
+            <p className="label text-ink-100">Saldo atual</p>
+            <p
+              className={`text-[22px] font-semibold tabular-nums ${
+                currentBalance >= 0 ? 'text-bone-50' : 'text-clay-100'
+              }`}
+            >
+              {formatCurrency(currentBalance)}
+            </p>
+            <p className="mt-1.5 text-aux text-ink-100">abertura + entradas − saídas</p>
+          </div>
         </div>
-      )}
+
+        {loading ? (
+          <div className="card flex h-40 items-center justify-center">
+            <p className="text-body text-ink-300">Carregando…</p>
+          </div>
+        ) : transactions.length === 0 ? (
+          <div className="card flex h-48 flex-col items-center justify-center text-center">
+            <p className="text-body text-ink-600">Nenhuma movimentação no período.</p>
+            <button className="btn-primary mt-3" onClick={() => setExpenseModal({ type: 'new' })}>
+              Registrar primeira despesa
+            </button>
+          </div>
+        ) : (
+          <div className="overflow-hidden rounded-card border border-bone-400 bg-bone-50">
+            <div className="flex items-center gap-4 border-b border-bone-300 px-[22px] py-2.5 text-meta font-bold uppercase tracking-[0.1em] text-ink-200">
+              <span className="w-[66px] shrink-0">Data</span>
+              <span className="flex-1">Movimentação</span>
+              <span className="w-[130px] shrink-0 text-right">Valor</span>
+              <span className="w-[120px] shrink-0 text-right">Saldo</span>
+              <span className="w-14 shrink-0" />
+            </div>
+
+            {transactions.map((tx, idx) => {
+              const entrada = tx.kind === 'income'
+              const cor = entrada ? '#5d8f76' : '#b3413f'
+
+              return (
+                <div
+                  key={`${tx.kind}-${tx.kind === 'fair-expense' ? tx.fairId : tx.id}-${idx}`}
+                  className="flex items-center gap-4 border-b border-bone-300 px-[22px] py-3 last:border-b-0 transition-colors hover:bg-bone-100"
+                >
+                  <span className="w-[66px] shrink-0 text-aux tabular-nums text-ink-400">
+                    {formatDate(tx.date)}
+                  </span>
+
+                  <div className="flex min-w-0 flex-1 items-center gap-3">
+                    <span
+                      className="h-[26px] w-1 shrink-0 rounded-full"
+                      style={{ background: cor }}
+                    />
+                    <div className="min-w-0">
+                      <p className="truncate text-body font-medium text-ink-900">{tx.label}</p>
+                      <p className="mt-px truncate text-micro text-ink-300">{tx.sub}</p>
+                    </div>
+                    {tx.kind === 'fair-expense' && (
+                      <span className="shrink-0 rounded-[5px] bg-plum-100 px-2 py-0.5 text-meta font-bold tracking-[0.03em] text-plum-500">
+                        FEIRA
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="w-[130px] shrink-0 text-right">
+                    <p
+                      className={`text-body font-semibold tabular-nums ${
+                        entrada ? 'text-sage-500' : 'text-clay-500'
+                      }`}
+                    >
+                      {entrada
+                        ? `+ ${formatCurrency(tx.netAmount)}`
+                        : `− ${formatCurrency(tx.amount)}`}
+                    </p>
+                    {tx.kind === 'income' && tx.feeAmount > 0 && (
+                      <p className="mt-px text-meta tabular-nums text-ink-300">
+                        bruto {formatCurrency(tx.amount)}
+                      </p>
+                    )}
+                  </div>
+
+                  <span className="w-[120px] shrink-0 text-right text-micro tabular-nums text-ink-600">
+                    {formatCurrency(saldos[idx])}
+                  </span>
+
+                  <div className="flex w-14 shrink-0 justify-end">
+                    {tx.kind === 'expense' && (
+                      <ActionMenu
+                        items={[
+                          {
+                            label: 'Editar despesa',
+                            onClick: () => setExpenseModal({ type: 'edit', expense: tx.raw })
+                          },
+                          {
+                            label: 'Excluir despesa',
+                            danger: true,
+                            onClick: () => setExpenseModal({ type: 'delete', expense: tx.raw })
+                          }
+                        ]}
+                      />
+                    )}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )}
+      </div>
 
       {toastMsg && <Toast message={toastMsg} onDismiss={dismissToast} />}
 
-      {/* Modal: nova/editar despesa */}
       {expenseModal?.type === 'new' && (
         <ExpenseForm
           categories={categories}
@@ -425,7 +461,6 @@ export default function Cash(): JSX.Element {
         />
       )}
 
-      {/* Modal: gerenciar categorias */}
       {showCategories && (
         <Modal
           title="Gerenciar categorias"
@@ -436,7 +471,6 @@ export default function Cash(): JSX.Element {
           }}
         >
           <div className="space-y-4">
-            {/* Nova categoria */}
             <div>
               <label className="label">Nova categoria</label>
               <div className="flex gap-2">
@@ -456,7 +490,7 @@ export default function Cash(): JSX.Element {
                 />
                 <button
                   type="button"
-                  className="btn-primary px-4"
+                  className="btn-primary"
                   onClick={handleCreateCategory}
                   disabled={!newCategoryName.trim()}
                 >
@@ -465,21 +499,23 @@ export default function Cash(): JSX.Element {
               </div>
             </div>
 
-            {categoryError && <p className="text-sm text-rose-500">{categoryError}</p>}
+            {categoryError && <p className="text-body text-clay-500">{categoryError}</p>}
 
-            {/* Lista de categorias */}
             {categories.length === 0 ? (
-              <p className="text-sm text-gray-400 text-center py-4">
+              <p className="py-4 text-center text-body text-ink-300">
                 Nenhuma categoria cadastrada.
               </p>
             ) : (
-              <div className="space-y-1.5 max-h-64 overflow-y-auto">
+              <div className="max-h-64 space-y-1.5 overflow-y-auto">
                 {categories.map((cat) => (
-                  <div key={cat.id} className="flex items-center gap-2 p-2 rounded-xl bg-cream-50">
+                  <div
+                    key={cat.id}
+                    className="flex items-center gap-2 rounded-control bg-bone-200 p-2"
+                  >
                     {editingCategory?.id === cat.id ? (
                       <>
                         <input
-                          className="input flex-1 py-1 text-sm"
+                          className="input flex-1 py-1"
                           value={editCategoryName}
                           onChange={(e) => setEditCategoryName(e.target.value)}
                           onKeyDown={(e) => {
@@ -491,13 +527,13 @@ export default function Cash(): JSX.Element {
                           autoFocus
                         />
                         <button
-                          className="text-xs text-blush-600 hover:text-blush-800 font-medium px-2"
+                          className="px-2 text-aux font-semibold text-wine-500 hover:text-wine-600"
                           onClick={handleUpdateCategory}
                         >
                           Salvar
                         </button>
                         <button
-                          className="text-xs text-gray-400 hover:text-gray-600 px-1"
+                          className="px-1 text-aux text-ink-400 hover:text-ink-700"
                           onClick={() => {
                             setEditingCategory(null)
                             setEditCategoryName('')
@@ -508,20 +544,22 @@ export default function Cash(): JSX.Element {
                       </>
                     ) : (
                       <>
-                        <span className="flex-1 text-sm text-gray-700">{cat.name}</span>
+                        <span className="flex-1 text-body text-ink-800">{cat.name}</span>
                         <button
-                          className="p-1 text-gray-400 hover:text-blush-600 rounded transition-colors"
+                          className="rounded p-1 text-ink-300 transition-colors hover:text-wine-500"
                           onClick={() => {
                             setEditingCategory(cat)
                             setEditCategoryName(cat.name)
                             setCategoryError('')
                           }}
+                          title="Editar categoria"
                         >
                           <Pencil size={13} />
                         </button>
                         <button
-                          className="p-1 text-gray-400 hover:text-rose-600 rounded transition-colors"
+                          className="rounded p-1 text-ink-300 transition-colors hover:text-clay-500"
                           onClick={() => setCategoryToDelete(cat)}
+                          title="Excluir categoria"
                         >
                           <Trash2 size={13} />
                         </button>
@@ -535,7 +573,6 @@ export default function Cash(): JSX.Element {
         </Modal>
       )}
 
-      {/* Confirm delete categoria */}
       {categoryToDelete && (
         <ConfirmDialog
           title="Excluir categoria"
@@ -547,11 +584,10 @@ export default function Cash(): JSX.Element {
         />
       )}
 
-      {/* Modal: saldo de abertura */}
       {showOpeningBalance && (
         <Modal title="Saldo de abertura" onClose={() => setShowOpeningBalance(false)}>
           <div className="space-y-4">
-            <p className="text-sm text-gray-500">
+            <p className="text-body text-ink-600">
               Informe o valor que você já possui em caixa antes de começar a registrar
               movimentações. Este valor será somado às entradas e descontado das saídas para
               calcular o saldo atual.

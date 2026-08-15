@@ -25,10 +25,10 @@ export default class ErrorBoundary extends Component<Props, State> {
       const isDev = import.meta.env.DEV
       return (
         <div className="p-8">
-          <h2 className="font-display text-xl font-semibold text-rose-600 mb-2">
+          <h2 className="font-display text-xl font-semibold text-clay-500 mb-2">
             Erro ao renderizar a página
           </h2>
-          <pre className="bg-rose-50 border border-rose-200 rounded-xl p-4 text-xs text-rose-800 overflow-auto whitespace-pre-wrap">
+          <pre className="bg-clay-100 border border-bone-500 rounded-card p-4 text-micro text-clay-600 overflow-auto whitespace-pre-wrap">
             {isDev
               ? `${this.state.error.message}\n\n${this.state.error.stack ?? ''}`
               : 'Ocorreu um erro inesperado. Feche e reabra a aplicação.'}

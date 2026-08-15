@@ -17,8 +17,9 @@
 
   body {
     font-family: 'DM Sans', system-ui, sans-serif;
-    background-color: #faf5f2;
-    color: #1a0f12;
+    font-size: 13.5px;
+    background-color: #f7f4f2;
+    color: #241419;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
@@ -26,7 +27,13 @@
   h1,
   h2,
   h3 {
-    font-family: 'Playfair Display', Georgia, serif;
+    font-family: Fraunces, Georgia, serif;
+    letter-spacing: -0.02em;
+  }
+
+  /* Valores monetários e quantidades se alinham em coluna nas tabelas. */
+  table {
+    font-variant-numeric: tabular-nums;
   }
 
   /* Scrollbar refinada */
@@ -38,76 +45,78 @@
     background: transparent;
   }
   ::-webkit-scrollbar-thumb {
-    background: #ddd0c8;
+    background: #d5c8c2;
     border-radius: 4px;
   }
   ::-webkit-scrollbar-thumb:hover {
-    background: #c4a898;
+    background: #c4b6b2;
   }
 }
 
 @layer components {
   .btn-primary {
-    @apply text-white font-medium px-4 py-2 rounded-xl text-sm transition-all duration-200;
-    background: linear-gradient(135deg, #e44d8a 0%, #c83075 100%);
-    box-shadow: 0 2px 10px rgba(228, 77, 138, 0.25);
+    @apply inline-flex items-center justify-center gap-2 rounded-control bg-wine-500 px-3.5 py-2 text-body font-semibold text-bone-50 transition-colors duration-150;
     border: none;
   }
   .btn-primary:hover {
-    background: linear-gradient(135deg, #ee5d97 0%, #d43d82 100%);
-    box-shadow: 0 4px 16px rgba(228, 77, 138, 0.35);
-    transform: translateY(-1px);
-  }
-  .btn-primary:active {
-    transform: translateY(0);
+    @apply bg-wine-600;
   }
   .btn-primary:disabled {
-    opacity: 0.6;
-    transform: none;
-    box-shadow: none;
+    @apply bg-wine-300 cursor-not-allowed;
   }
 
   .btn-secondary {
-    @apply bg-white text-blush-600 font-medium px-4 py-2 rounded-xl text-sm transition-all duration-200;
-    border: 1.5px solid #fad1e4;
+    @apply inline-flex items-center justify-center gap-2 rounded-control bg-bone-50 px-3.5 py-2 text-body font-medium text-ink-800 transition-colors duration-150;
+    border: 1px solid #e3d9d4;
   }
   .btn-secondary:hover {
-    @apply bg-blush-50;
-    border-color: #f5aacb;
+    @apply bg-bone-100;
+    border-color: #d5c8c2;
+  }
+  .btn-secondary:disabled {
+    @apply text-ink-300 cursor-not-allowed;
+  }
+
+  .btn-ghost {
+    @apply inline-flex items-center justify-center gap-2 rounded-control bg-transparent px-3 py-2 text-body font-medium text-ink-600 transition-colors duration-150;
+    border: none;
+  }
+  .btn-ghost:hover {
+    @apply bg-bone-300 text-ink-900;
+  }
+
+  .btn-danger {
+    @apply inline-flex items-center justify-center gap-2 rounded-control bg-clay-500 px-3.5 py-2 text-body font-semibold text-bone-50 transition-colors duration-150;
+    border: none;
+  }
+  .btn-danger:hover {
+    @apply bg-clay-600;
   }
 
   .card {
-    @apply bg-white rounded-2xl p-6;
-    border: 1px solid #f0e6e0;
-    box-shadow:
-      0 1px 3px rgba(160, 80, 100, 0.06),
-      0 4px 20px rgba(160, 80, 100, 0.07);
+    @apply rounded-card bg-bone-50 p-6;
+    border: 1px solid #eae1dc;
   }
 
   .input {
-    @apply w-full rounded-xl px-3 py-2 text-sm transition-all duration-150 bg-white;
-    border: 1.5px solid #e2cdc5;
-    color: #1a0f12;
+    @apply w-full rounded-control bg-bone-50 px-3 py-2 text-body text-ink-900 transition-colors duration-150;
+    border: 1px solid #e3d9d4;
     font-family: 'DM Sans', system-ui, sans-serif;
   }
   .input:focus {
     outline: none;
-    border-color: #ee78aa;
-    box-shadow: 0 0 0 3px rgba(228, 77, 138, 0.12);
+    border-color: #a4718a;
+    box-shadow: 0 0 0 3px rgba(139, 58, 92, 0.13);
   }
   .input::placeholder {
-    color: #b8a0a8;
+    @apply text-ink-200;
   }
   .input:disabled {
-    @apply bg-cream-50 opacity-60;
+    @apply bg-bone-200 text-ink-400 cursor-not-allowed;
   }
 
   .label {
-    @apply block mb-1.5;
-    font-size: 0.7rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.07em;
-    color: #9b7d88;
+    @apply mb-1.5 block text-meta font-bold uppercase text-ink-300;
+    letter-spacing: 0.12em;
   }
 }

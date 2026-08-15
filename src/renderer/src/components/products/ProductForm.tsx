@@ -87,7 +87,7 @@ export default function ProductForm({
 
         <div>
           <label className="label">
-            Descrição <span className="text-gray-400 font-normal">(opcional)</span>
+            Descrição <span className="text-ink-200 font-normal">(opcional)</span>
           </label>
           <textarea
             className="input resize-none"
@@ -98,7 +98,7 @@ export default function ProductForm({
           />
         </div>
 
-        {error && <p className="text-sm text-rose-500">{error}</p>}
+        {error && <p className="text-body text-clay-500">{error}</p>}
 
         <div className="flex justify-end gap-3 pt-2">
           <button type="button" className="btn-secondary" onClick={onClose}>

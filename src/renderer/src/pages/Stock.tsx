@@ -1,7 +1,10 @@
-import { useEffect, useState, useMemo, useRef } from 'react'
+import { useEffect, useState, useMemo } from 'react'
+import { ChevronDown } from 'lucide-react'
 import { formatCurrency } from '../utils/format'
+import { avisarInsumosAlterados } from '../utils/eventos'
 import InsumoForm from '../components/insumos/InsumoForm'
 import AddInsumoStockForm from '../components/insumos/AddInsumoStockForm'
+import ActionMenu from '../components/ui/ActionMenu'
 import ConfirmDialog from '../components/ui/ConfirmDialog'
 import Toast from '../components/ui/Toast'
 import { useToast } from '../hooks/useToast'
@@ -15,13 +18,61 @@ type Modal =
 
 type StatusFilter = 'todos' | 'low' | 'out'
 type SortOption =
-  'recente' | 'nome-az' | 'nome-za' | 'estoque-asc' | 'estoque-desc' | 'custo-asc' | 'custo-desc'
+  | 'reposicao'
+  | 'recente'
+  | 'nome-az'
+  | 'nome-za'
+  | 'estoque-asc'
+  | 'estoque-desc'
+  | 'custo-asc'
+  | 'custo-desc'
 
-function stockStatus(insumo: Insumo): 'ok' | 'low' | 'out' {
+type Status = 'ok' | 'low' | 'out'
+
+function stockStatus(insumo: Insumo): Status {
   if (insumo.stockQuantity <= 0) return 'out'
   if (insumo.minimumStock > 0 && insumo.stockQuantity < insumo.minimumStock) return 'low'
   return 'ok'
 }
+
+const CORES: Record<Status, { marcador: string; texto: string }> = {
+  out: { marcador: '#b3413f', texto: 'text-clay-500' },
+  low: { marcador: '#c98b2e', texto: 'text-honey-500' },
+  ok: { marcador: '#5d8f76', texto: 'text-ink-900' }
+}
+
+function unitLabel(unit: Insumo['unit']): string {
+  return unit === 'unidade' ? 'un.' : unit
+}
+
+function nomeUnidade(unit: Insumo['unit']): string {
+  return unit === 'unidade' ? 'Por unidade' : `Por ${unit}`
+}
+
+/**
+ * Insumos vendidos a granel têm custo unitário abaixo de um centavo (fio a
+ * R$ 0,012/cm). Arredondar para duas casas mostraria "R$ 0,01" e faria a conta
+ * parecer errada ao lado do valor total.
+ */
+function formatarCustoUnitario(valor: number): string {
+  const casas = valor > 0 && valor < 0.1 ? 4 : 2
+  return valor.toLocaleString('pt-BR', {
+    style: 'currency',
+    currency: 'BRL',
+    minimumFractionDigits: casas,
+    maximumFractionDigits: casas
+  })
+}
+
+/** Quanto falta em dinheiro para todos os insumos voltarem ao mínimo. */
+function custoDeReposicao(insumos: Insumo[]): number {
+  return insumos.reduce((total, i) => {
+    const falta = Math.max(i.minimumStock - i.stockQuantity, 0)
+    return total + falta * i.costPerUnit
+  }, 0)
+}
+
+const TH = 'px-3 py-2.5 text-meta font-bold uppercase tracking-[0.1em] text-ink-200'
 
 export default function Stock(): JSX.Element {
   const [insumos, setInsumos] = useState<Insumo[]>([])
@@ -31,15 +82,13 @@ export default function Stock(): JSX.Element {
   const [toastMsg, showToast, dismissToast] = useToast()
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('todos')
-  const [sortBy, setSortBy] = useState<SortOption>('recente')
-  const [lowStockExpanded, setLowStockExpanded] = useState(true)
-  const [exportMenuOpen, setExportMenuOpen] = useState(false)
-  const exportMenuRef = useRef<HTMLDivElement>(null)
+  const [sortBy, setSortBy] = useState<SortOption>('reposicao')
 
   async function loadInsumos(): Promise<void> {
     try {
       const data = await window.api.insumos.getAll()
       setInsumos(data)
+      avisarInsumosAlterados()
     } catch (err) {
       setErrorMessage('Erro ao carregar estoque.')
       console.error(err)
@@ -51,20 +100,6 @@ export default function Stock(): JSX.Element {
   useEffect(() => {
     loadInsumos()
   }, [])
-
-  useEffect(() => {
-    function handleClickOutside(e: MouseEvent): void {
-      if (exportMenuRef.current && !exportMenuRef.current.contains(e.target as Node)) {
-        setExportMenuOpen(false)
-      }
-    }
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [])
-
-  function unitLabel(unit: Insumo['unit']): string {
-    return unit === 'unidade' ? 'un.' : unit
-  }
 
   function buildCsv(rows: Insumo[]): string {
     const headers = ['Nome', 'Unidade', 'Estoque Atual', 'Estoque Mínimo', 'Déficit']
@@ -86,14 +121,13 @@ export default function Stock(): JSX.Element {
   }
 
   async function handleExport(mode: 'todos' | 'baixo' | 'atual'): Promise<void> {
-    setExportMenuOpen(false)
     let rows: Insumo[]
     let fileName: string
     if (mode === 'todos') {
       rows = insumos
       fileName = 'insumos_todos.csv'
     } else if (mode === 'baixo') {
-      rows = lowStock
+      rows = precisamReposicao
       fileName = 'insumos_estoque_baixo.csv'
     } else {
       rows = displayedInsumos
@@ -124,8 +158,11 @@ export default function Stock(): JSX.Element {
     }
   }
 
-  const lowStock = insumos.filter((i) => stockStatus(i) !== 'ok')
+  const precisamReposicao = insumos.filter((i) => stockStatus(i) !== 'ok')
+  const esgotados = insumos.filter((i) => stockStatus(i) === 'out')
+  const baixos = insumos.filter((i) => stockStatus(i) === 'low')
   const totalStockValue = insumos.reduce((s, i) => s + i.stockQuantity * i.costPerUnit, 0)
+  const valorReposicao = custoDeReposicao(precisamReposicao)
 
   const displayedInsumos = useMemo(() => {
     let result = insumos
@@ -139,8 +176,19 @@ export default function Stock(): JSX.Element {
       result = result.filter((i) => stockStatus(i) === statusFilter)
     }
 
-    result = [...result].sort((a, b) => {
+    const urgencia: Record<Status, number> = { out: 0, low: 1, ok: 2 }
+
+    return [...result].sort((a, b) => {
       switch (sortBy) {
+        case 'reposicao': {
+          const diff = urgencia[stockStatus(a)] - urgencia[stockStatus(b)]
+          if (diff !== 0) return diff
+          // Dentro do mesmo status, quem está proporcionalmente mais longe do
+          // mínimo aparece antes.
+          const folga = (i: Insumo): number =>
+            i.minimumStock > 0 ? i.stockQuantity / i.minimumStock : Number.POSITIVE_INFINITY
+          return folga(a) - folga(b)
+        }
         case 'nome-az':
           return a.name.localeCompare(b.name, 'pt-BR')
         case 'nome-za':
@@ -159,316 +207,273 @@ export default function Stock(): JSX.Element {
           return 0
       }
     })
-
-    return result
   }, [insumos, search, statusFilter, sortBy])
 
   const isFiltering = search.trim() !== '' || statusFilter !== 'todos'
 
+  const chips: { valor: StatusFilter; rotulo: string; contagem: number }[] = [
+    { valor: 'todos', rotulo: 'Todos', contagem: insumos.length },
+    { valor: 'low', rotulo: 'Baixo', contagem: baixos.length },
+    { valor: 'out', rotulo: 'Esgotado', contagem: esgotados.length }
+  ]
+
   return (
-    <div>
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h2 className="font-display text-2xl font-semibold text-gray-800">Estoque de Insumos</h2>
-          <p className="text-sm text-gray-400 mt-0.5">
-            {insumos.length === 0
-              ? 'Nenhum insumo cadastrado'
-              : isFiltering
-                ? `${displayedInsumos.length} de ${insumos.length} insumo${insumos.length !== 1 ? 's' : ''}`
-                : `${insumos.length} insumo${insumos.length !== 1 ? 's' : ''} cadastrado${insumos.length !== 1 ? 's' : ''}`}
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          {insumos.length > 0 && (
-            <div className="relative" ref={exportMenuRef}>
-              <button className="btn-secondary" onClick={() => setExportMenuOpen((v) => !v)}>
-                Exportar ↓
-              </button>
-              {exportMenuOpen && (
-                <div className="absolute right-0 mt-1 w-52 bg-white border border-cream-200 rounded-xl shadow-lg z-10 overflow-hidden">
-                  <button
-                    className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-cream-50 transition-colors"
-                    onClick={() => handleExport('todos')}
-                  >
-                    Todos os insumos
-                  </button>
-                  <button
-                    className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-cream-50 transition-colors disabled:opacity-40"
-                    onClick={() => handleExport('baixo')}
-                    disabled={lowStock.length === 0}
-                  >
-                    Estoque baixo / esgotado
-                    {lowStock.length > 0 && (
-                      <span className="ml-1.5 text-xs text-amber-600">({lowStock.length})</span>
-                    )}
-                  </button>
-                  <button
-                    className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-cream-50 transition-colors"
-                    onClick={() => handleExport('atual')}
-                  >
-                    Visão atual da tela
-                    <span className="ml-1.5 text-xs text-gray-400">
-                      ({displayedInsumos.length})
-                    </span>
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
-          <button className="btn-primary" onClick={() => setModal({ type: 'new' })}>
-            + Novo insumo
-          </button>
-        </div>
-      </div>
-
-      {errorMessage && (
-        <div className="bg-rose-50 border border-rose-200 rounded-2xl px-5 py-3 mb-4 flex items-start justify-between gap-3">
-          <p className="text-sm text-rose-700">{errorMessage}</p>
-          <button
-            onClick={() => setErrorMessage('')}
-            className="text-rose-400 hover:text-rose-600 shrink-0 text-lg leading-none"
-          >
-            ×
-          </button>
-        </div>
-      )}
-
-      {loading ? (
-        <div className="card flex items-center justify-center h-40">
-          <p className="text-gray-400 text-sm">Carregando…</p>
-        </div>
-      ) : insumos.length === 0 ? (
-        <div className="card flex flex-col items-center justify-center h-48 text-center">
-          <p className="text-gray-500 text-sm">Nenhum insumo cadastrado ainda.</p>
-          <p className="text-xs text-gray-400 mt-1">
-            Cadastre os materiais que você usa para fazer suas peças.
-          </p>
-          <button className="btn-primary mt-3" onClick={() => setModal({ type: 'new' })}>
-            Cadastrar primeiro insumo
-          </button>
-        </div>
-      ) : (
-        <>
-          {/* Stats */}
-          <div className="grid grid-cols-3 gap-4 mb-5">
-            <div className="card py-4">
-              <p className="text-xs text-gray-400 uppercase tracking-widest mb-1">
-                Valor em estoque
-              </p>
-              <p className="font-display text-xl font-bold text-blush-600">
-                {formatCurrency(totalStockValue)}
-              </p>
-              <p className="text-xs text-gray-400 mt-0.5">custo total dos insumos</p>
-            </div>
-            <div className="card py-4">
-              <p className="text-xs text-gray-400 uppercase tracking-widest mb-1">
-                Insumos em falta/baixo
-              </p>
-              <p
-                className={`font-display text-xl font-bold ${lowStock.length > 0 ? 'text-amber-500' : 'text-emerald-500'}`}
-              >
-                {lowStock.length}
-              </p>
-              <p className="text-xs text-gray-400 mt-0.5">precisam de reposição</p>
-            </div>
-            <div className="card py-4">
-              <p className="text-xs text-gray-400 uppercase tracking-widest mb-1">
-                Total de insumos
-              </p>
-              <p className="font-display text-xl font-bold text-gray-700">{insumos.length}</p>
-              <p className="text-xs text-gray-400 mt-0.5">materiais cadastrados</p>
-            </div>
+    <div className="pb-10">
+      <div className="sticky top-0 z-10 border-b border-bone-400 bg-bone-200 px-8 pb-3.5 pt-[26px]">
+        <div className="mb-4 flex items-end justify-between gap-6">
+          <div>
+            <p className="label mb-1">
+              {insumos.length === 0
+                ? 'Nenhum insumo cadastrado'
+                : isFiltering
+                  ? `${displayedInsumos.length} de ${insumos.length} insumos`
+                  : `${insumos.length} insumo${insumos.length !== 1 ? 's' : ''} · ${formatCurrency(totalStockValue)} em estoque`}
+            </p>
+            <h2 className="font-display text-[30px] font-semibold leading-none text-ink-900">
+              Insumos
+            </h2>
           </div>
+          <div className="flex gap-2">
+            {insumos.length > 0 && (
+              <ActionMenu
+                trigger={
+                  <>
+                    Exportar
+                    <ChevronDown size={14} />
+                  </>
+                }
+                items={[
+                  { label: 'Todos os insumos', onClick: () => handleExport('todos') },
+                  {
+                    label: 'Estoque baixo / esgotado',
+                    hint:
+                      precisamReposicao.length > 0 ? `(${precisamReposicao.length})` : undefined,
+                    disabled: precisamReposicao.length === 0,
+                    onClick: () => handleExport('baixo')
+                  },
+                  {
+                    label: 'Visão atual da tela',
+                    hint: `(${displayedInsumos.length})`,
+                    onClick: () => handleExport('atual')
+                  }
+                ]}
+              />
+            )}
+            <button className="btn-primary" onClick={() => setModal({ type: 'new' })}>
+              + Novo insumo
+            </button>
+          </div>
+        </div>
 
-          {/* Alertas */}
-          {lowStock.length > 0 && (
-            <div className="bg-amber-50 border border-amber-200 rounded-2xl px-5 py-4 mb-4">
-              <button
-                onClick={() => setLowStockExpanded((v) => !v)}
-                className="flex items-center justify-between w-full text-left"
-              >
-                <p className="text-sm font-semibold text-amber-800">
-                  ⚠ {lowStock.length} insumo{lowStock.length !== 1 ? 's' : ''} com estoque baixo ou
-                  esgotado
-                </p>
-                <span className="text-amber-500 text-xs font-medium ml-3 shrink-0">
-                  {lowStockExpanded ? '▲ Recolher' : '▼ Expandir'}
-                </span>
-              </button>
-              {lowStockExpanded && (
-                <div className="flex flex-wrap gap-2 mt-2">
-                  {lowStock.map((i) => (
-                    <span
-                      key={i.id}
-                      className={`text-xs px-2.5 py-1 rounded-full ${
-                        stockStatus(i) === 'out'
-                          ? 'bg-rose-100 text-rose-700'
-                          : 'bg-amber-100 text-amber-700'
-                      }`}
-                    >
-                      {i.name} — {i.stockQuantity.toLocaleString('pt-BR')}{' '}
-                      {i.unit === 'unidade' ? 'un.' : i.unit}
-                    </span>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Barra de pesquisa, filtro e ordenação */}
-          <div className="flex flex-wrap items-center gap-3 mb-4">
-            <input
-              type="text"
-              placeholder="Pesquisar insumo…"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="flex-1 min-w-48 px-4 py-2 rounded-xl border border-cream-200 bg-white text-sm text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blush-300"
-            />
-
-            <div className="flex rounded-xl border border-cream-200 bg-white overflow-hidden text-xs font-semibold">
-              {(
-                [
-                  ['todos', 'Todos'],
-                  ['low', 'Baixo'],
-                  ['out', 'Esgotado']
-                ] as [StatusFilter, string][]
-              ).map(([value, label]) => (
-                <button
-                  key={value}
-                  onClick={() => setStatusFilter(value)}
-                  className={`px-3 py-2 transition-colors ${
-                    statusFilter === value
-                      ? 'bg-blush-500 text-white'
-                      : 'text-gray-500 hover:bg-cream-50'
-                  }`}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
-
+        <div className="flex flex-wrap items-center gap-2">
+          <input
+            className="input w-[280px]"
+            placeholder="Pesquisar insumo…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+          <div className="mx-1 h-[22px] w-px bg-bone-500" />
+          {chips.map((chip) => (
+            <button
+              key={chip.valor}
+              onClick={() => setStatusFilter(chip.valor)}
+              className={`rounded-lg px-3 py-1.5 text-body transition-colors ${
+                statusFilter === chip.valor
+                  ? 'bg-ink-900 font-semibold text-bone-50'
+                  : 'font-medium text-ink-600 hover:bg-bone-300'
+              }`}
+            >
+              {chip.rotulo}{' '}
+              <span className={statusFilter === chip.valor ? 'opacity-55' : 'text-ink-200'}>
+                {chip.contagem}
+              </span>
+            </button>
+          ))}
+          <label className="ml-auto flex items-center gap-1 text-aux text-ink-300">
+            Ordenar:
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value as SortOption)}
-              className="px-3 py-2 rounded-xl border border-cream-200 bg-white text-xs text-gray-600 focus:outline-none focus:ring-2 focus:ring-blush-300"
+              className="cursor-pointer bg-transparent font-semibold text-ink-800 outline-none"
             >
-              <option value="recente">Último adicionado</option>
-              <option value="nome-az">Nome A→Z</option>
-              <option value="nome-za">Nome Z→A</option>
-              <option value="estoque-asc">Estoque ↑</option>
-              <option value="estoque-desc">Estoque ↓</option>
-              <option value="custo-asc">Custo/un. ↑</option>
-              <option value="custo-desc">Custo/un. ↓</option>
+              <option value="reposicao">reposição primeiro</option>
+              <option value="recente">recentes</option>
+              <option value="nome-az">nome A→Z</option>
+              <option value="nome-za">nome Z→A</option>
+              <option value="estoque-asc">menor estoque</option>
+              <option value="estoque-desc">maior estoque</option>
+              <option value="custo-asc">menor custo</option>
+              <option value="custo-desc">maior custo</option>
             </select>
-          </div>
+          </label>
+        </div>
+      </div>
 
-          {/* Lista */}
-          <div className="bg-white rounded-2xl border border-cream-200 shadow-card overflow-hidden">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-cream-100">
-                  <th className="text-left px-5 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">
-                    Insumo
-                  </th>
-                  <th className="text-right px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">
-                    Custo/un.
-                  </th>
-                  <th className="text-right px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">
-                    Estoque
-                  </th>
-                  <th className="text-right px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">
-                    Mínimo
-                  </th>
-                  <th className="text-right px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">
-                    Val. estoque
-                  </th>
-                  <th className="px-4 py-3" />
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-cream-100">
-                {displayedInsumos.length === 0 ? (
-                  <tr>
-                    <td colSpan={6} className="px-5 py-10 text-center text-sm text-gray-400">
-                      Nenhum insumo encontrado para esta pesquisa.
-                    </td>
-                  </tr>
-                ) : (
-                  displayedInsumos.map((insumo) => {
-                    const status = stockStatus(insumo)
-                    const unitLabel = insumo.unit === 'unidade' ? 'un.' : insumo.unit
-                    return (
-                      <tr key={insumo.id} className="hover:bg-cream-50 transition-colors">
-                        <td className="px-5 py-3">
-                          <div className="flex items-center gap-2">
-                            <span className="font-medium text-gray-800">{insumo.name}</span>
-                            {status === 'out' && (
-                              <span className="text-xs bg-rose-100 text-rose-600 px-2 py-0.5 rounded-full">
-                                Esgotado
-                              </span>
-                            )}
-                            {status === 'low' && (
-                              <span className="text-xs bg-amber-100 text-amber-600 px-2 py-0.5 rounded-full">
-                                Baixo
-                              </span>
-                            )}
-                          </div>
-                          <p className="text-xs text-gray-400 mt-0.5">
-                            {insumo.unit === 'unidade' ? 'Por unidade' : `Por ${insumo.unit}`}
-                          </p>
-                        </td>
-                        <td className="px-4 py-3 text-right text-gray-600">
-                          {formatCurrency(insumo.costPerUnit)}/{unitLabel}
-                        </td>
-                        <td
-                          className={`px-4 py-3 text-right font-medium ${
-                            status === 'out'
-                              ? 'text-rose-600'
-                              : status === 'low'
-                                ? 'text-amber-600'
-                                : 'text-gray-700'
-                          }`}
-                        >
-                          {insumo.stockQuantity.toLocaleString('pt-BR')} {unitLabel}
-                        </td>
-                        <td className="px-4 py-3 text-right text-gray-400">
-                          {insumo.minimumStock > 0
-                            ? `${insumo.minimumStock.toLocaleString('pt-BR')} ${unitLabel}`
-                            : '—'}
-                        </td>
-                        <td className="px-4 py-3 text-right text-gray-600">
-                          {formatCurrency(insumo.stockQuantity * insumo.costPerUnit)}
-                        </td>
-                        <td className="px-4 py-3">
-                          <div className="flex justify-end gap-1">
-                            <button
-                              className="text-xs text-emerald-600 hover:text-emerald-800 px-2 py-1 rounded-lg hover:bg-emerald-50 transition-colors whitespace-nowrap"
-                              onClick={() => setModal({ type: 'addStock', insumo })}
-                            >
-                              + Estoque
-                            </button>
-                            <button
-                              className="text-xs text-blush-600 hover:text-blush-800 px-2 py-1 rounded-lg hover:bg-blush-50 transition-colors"
-                              onClick={() => setModal({ type: 'edit', insumo })}
-                            >
-                              Editar
-                            </button>
-                            <button
-                              className="text-xs text-rose-500 hover:text-rose-700 px-2 py-1 rounded-lg hover:bg-rose-50 transition-colors"
-                              onClick={() => setModal({ type: 'delete', insumo })}
-                            >
-                              Excluir
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    )
-                  })
-                )}
-              </tbody>
-            </table>
+      <div className="px-8 pt-5">
+        {errorMessage && (
+          <div className="mb-4 flex items-start justify-between gap-3 rounded-[11px] border border-bone-500 bg-clay-100 px-4 py-3">
+            <p className="text-body text-clay-600">{errorMessage}</p>
+            <button
+              onClick={() => setErrorMessage('')}
+              className="shrink-0 text-lg leading-none text-clay-500 hover:text-clay-600"
+            >
+              ×
+            </button>
           </div>
-        </>
-      )}
+        )}
+
+        {loading ? (
+          <div className="card flex h-40 items-center justify-center">
+            <p className="text-body text-ink-300">Carregando…</p>
+          </div>
+        ) : insumos.length === 0 ? (
+          <div className="card flex h-48 flex-col items-center justify-center text-center">
+            <p className="text-body text-ink-600">Nenhum insumo cadastrado ainda.</p>
+            <p className="mt-1 text-micro text-ink-300">
+              Cadastre os materiais que você usa para fazer suas peças.
+            </p>
+            <button className="btn-primary mt-3" onClick={() => setModal({ type: 'new' })}>
+              Cadastrar primeiro insumo
+            </button>
+          </div>
+        ) : (
+          <>
+            {precisamReposicao.length > 0 && (
+              <div className="mb-4 flex items-center gap-3.5 rounded-[11px] border border-honey-200 bg-honey-100 px-4 py-3">
+                <span className="shrink-0 rounded-md bg-honey-200 px-2.5 py-[3px] text-micro font-bold text-honey-500">
+                  REPOR
+                </span>
+                <p className="text-body text-honey-600">
+                  {precisamReposicao.length} insumo{precisamReposicao.length !== 1 ? 's' : ''}{' '}
+                  abaixo do mínimo — reposição estimada em{' '}
+                  <strong className="font-semibold">{formatCurrency(valorReposicao)}</strong>.
+                </p>
+                <button
+                  onClick={() => handleExport('baixo')}
+                  className="ml-auto shrink-0 whitespace-nowrap text-body font-semibold text-wine-500 hover:text-wine-600"
+                >
+                  Exportar lista →
+                </button>
+              </div>
+            )}
+
+            <div className="overflow-hidden rounded-card border border-bone-400 bg-bone-50">
+              <table className="w-full text-body">
+                <thead>
+                  <tr>
+                    <th className={`${TH} pl-[22px] text-left`}>Insumo</th>
+                    <th className={`${TH} text-left`}>Estoque</th>
+                    <th className={`${TH} text-right`}>Mínimo</th>
+                    <th className={`${TH} text-right`}>Custo/un.</th>
+                    <th className={`${TH} text-right`}>Val. estoque</th>
+                    <th className={`${TH} pr-[22px]`} />
+                  </tr>
+                </thead>
+                <tbody>
+                  {displayedInsumos.length === 0 ? (
+                    <tr>
+                      <td
+                        colSpan={6}
+                        className="border-t border-bone-300 px-[22px] py-10 text-center text-body text-ink-300"
+                      >
+                        Nenhum insumo encontrado para esta pesquisa.
+                      </td>
+                    </tr>
+                  ) : (
+                    displayedInsumos.map((insumo) => {
+                      const status = stockStatus(insumo)
+                      const cores = CORES[status]
+                      const ul = unitLabel(insumo.unit)
+                      const pct =
+                        insumo.minimumStock > 0
+                          ? Math.min((insumo.stockQuantity / insumo.minimumStock) * 100, 100)
+                          : insumo.stockQuantity > 0
+                            ? 100
+                            : 0
+
+                      return (
+                        <tr
+                          key={insumo.id}
+                          className="border-t border-bone-300 transition-colors hover:bg-bone-100"
+                        >
+                          <td className="py-3 pl-[22px] pr-3">
+                            <div className="flex items-center gap-2.5">
+                              <span
+                                className="h-[26px] w-1.5 shrink-0 rounded-full"
+                                style={{ background: cores.marcador }}
+                              />
+                              <div>
+                                <p className="font-medium text-ink-900">{insumo.name}</p>
+                                <p className="mt-px text-micro text-ink-300">
+                                  {nomeUnidade(insumo.unit)}
+                                </p>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-3 py-3">
+                            <div
+                              className="flex items-center gap-2.5"
+                              title={
+                                insumo.minimumStock > 0
+                                  ? `Mínimo: ${insumo.minimumStock.toLocaleString('pt-BR')} ${ul}`
+                                  : 'Sem mínimo definido'
+                              }
+                            >
+                              <div className="h-[5px] w-14 overflow-hidden rounded-full bg-bone-300">
+                                <div
+                                  className="h-full rounded-full"
+                                  style={{ width: `${pct}%`, background: cores.marcador }}
+                                />
+                              </div>
+                              <span className={`font-semibold tabular-nums ${cores.texto}`}>
+                                {insumo.stockQuantity.toLocaleString('pt-BR')} {ul}
+                              </span>
+                            </div>
+                          </td>
+                          <td className="px-3 py-3 text-right tabular-nums text-ink-300">
+                            {insumo.minimumStock > 0
+                              ? `${insumo.minimumStock.toLocaleString('pt-BR')} ${ul}`
+                              : '—'}
+                          </td>
+                          <td className="px-3 py-3 text-right tabular-nums text-ink-600">
+                            {formatarCustoUnitario(insumo.costPerUnit)}
+                          </td>
+                          <td className="px-3 py-3 text-right font-semibold tabular-nums text-ink-900">
+                            {formatCurrency(insumo.stockQuantity * insumo.costPerUnit)}
+                          </td>
+                          <td className="py-3 pl-3 pr-[22px]">
+                            <div className="flex items-center justify-end gap-2">
+                              <button
+                                className="whitespace-nowrap text-aux font-semibold text-wine-500 hover:text-wine-600"
+                                onClick={() => setModal({ type: 'addStock', insumo })}
+                              >
+                                + Estoque
+                              </button>
+                              <ActionMenu
+                                items={[
+                                  {
+                                    label: 'Editar insumo',
+                                    onClick: () => setModal({ type: 'edit', insumo })
+                                  },
+                                  {
+                                    label: 'Excluir insumo',
+                                    danger: true,
+                                    onClick: () => setModal({ type: 'delete', insumo })
+                                  }
+                                ]}
+                              />
+                            </div>
+                          </td>
+                        </tr>
+                      )
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </>
+        )}
+      </div>
 
       {toastMsg && <Toast message={toastMsg} onDismiss={dismissToast} />}
 

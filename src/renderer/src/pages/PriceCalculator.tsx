@@ -4,13 +4,14 @@ import { formatCurrency } from '../utils/format'
 import type { Insumo, Product } from '../types'
 
 const LABOR_COST_KEY = 'pricing_default_labor_cost'
+const FORMULA = 'teto((materiais × 3 + mão de obra) × 1,10 + 1,00)'
 
 interface MaterialRow {
   id: string
-  // manual mode
+  // Modo manual: nome e custo informados direto.
   name: string
   cost: string
-  // insumo mode (null = manual)
+  // Modo insumo (insumoId null = manual): quantidade sobre o custo unitário.
   insumoId: number | null
   quantity: string
 }
@@ -18,10 +19,12 @@ interface MaterialRow {
 function ApplyToVariation({
   suggestedPrice,
   products,
+  habilitado,
   onApplied
 }: {
   suggestedPrice: number
   products: Product[]
+  habilitado: boolean
   onApplied: () => void
 }): JSX.Element {
   const [productId, setProductId] = useState<number | ''>('')
@@ -31,22 +34,26 @@ function ApplyToVariation({
 
   const selectedProduct = products.find((p) => p.id === productId)
   const variations = selectedProduct?.variations ?? []
+  const selectedVariation = variations.find((v) => v.id === variationId)
+
+  const diferenca =
+    selectedVariation && selectedVariation.salePrice > 0
+      ? ((suggestedPrice - selectedVariation.salePrice) / selectedVariation.salePrice) * 100
+      : null
 
   async function handleApply(): Promise<void> {
-    if (!variationId) return
+    if (!selectedVariation) return
     setSaving(true)
     try {
-      const variation = variations.find((v) => v.id === variationId)
-      if (!variation) return
       await window.api.variations.update({
-        id: variation.id,
-        productId: variation.productId,
-        identifier: variation.identifier,
-        costPrice: variation.costPrice,
+        id: selectedVariation.id,
+        productId: selectedVariation.productId,
+        identifier: selectedVariation.identifier,
+        costPrice: selectedVariation.costPrice,
         salePrice: suggestedPrice,
-        stockQuantity: variation.stockQuantity,
-        minimumStock: variation.minimumStock,
-        laborCost: variation.laborCost
+        stockQuantity: selectedVariation.stockQuantity,
+        minimumStock: selectedVariation.minimumStock,
+        laborCost: selectedVariation.laborCost
       })
       setSuccess(true)
       setTimeout(() => {
@@ -61,56 +68,80 @@ function ApplyToVariation({
   }
 
   return (
-    <div className="mt-6 pt-5 border-t border-cream-200">
-      <p className="text-sm font-medium text-gray-700 mb-3">Aplicar preço a uma variação</p>
-      <div className="space-y-3">
-        <div>
-          <label className="label">Produto</label>
-          <select
-            className="input"
-            value={productId}
-            onChange={(e) => {
-              setProductId(e.target.value === '' ? '' : Number(e.target.value))
-              setVariationId('')
-            }}
-          >
-            <option value="">Selecione um produto…</option>
-            {products.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.name} ({p.categoryName})
-              </option>
-            ))}
-          </select>
-        </div>
+    <div className="card">
+      <p className="mb-3 text-sm font-semibold text-ink-900">Aplicar a uma variação</p>
 
-        {productId !== '' && (
-          <div>
-            <label className="label">Variação</label>
-            <select
-              className="input"
-              value={variationId}
-              onChange={(e) => setVariationId(e.target.value === '' ? '' : Number(e.target.value))}
-            >
-              <option value="">Selecione uma variação…</option>
-              {variations.map((v) => (
-                <option key={v.id} value={v.id}>
-                  {v.identifier}
-                </option>
-              ))}
-            </select>
-          </div>
-        )}
-
-        {variationId !== '' && (
-          <button className="btn-primary w-full" onClick={handleApply} disabled={saving || success}>
-            {success
-              ? '✓ Preço aplicado!'
-              : saving
-                ? 'Aplicando…'
-                : `Aplicar ${formatCurrency(suggestedPrice)} a esta variação`}
-          </button>
-        )}
+      <div className="mb-3 flex gap-2">
+        <select
+          className="input flex-1"
+          value={productId}
+          onChange={(e) => {
+            setProductId(e.target.value === '' ? '' : Number(e.target.value))
+            setVariationId('')
+          }}
+        >
+          <option value="">Produto…</option>
+          {products.map((p) => (
+            <option key={p.id} value={p.id}>
+              {p.name} ({p.categoryName})
+            </option>
+          ))}
+        </select>
+        <select
+          className="input flex-1"
+          value={variationId}
+          disabled={productId === ''}
+          onChange={(e) => setVariationId(e.target.value === '' ? '' : Number(e.target.value))}
+        >
+          <option value="">Variação…</option>
+          {variations.map((v) => (
+            <option key={v.id} value={v.id}>
+              {v.identifier}
+            </option>
+          ))}
+        </select>
       </div>
+
+      {selectedVariation && (
+        <div className="mb-3 flex items-center gap-3 rounded-control bg-bone-200 px-3 py-2.5">
+          <span className="text-aux text-ink-400">
+            Preço atual{' '}
+            <strong className="font-semibold text-ink-800 line-through decoration-ink-100">
+              {formatCurrency(selectedVariation.salePrice)}
+            </strong>
+          </span>
+          <span className="text-aux text-ink-200">→</span>
+          <span className="text-aux text-ink-400">
+            novo{' '}
+            <strong className="font-semibold text-wine-500">
+              {formatCurrency(suggestedPrice)}
+            </strong>
+          </span>
+          {diferenca !== null && Math.abs(diferenca) >= 0.5 && (
+            <span
+              className={`ml-auto rounded-[5px] px-2 py-0.5 text-meta font-bold ${
+                diferenca < 0 ? 'bg-honey-100 text-honey-500' : 'bg-sage-100 text-sage-500'
+              }`}
+            >
+              {diferenca < 0 ? 'baixa' : 'alta'} de {Math.abs(diferenca).toFixed(0)}%
+            </span>
+          )}
+        </div>
+      )}
+
+      <button
+        className="btn-primary w-full"
+        onClick={handleApply}
+        disabled={!habilitado || !selectedVariation || saving || success}
+      >
+        {success
+          ? '✓ Preço aplicado!'
+          : saving
+            ? 'Aplicando…'
+            : selectedVariation
+              ? `Aplicar ${formatCurrency(suggestedPrice)} a ${selectedProduct?.name} — ${selectedVariation.identifier}`
+              : 'Escolha o produto e a variação'}
+      </button>
     </div>
   )
 }
@@ -123,18 +154,18 @@ export default function PriceCalculator(): JSX.Element {
   const [laborCost, setLaborCost] = useState(() => localStorage.getItem(LABOR_COST_KEY) ?? '')
   const [products, setProducts] = useState<Product[]>([])
   const [insumos, setInsumos] = useState<Insumo[]>([])
-  const [showApply, setShowApply] = useState(false)
   const [laborSaved, setLaborSaved] = useState(false)
 
+  async function loadData(): Promise<void> {
+    const [prods, insms] = await Promise.all([
+      window.api.products.getAll(),
+      window.api.insumos.getAll()
+    ])
+    setProducts(prods)
+    setInsumos(insms)
+  }
+
   useEffect(() => {
-    async function loadData(): Promise<void> {
-      const [prods, insms] = await Promise.all([
-        window.api.products.getAll(),
-        window.api.insumos.getAll()
-      ])
-      setProducts(prods)
-      setInsumos(insms)
-    }
     loadData()
   }, [])
 
@@ -178,7 +209,6 @@ export default function PriceCalculator(): JSX.Element {
   }
 
   const totalMaterials = materials.reduce((sum, m) => sum + rowCost(m), 0)
-
   const labor = parseFloat(laborCost)
   const laborValue = isNaN(labor) ? 0 : labor
 
@@ -188,155 +218,178 @@ export default function PriceCalculator(): JSX.Element {
   const step4 = step3 + 1
   const finalPrice = calcSuggestedPrice(totalMaterials, laborValue)
   const hasResult = totalMaterials > 0 || laborValue > 0
+  const custoTotal = totalMaterials + laborValue
+  const margemSobreCusto = custoTotal > 0 ? ((finalPrice - custoTotal) / custoTotal) * 100 : null
+
+  const passos = [
+    { titulo: 'Materiais × 3', conta: `${formatCurrency(totalMaterials)} × 3`, valor: step1 },
+    {
+      titulo: '+ Mão de obra',
+      conta: `${formatCurrency(step1)} + ${formatCurrency(laborValue)}`,
+      valor: step2
+    },
+    { titulo: '× 1,10 (margem)', conta: `${formatCurrency(step2)} × 1,10`, valor: step3 },
+    { titulo: '+ Embalagem', conta: `${formatCurrency(step3)} + R$ 1,00`, valor: step4 },
+    {
+      titulo: 'Arredondamento',
+      conta: 'sempre para o real inteiro acima',
+      valor: finalPrice,
+      destaque: true
+    }
+  ]
 
   return (
-    <div>
-      <div className="mb-6">
-        <h2 className="font-display text-2xl font-semibold text-gray-800">Calculadora de Preço</h2>
-        <p className="text-sm text-gray-400 mt-0.5">
-          Insira os custos e veja o preço de venda sugerido automaticamente.
-        </p>
+    <div className="pb-10">
+      <div className="sticky top-0 z-10 border-b border-bone-400 bg-bone-200 px-8 pb-3.5 pt-[26px]">
+        <p className="label mb-1">{FORMULA}</p>
+        <h2 className="font-display text-[30px] font-semibold leading-none text-ink-900">
+          Precificação
+        </h2>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
-        {/* Coluna de entrada */}
-        <div className="card space-y-5">
-          {/* Materiais */}
-          <div>
-            <div className="flex items-center justify-between mb-3">
-              <label className="text-sm font-medium text-gray-700">Materiais utilizados</label>
-              <button
-                onClick={addMaterial}
-                className="text-xs text-blush-600 hover:text-blush-800 font-medium transition-colors"
-              >
-                + Adicionar material
-              </button>
-            </div>
-
-            <div className="space-y-2">
-              {materials.map((m, index) => {
-                const linkedInsumo =
-                  m.insumoId !== null ? insumos.find((i) => i.id === m.insumoId) : null
-                const computedCost = linkedInsumo ? rowCost(m) : null
-                const unitLabel = linkedInsumo
-                  ? linkedInsumo.unit === 'unidade'
-                    ? 'un.'
-                    : linkedInsumo.unit
-                  : null
-
-                return (
-                  <div key={m.id} className="space-y-1.5">
-                    <div className="flex gap-2 items-center">
-                      <select
-                        className="input flex-1"
-                        value={m.insumoId ?? ''}
-                        onChange={(e) =>
-                          setMaterialInsumo(
-                            m.id,
-                            e.target.value === '' ? null : Number(e.target.value)
-                          )
-                        }
-                      >
-                        <option value="">Inserir manualmente…</option>
-                        {insumos.length > 0 && (
-                          <optgroup label="Insumos cadastrados">
-                            {insumos.map((i) => (
-                              <option key={i.id} value={i.id}>
-                                {i.name} ({i.unit === 'unidade' ? 'un.' : i.unit} ·{' '}
-                                {formatCurrency(i.costPerUnit)})
-                              </option>
-                            ))}
-                          </optgroup>
-                        )}
-                      </select>
-                      {materials.length > 1 && (
-                        <button
-                          onClick={() => removeMaterial(m.id)}
-                          className="text-gray-300 hover:text-rose-400 transition-colors text-lg leading-none shrink-0"
-                          title="Remover"
-                        >
-                          ×
-                        </button>
-                      )}
-                    </div>
-
-                    {m.insumoId === null ? (
-                      <div className="flex gap-2 items-center pl-1">
-                        <input
-                          className="input flex-1"
-                          placeholder={`Nome do material ${index + 1}`}
-                          value={m.name}
-                          onChange={(e) => updateMaterial(m.id, 'name', e.target.value)}
-                        />
-                        <div className="relative w-32 shrink-0">
-                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm pointer-events-none">
-                            R$
-                          </span>
-                          <input
-                            className="input pl-8"
-                            type="number"
-                            min="0"
-                            step="0.01"
-                            placeholder="0,00"
-                            value={m.cost}
-                            onChange={(e) => updateMaterial(m.id, 'cost', e.target.value)}
-                          />
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="flex gap-2 items-center pl-1">
-                        <div className="relative w-40 shrink-0">
-                          <input
-                            className="input"
-                            type="number"
-                            min="0"
-                            step="0.01"
-                            placeholder={`Qtd. em ${unitLabel}`}
-                            value={m.quantity}
-                            onChange={(e) => updateMaterial(m.id, 'quantity', e.target.value)}
-                          />
-                        </div>
-                        <span className="text-xs text-gray-400">{unitLabel}</span>
-                        <span className="ml-auto text-sm font-medium text-gray-700">
-                          {computedCost !== null && computedCost > 0 ? (
-                            `= ${formatCurrency(computedCost)}`
-                          ) : (
-                            <span className="text-gray-300">= R$ —</span>
-                          )}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                )
-              })}
-            </div>
-
-            <div className="mt-3 flex justify-end">
-              <span className="text-sm text-gray-500">
-                Total de materiais:{' '}
-                <span className="font-medium text-gray-700">{formatCurrency(totalMaterials)}</span>
-              </span>
-            </div>
+      <div className="grid grid-cols-[1.05fr_1fr] items-start gap-3.5 px-8 pt-[22px]">
+        <div className="card">
+          <div className="mb-3.5 flex items-baseline justify-between">
+            <p className="text-sm font-semibold text-ink-900">Materiais</p>
+            <button
+              onClick={addMaterial}
+              className="text-aux font-semibold text-wine-500 transition-colors hover:text-wine-600"
+            >
+              + Adicionar material
+            </button>
           </div>
 
-          {/* Mão de obra */}
-          <div>
-            <div className="flex items-center justify-between mb-1">
-              <label className="label mb-0">Mão de obra (R$)</label>
-              <button
-                type="button"
-                onClick={saveDefaultLaborCost}
-                className="text-xs text-blush-600 hover:text-blush-800 transition-colors"
-              >
-                {laborSaved ? '✓ Salvo!' : 'Salvar como padrão'}
-              </button>
-            </div>
-            <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm pointer-events-none">
+          <div className="flex flex-col gap-2">
+            {materials.map((m, index) => {
+              const insumo = m.insumoId !== null ? insumos.find((i) => i.id === m.insumoId) : null
+              const unitLabel = insumo ? (insumo.unit === 'unidade' ? 'un.' : insumo.unit) : null
+              const subtotal = rowCost(m)
+
+              return (
+                <div
+                  key={m.id}
+                  className="flex items-center gap-2.5 rounded-[11px] border border-bone-400 bg-bone-100 p-3"
+                >
+                  <span
+                    className="h-6 w-1.5 shrink-0 rounded-full"
+                    style={{ background: insumo ? '#c9a15f' : '#d5c8c2' }}
+                  />
+
+                  <div className="min-w-0 flex-1 space-y-1.5">
+                    <select
+                      className="input py-1.5 text-aux"
+                      value={m.insumoId ?? ''}
+                      onChange={(e) =>
+                        setMaterialInsumo(
+                          m.id,
+                          e.target.value === '' ? null : Number(e.target.value)
+                        )
+                      }
+                    >
+                      <option value="">Inserir manualmente…</option>
+                      {insumos.length > 0 && (
+                        <optgroup label="Insumos cadastrados">
+                          {insumos.map((i) => (
+                            <option key={i.id} value={i.id}>
+                              {i.name} ({i.unit === 'unidade' ? 'un.' : i.unit} ·{' '}
+                              {formatCurrency(i.costPerUnit)})
+                            </option>
+                          ))}
+                        </optgroup>
+                      )}
+                    </select>
+                    {m.insumoId === null ? (
+                      <input
+                        className="input py-1.5 text-aux"
+                        placeholder={`Nome do material ${index + 1}`}
+                        value={m.name}
+                        onChange={(e) => updateMaterial(m.id, 'name', e.target.value)}
+                      />
+                    ) : (
+                      <p className="text-micro text-ink-300">
+                        Insumo · {formatCurrency(insumo!.costPerUnit)}/{unitLabel}
+                      </p>
+                    )}
+                  </div>
+
+                  {m.insumoId === null ? (
+                    <div className="relative w-[104px] shrink-0">
+                      <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-aux text-ink-300">
+                        R$
+                      </span>
+                      <input
+                        className="input py-1.5 pl-8 text-right text-aux tabular-nums"
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        placeholder="0,00"
+                        value={m.cost}
+                        onChange={(e) => updateMaterial(m.id, 'cost', e.target.value)}
+                      />
+                    </div>
+                  ) : (
+                    <div className="flex shrink-0 items-center gap-1.5">
+                      <input
+                        className="input w-[68px] py-1.5 text-right text-aux tabular-nums"
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        placeholder="Qtd."
+                        value={m.quantity}
+                        onChange={(e) => updateMaterial(m.id, 'quantity', e.target.value)}
+                      />
+                      <span className="w-7 text-aux text-ink-400">{unitLabel}</span>
+                    </div>
+                  )}
+
+                  <span className="w-[82px] shrink-0 text-right text-body font-semibold tabular-nums text-ink-900">
+                    {subtotal > 0 ? (
+                      formatCurrency(subtotal)
+                    ) : (
+                      <span className="text-ink-100">—</span>
+                    )}
+                  </span>
+
+                  {materials.length > 1 && (
+                    <button
+                      onClick={() => removeMaterial(m.id)}
+                      className="shrink-0 text-lg leading-none text-ink-100 transition-colors hover:text-clay-500"
+                      title="Remover material"
+                    >
+                      ×
+                    </button>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+
+          <div className="mt-3.5 flex items-baseline justify-between border-t border-bone-300 pt-3">
+            <span className="text-body text-ink-600">Total de materiais</span>
+            <span className="text-base font-semibold tabular-nums text-ink-900">
+              {formatCurrency(totalMaterials)}
+            </span>
+          </div>
+
+          <div className="my-5 h-px bg-bone-300" />
+
+          <div className="mb-2 flex items-baseline justify-between">
+            <p className="text-sm font-semibold text-ink-900">Mão de obra</p>
+            <button
+              type="button"
+              onClick={saveDefaultLaborCost}
+              className="text-aux font-semibold text-wine-500 transition-colors hover:text-wine-600"
+            >
+              {laborSaved ? '✓ Salvo!' : 'Salvar como padrão'}
+            </button>
+          </div>
+          <div className="flex items-center gap-2.5">
+            <div className="relative w-[150px] shrink-0">
+              <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-body text-ink-300">
                 R$
               </span>
               <input
-                className="input pl-8"
+                className="input pl-9 font-semibold tabular-nums"
                 type="number"
                 min="0"
                 step="0.01"
@@ -345,129 +398,65 @@ export default function PriceCalculator(): JSX.Element {
                 onChange={(e) => setLaborCost(e.target.value)}
               />
             </div>
-            <p className="text-xs text-gray-400 mt-1">
-              Valor cobrado pelo seu tempo e trabalho na confecção desta peça.
-            </p>
+            <p className="flex-1 text-aux text-ink-400">Seu tempo de confecção desta peça.</p>
           </div>
         </div>
 
-        {/* Coluna de resultado */}
-        <div className="space-y-4">
-          {/* Breakdown da fórmula */}
+        <div className="flex flex-col gap-3.5">
           <div className="card">
-            <h3 className="font-display text-base font-semibold text-gray-700 mb-4">
-              Cálculo passo a passo
-            </h3>
-
-            <div className="space-y-3">
-              <div className="flex items-center justify-between py-2.5 border-b border-cream-100">
-                <div>
-                  <p className="text-sm font-medium text-gray-700">Materiais × 3</p>
-                  <p className="text-xs text-gray-400">{formatCurrency(totalMaterials)} × 3</p>
-                </div>
-                <span
-                  className={`text-sm font-semibold ${hasResult ? 'text-gray-800' : 'text-gray-300'}`}
-                >
-                  {formatCurrency(step1)}
-                </span>
-              </div>
-
-              <div className="flex items-center justify-between py-2.5 border-b border-cream-100">
-                <div>
-                  <p className="text-sm font-medium text-gray-700">+ Mão de obra</p>
-                  <p className="text-xs text-gray-400">
-                    {formatCurrency(step1)} + {formatCurrency(laborValue)}
+            <p className="label mb-1">Preço sugerido</p>
+            <div className="flex items-end justify-between gap-4">
+              <p
+                className={`text-[46px] font-semibold leading-none tracking-[-0.035em] tabular-nums ${
+                  hasResult ? 'text-wine-500' : 'text-ink-100'
+                }`}
+              >
+                {hasResult ? formatCurrency(finalPrice) : 'R$ —'}
+              </p>
+              {hasResult && margemSobreCusto !== null && (
+                <div className="pb-1 text-right">
+                  <p className="text-aux text-ink-400">margem sobre custo</p>
+                  <p className="text-[15px] font-semibold tabular-nums text-sage-500">
+                    {margemSobreCusto.toFixed(0)}%
                   </p>
                 </div>
-                <span
-                  className={`text-sm font-semibold ${hasResult ? 'text-gray-800' : 'text-gray-300'}`}
-                >
-                  {formatCurrency(step2)}
-                </span>
-              </div>
-
-              <div className="flex items-center justify-between py-2.5 border-b border-cream-100">
-                <div>
-                  <p className="text-sm font-medium text-gray-700">× 1,10 (margem)</p>
-                  <p className="text-xs text-gray-400">{formatCurrency(step2)} × 1,10</p>
-                </div>
-                <span
-                  className={`text-sm font-semibold ${hasResult ? 'text-gray-800' : 'text-gray-300'}`}
-                >
-                  {formatCurrency(step3)}
-                </span>
-              </div>
-
-              <div className="flex items-center justify-between py-2.5 border-b border-cream-100">
-                <div>
-                  <p className="text-sm font-medium text-gray-700">+ Embalagem</p>
-                  <p className="text-xs text-gray-400">{formatCurrency(step3)} + R$ 1,00</p>
-                </div>
-                <span
-                  className={`text-sm font-semibold ${hasResult ? 'text-gray-800' : 'text-gray-300'}`}
-                >
-                  {formatCurrency(step4)}
-                </span>
-              </div>
-
-              <div className="flex items-center justify-between py-2.5">
-                <div>
-                  <p className="text-sm font-medium text-gray-700">Arredondamento</p>
-                  <p className="text-xs text-gray-400">Sempre para o R$ inteiro acima</p>
-                </div>
-                <span
-                  className={`text-sm font-semibold ${hasResult ? 'text-gray-800' : 'text-gray-300'}`}
-                >
-                  {hasResult ? formatCurrency(finalPrice) : formatCurrency(0)}
-                </span>
-              </div>
-            </div>
-
-            {/* Preço final */}
-            <div
-              className={`mt-4 rounded-xl p-4 text-center transition-all ${hasResult ? 'bg-blush-50' : 'bg-cream-100'}`}
-            >
-              <p className="text-xs text-gray-400 uppercase tracking-widest mb-1">Preço sugerido</p>
-              <p
-                className={`font-display text-4xl font-bold transition-colors ${hasResult ? 'text-blush-600' : 'text-gray-300'}`}
-              >
-                {formatCurrency(finalPrice)}
-              </p>
-              {hasResult && (
-                <p className="text-xs text-gray-400 mt-1">
-                  Margem sobre custo total:{' '}
-                  {totalMaterials + laborValue > 0
-                    ? `${(((finalPrice - (totalMaterials + laborValue)) / (totalMaterials + laborValue)) * 100).toFixed(0)}%`
-                    : '—'}
-                </p>
               )}
             </div>
 
-            {/* Aplicar a variação */}
-            {hasResult && products.length > 0 && (
-              <>
-                {!showApply ? (
-                  <button className="btn-secondary w-full mt-4" onClick={() => setShowApply(true)}>
-                    Aplicar preço a uma variação
-                  </button>
-                ) : (
-                  <ApplyToVariation
-                    suggestedPrice={finalPrice}
-                    products={products}
-                    onApplied={() => setShowApply(false)}
-                  />
-                )}
-              </>
-            )}
+            <div className="mt-4 flex flex-col">
+              {passos.map((passo) => (
+                <div
+                  key={passo.titulo}
+                  className="flex items-baseline justify-between gap-3 border-t border-bone-300 py-2.5"
+                >
+                  <div>
+                    <p className="text-body font-medium text-ink-800">{passo.titulo}</p>
+                    <p className="mt-px text-micro tabular-nums text-ink-300">{passo.conta}</p>
+                  </div>
+                  <span
+                    className={`whitespace-nowrap text-body font-semibold tabular-nums ${
+                      !hasResult
+                        ? 'text-ink-100'
+                        : passo.destaque
+                          ? 'text-wine-500'
+                          : 'text-ink-800'
+                    }`}
+                  >
+                    {formatCurrency(passo.valor)}
+                  </span>
+                </div>
+              ))}
+            </div>
           </div>
 
-          {/* Fórmula resumida */}
-          <div className="bg-white rounded-2xl border border-cream-200 px-5 py-4">
-            <p className="text-xs text-gray-400 uppercase tracking-wide mb-2">Fórmula utilizada</p>
-            <p className="text-sm text-gray-600 font-mono leading-relaxed">
-              teto((materiais × 3 + mão de obra) × 1,10 + 1,00)
-            </p>
-          </div>
+          {products.length > 0 && (
+            <ApplyToVariation
+              suggestedPrice={finalPrice}
+              products={products}
+              habilitado={hasResult}
+              onApplied={loadData}
+            />
+          )}
         </div>
       </div>
     </div>

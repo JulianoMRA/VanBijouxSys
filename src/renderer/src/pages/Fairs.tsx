@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
+import { ChevronDown, ChevronUp } from 'lucide-react'
 import FairForm from '../components/fairs/FairForm'
 import ConfirmDialog from '../components/ui/ConfirmDialog'
+import ActionMenu from '../components/ui/ActionMenu'
 import Toast from '../components/ui/Toast'
 import { useToast } from '../hooks/useToast'
 import { formatCurrency, formatDate, formatDateRange } from '../utils/format'
@@ -8,10 +10,74 @@ import type { Fair, Sale } from '../types'
 
 type Modal = { type: 'new' } | { type: 'edit'; fair: Fair } | { type: 'delete'; fair: Fair }
 
+const MESES = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
+
+function hojeISO(): string {
+  return new Date().toISOString().slice(0, 10)
+}
+
 function isFuture(fair: Fair): boolean {
   const lastDay = fair.endDate ?? fair.date
-  return lastDay >= new Date().toISOString().slice(0, 10)
+  return lastDay >= hojeISO()
 }
+
+function diasAte(dateStr: string): number {
+  const umDia = 24 * 60 * 60 * 1000
+  return Math.round((new Date(dateStr).getTime() - new Date(hojeISO()).getTime()) / umDia)
+}
+
+function prazoLabel(fair: Fair): string {
+  const dias = diasAte(fair.date)
+  if (dias < 0) return 'acontecendo agora'
+  if (dias === 0) return 'é hoje'
+  if (dias === 1) return 'é amanhã'
+  return `em ${dias} dias`
+}
+
+function DataBadge({ data, futura }: { data: string; futura: boolean }): JSX.Element {
+  const mes = MESES[parseInt(data.slice(5, 7), 10) - 1]
+  return (
+    <div
+      className={`w-[54px] shrink-0 rounded-[10px] py-[7px] text-center ${
+        futura ? 'bg-wine-50' : 'bg-bone-300'
+      }`}
+    >
+      <p
+        className={`text-[10.5px] font-bold uppercase tracking-[0.08em] ${
+          futura ? 'text-wine-400' : 'text-ink-300'
+        }`}
+      >
+        {mes}
+      </p>
+      <p
+        className={`font-display text-[21px] font-semibold leading-none ${
+          futura ? 'text-wine-500' : 'text-ink-800'
+        }`}
+      >
+        {data.slice(8, 10)}
+      </p>
+    </div>
+  )
+}
+
+function Metrica({
+  rotulo,
+  valor,
+  cor = 'text-ink-900'
+}: {
+  rotulo: string
+  valor: string
+  cor?: string
+}): JSX.Element {
+  return (
+    <div>
+      <p className="label mb-0">{rotulo}</p>
+      <p className={`text-sm font-semibold tabular-nums ${cor}`}>{valor}</p>
+    </div>
+  )
+}
+
+const TH = 'py-2 text-meta font-bold uppercase tracking-[0.1em] text-ink-200'
 
 export default function Fairs(): JSX.Element {
   const [fairs, setFairs] = useState<Fair[]>([])
@@ -55,91 +121,92 @@ export default function Fairs(): JSX.Element {
     }
   }
 
-  const upcoming = fairs.filter((f) => isFuture(f))
-  const past = fairs.filter((f) => !isFuture(f))
+  // As próximas vêm da mais perto para a mais distante; as realizadas, da mais
+  // recente para a mais antiga.
+  const upcoming = fairs.filter(isFuture).sort((a, b) => a.date.localeCompare(b.date))
+  const past = fairs.filter((f) => !isFuture(f)).sort((a, b) => b.date.localeCompare(a.date))
 
   return (
-    <div>
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h2 className="font-display text-2xl font-semibold text-gray-800">Feiras</h2>
-          <p className="text-sm text-gray-400 mt-0.5">
-            {fairs.length > 0
-              ? `${upcoming.length} próxima${upcoming.length !== 1 ? 's' : ''} · ${past.length} realizada${past.length !== 1 ? 's' : ''}`
-              : 'Nenhuma feira cadastrada'}
-          </p>
+    <div className="pb-10">
+      <div className="sticky top-0 z-10 border-b border-bone-400 bg-bone-200 px-8 pb-3.5 pt-[26px]">
+        <div className="flex items-end justify-between gap-6">
+          <div>
+            <p className="label mb-1">
+              {fairs.length > 0
+                ? `${upcoming.length} próxima${upcoming.length !== 1 ? 's' : ''} · ${past.length} realizada${past.length !== 1 ? 's' : ''}`
+                : 'Nenhuma feira cadastrada'}
+            </p>
+            <h2 className="font-display text-[30px] font-semibold leading-none text-ink-900">
+              Feiras
+            </h2>
+          </div>
+          <button className="btn-primary" onClick={() => setModal({ type: 'new' })}>
+            + Nova feira
+          </button>
         </div>
-        <button className="btn-primary" onClick={() => setModal({ type: 'new' })}>
-          + Nova feira
-        </button>
       </div>
 
-      {errorMessage && (
-        <div className="bg-rose-50 border border-rose-200 rounded-2xl px-5 py-3 mb-4 flex items-start justify-between gap-3">
-          <p className="text-sm text-rose-700">{errorMessage}</p>
-          <button
-            onClick={() => setErrorMessage('')}
-            className="text-rose-400 hover:text-rose-600 shrink-0 text-lg leading-none"
-          >
-            ×
-          </button>
-        </div>
-      )}
+      <div className="px-8 pt-[22px]">
+        {errorMessage && (
+          <div className="mb-4 flex items-start justify-between gap-3 rounded-[11px] border border-bone-500 bg-clay-100 px-4 py-3">
+            <p className="text-body text-clay-600">{errorMessage}</p>
+            <button
+              onClick={() => setErrorMessage('')}
+              className="shrink-0 text-lg leading-none text-clay-500 hover:text-clay-600"
+            >
+              ×
+            </button>
+          </div>
+        )}
 
-      {loading ? (
-        <div className="card flex items-center justify-center h-40">
-          <p className="text-gray-400 text-sm">Carregando…</p>
-        </div>
-      ) : fairs.length === 0 ? (
-        <div className="card flex flex-col items-center justify-center h-48 text-center">
-          <p className="text-gray-500 text-sm">Nenhuma feira cadastrada ainda.</p>
-          <button className="btn-primary mt-3" onClick={() => setModal({ type: 'new' })}>
-            Cadastrar primeira feira
-          </button>
-        </div>
-      ) : (
-        <div className="space-y-6">
-          {upcoming.length > 0 && (
-            <section>
-              <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3">
-                Próximas feiras
-              </h3>
-              <div className="space-y-3">
-                {upcoming.map((fair) => (
-                  <FairCard
-                    key={fair.id}
-                    fair={fair}
-                    upcoming
-                    fairSales={sales.filter((s) => s.fairId === fair.id)}
-                    onEdit={() => setModal({ type: 'edit', fair })}
-                    onDelete={() => setModal({ type: 'delete', fair })}
-                  />
-                ))}
-              </div>
-            </section>
-          )}
+        {loading ? (
+          <div className="card flex h-40 items-center justify-center">
+            <p className="text-body text-ink-300">Carregando…</p>
+          </div>
+        ) : fairs.length === 0 ? (
+          <div className="card flex h-48 flex-col items-center justify-center text-center">
+            <p className="text-body text-ink-600">Nenhuma feira cadastrada ainda.</p>
+            <button className="btn-primary mt-3" onClick={() => setModal({ type: 'new' })}>
+              Cadastrar primeira feira
+            </button>
+          </div>
+        ) : (
+          <>
+            {upcoming.length > 0 && (
+              <>
+                <p className="label mb-2.5">Próximas</p>
+                <div className="mb-7 flex flex-col gap-2">
+                  {upcoming.map((fair) => (
+                    <CardProxima
+                      key={fair.id}
+                      fair={fair}
+                      onEdit={() => setModal({ type: 'edit', fair })}
+                      onDelete={() => setModal({ type: 'delete', fair })}
+                    />
+                  ))}
+                </div>
+              </>
+            )}
 
-          {past.length > 0 && (
-            <section>
-              <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3">
-                Feiras realizadas
-              </h3>
-              <div className="space-y-3">
-                {past.map((fair) => (
-                  <FairCard
-                    key={fair.id}
-                    fair={fair}
-                    upcoming={false}
-                    fairSales={sales.filter((s) => s.fairId === fair.id)}
-                    onEdit={() => setModal({ type: 'edit', fair })}
-                    onDelete={() => setModal({ type: 'delete', fair })}
-                  />
-                ))}
-              </div>
-            </section>
-          )}
-        </div>
-      )}
+            {past.length > 0 && (
+              <>
+                <p className="label mb-2.5">Realizadas</p>
+                <div className="flex flex-col gap-2">
+                  {past.map((fair) => (
+                    <CardRealizada
+                      key={fair.id}
+                      fair={fair}
+                      fairSales={sales.filter((s) => s.fairId === fair.id)}
+                      onEdit={() => setModal({ type: 'edit', fair })}
+                      onDelete={() => setModal({ type: 'delete', fair })}
+                    />
+                  ))}
+                </div>
+              </>
+            )}
+          </>
+        )}
+      </div>
 
       {toastMsg && <Toast message={toastMsg} onDismiss={dismissToast} />}
 
@@ -176,149 +243,182 @@ export default function Fairs(): JSX.Element {
   )
 }
 
-function FairCard({
+function custoDaFeira(fair: Fair): number {
+  return fair.enrollmentCost + fair.additionalCosts.reduce((s, c) => s + c.amount, 0)
+}
+
+function CardProxima({
   fair,
-  upcoming,
+  onEdit,
+  onDelete
+}: {
+  fair: Fair
+  onEdit: () => void
+  onDelete: () => void
+}): JSX.Element {
+  const custo = custoDaFeira(fair)
+
+  return (
+    <div className="flex items-center gap-[18px] rounded-card border border-bone-400 bg-bone-50 px-[22px] py-4">
+      <DataBadge data={fair.date} futura />
+
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-2.5">
+          <p className="truncate text-[15px] font-semibold text-ink-900">{fair.name}</p>
+          <span className="shrink-0 rounded-[5px] bg-sage-100 px-2 py-0.5 text-meta font-bold text-sage-600">
+            {prazoLabel(fair)}
+          </span>
+        </div>
+        <p className="mt-0.5 truncate text-aux text-ink-400">
+          {fair.location} · {formatDateRange(fair.date, fair.endDate)}
+          {fair.organizer ? ` · Org. ${fair.organizer}` : ''}
+        </p>
+      </div>
+
+      <div className="shrink-0 text-right">
+        <p className="label mb-0">Custo</p>
+        <p className="text-sm font-semibold tabular-nums text-ink-900">
+          {custo > 0 ? formatCurrency(custo) : 'Gratuita'}
+        </p>
+      </div>
+
+      <div className="ml-3.5 flex shrink-0 items-center gap-2">
+        <button
+          className="text-aux font-semibold text-wine-500 hover:text-wine-600"
+          onClick={onEdit}
+        >
+          Editar
+        </button>
+        <ActionMenu items={[{ label: 'Excluir feira', danger: true, onClick: onDelete }]} />
+      </div>
+    </div>
+  )
+}
+
+function CardRealizada({
+  fair,
   fairSales,
   onEdit,
   onDelete
 }: {
   fair: Fair
-  upcoming: boolean
   fairSales: Sale[]
   onEdit: () => void
   onDelete: () => void
 }): JSX.Element {
-  const [expanded, setExpanded] = useState(false)
+  const [expandida, setExpandida] = useState(false)
 
-  const additionalTotal = fair.additionalCosts.reduce((s, c) => s + c.amount, 0)
-  const totalFairCost = fair.enrollmentCost + additionalTotal
-  const totalRevenue = fairSales.reduce((s, sale) => s + sale.totalAmount, 0)
-  const totalProfit = fairSales.reduce((s, sale) => s + (sale.totalAmount - sale.totalCost), 0)
+  const extras = fair.additionalCosts.reduce((s, c) => s + c.amount, 0)
+  const custo = fair.enrollmentCost + extras
+  const faturado = fairSales.reduce((s, sale) => s + sale.totalAmount, 0)
+  const lucroBruto = fairSales.reduce((s, sale) => s + (sale.totalAmount - sale.totalCost), 0)
+  const liquido = lucroBruto - custo
+  const temVendas = fairSales.length > 0
 
   return (
-    <div className="bg-white rounded-2xl border border-cream-200 shadow-card overflow-hidden">
-      <div className="flex items-start gap-4 px-5 py-4">
-        <div className="flex gap-4 items-start flex-1 min-w-0">
-          {/* Data */}
-          <div
-            className={`shrink-0 w-14 rounded-xl text-center py-2 ${
-              upcoming ? 'bg-blush-50 text-blush-700' : 'bg-cream-100 text-gray-400'
-            }`}
-          >
-            <p className="text-xs font-medium leading-none">
-              {fair.date.slice(5, 7)}/{fair.date.slice(0, 4)}
-            </p>
-            <p className="text-2xl font-bold font-display leading-tight mt-0.5">
-              {fair.date.slice(8, 10)}
-            </p>
-            {fair.endDate && fair.endDate !== fair.date && (
-              <p className="text-xs font-medium leading-none mt-0.5">
-                – {fair.endDate.slice(8, 10)}
-              </p>
-            )}
-          </div>
+    <div className="overflow-hidden rounded-card border border-bone-400 bg-bone-50">
+      <div
+        className={`flex items-center gap-[18px] px-[22px] py-4 ${
+          expandida ? 'border-b border-bone-400 bg-bone-100' : ''
+        }`}
+      >
+        <DataBadge data={fair.date} futura={false} />
 
-          {/* Info */}
-          <div className="min-w-0">
-            <p className="font-medium text-gray-800 text-sm">{fair.name}</p>
-            <p className="text-xs text-gray-500 mt-0.5">{fair.location}</p>
-            {fair.organizer && (
-              <p className="text-xs text-gray-400 mt-0.5">Org: {fair.organizer}</p>
-            )}
-            <div className="flex items-center gap-3 mt-2 flex-wrap">
-              <span className="text-xs text-gray-500">
-                Custo total:{' '}
-                <span className="font-medium text-gray-700">
-                  {totalFairCost > 0 ? formatCurrency(totalFairCost) : 'Gratuita'}
-                </span>
-              </span>
-              <span className="text-xs text-gray-300">·</span>
-              <span className="text-xs text-gray-400">
-                {formatDateRange(fair.date, fair.endDate)}
-              </span>
-              {!upcoming && fairSales.length > 0 && (
-                <>
-                  <span className="text-xs text-gray-300">·</span>
-                  <span className="text-xs font-medium text-emerald-600">
-                    {formatCurrency(totalRevenue)} faturado
-                  </span>
-                </>
-              )}
-            </div>
-          </div>
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-[15px] font-semibold text-ink-900">{fair.name}</p>
+          <p className="mt-0.5 truncate text-aux text-ink-400">
+            {fair.location} · {formatDateRange(fair.date, fair.endDate)}
+            {fair.organizer ? ` · Org. ${fair.organizer}` : ''}
+          </p>
         </div>
 
-        {/* Ações */}
-        <div className="flex gap-1 shrink-0 items-center">
-          {!upcoming && fairSales.length > 0 && (
+        <div className="flex shrink-0 gap-6 text-right">
+          <Metrica rotulo="Faturado" valor={formatCurrency(faturado)} />
+          <Metrica
+            rotulo="Custo"
+            valor={custo > 0 ? formatCurrency(custo) : 'Gratuita'}
+            cor={custo > 0 ? 'text-clay-500' : 'text-ink-400'}
+          />
+          <Metrica
+            rotulo="Líquido"
+            valor={formatCurrency(liquido)}
+            cor={liquido >= 0 ? 'text-sage-500' : 'text-clay-500'}
+          />
+        </div>
+
+        <div className="ml-2 flex shrink-0 items-center gap-2">
+          {temVendas ? (
             <button
-              className="text-xs text-gray-500 hover:text-gray-700 px-2 py-1 rounded-lg hover:bg-cream-100 transition-colors"
-              onClick={() => setExpanded((v) => !v)}
+              className="flex items-center gap-1 whitespace-nowrap text-aux font-semibold text-wine-500 hover:text-wine-600"
+              onClick={() => setExpandida((v) => !v)}
             >
-              Vendas ({fairSales.length}) {expanded ? '▲' : '▼'}
+              {fairSales.length} venda{fairSales.length !== 1 ? 's' : ''}
+              {expandida ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
             </button>
+          ) : (
+            <span className="whitespace-nowrap text-aux text-ink-200">sem vendas</span>
           )}
-          <button
-            className="text-xs text-blush-600 hover:text-blush-800 px-2 py-1 rounded-lg hover:bg-blush-50 transition-colors"
-            onClick={onEdit}
-          >
-            Editar
-          </button>
-          <button
-            className="text-xs text-rose-500 hover:text-rose-700 px-2 py-1 rounded-lg hover:bg-rose-50 transition-colors"
-            onClick={onDelete}
-          >
-            Excluir
-          </button>
+          <ActionMenu
+            items={[
+              { label: 'Editar feira', onClick: onEdit },
+              { label: 'Excluir feira', danger: true, onClick: onDelete }
+            ]}
+          />
         </div>
       </div>
 
-      {expanded && (
-        <div className="border-t border-cream-100 bg-cream-50 px-5 py-4">
-          <table className="w-full text-sm">
+      {expandida && temVendas && (
+        <div className="py-1 pl-[94px] pr-[22px]">
+          <table className="w-full text-micro">
             <thead>
-              <tr className="text-xs text-gray-400 uppercase tracking-wide">
-                <th className="text-left pb-2 font-medium">Data</th>
-                <th className="text-left pb-2 font-medium">Itens</th>
-                <th className="text-right pb-2 font-medium">Total</th>
-                <th className="text-right pb-2 font-medium">Lucro</th>
+              <tr>
+                <th className={`${TH} w-[74px] text-left`}>Data</th>
+                <th className={`${TH} text-left`}>Itens</th>
+                <th className={`${TH} text-right`}>Total</th>
+                <th className={`${TH} text-right`}>Lucro</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-cream-200">
+            <tbody>
               {fairSales.map((sale) => (
-                <tr key={sale.id}>
-                  <td className="py-2 text-gray-500">{formatDate(sale.soldAt)}</td>
-                  <td className="py-2 text-gray-500">
+                <tr key={sale.id} className="border-t border-bone-300">
+                  <td className="py-2.5 tabular-nums text-ink-400">{formatDate(sale.soldAt)}</td>
+                  <td className="py-2.5 pr-4 text-ink-800">
                     {sale.items
                       .map((i) => `${i.productName} — ${i.variationIdentifier} (${i.quantity}x)`)
                       .join(', ')}
                   </td>
-                  <td className="py-2 text-right font-medium text-gray-800">
+                  <td className="py-2.5 text-right font-semibold tabular-nums text-ink-900">
                     {formatCurrency(sale.totalAmount)}
                   </td>
-                  <td className="py-2 text-right text-emerald-600">
+                  <td className="py-2.5 text-right tabular-nums text-sage-500">
                     {formatCurrency(sale.totalAmount - sale.totalCost)}
                   </td>
                 </tr>
               ))}
             </tbody>
-            <tfoot>
-              <tr className="border-t border-cream-300">
-                <td colSpan={2} className="pt-2 text-xs text-gray-400">
-                  Lucro bruto: {formatCurrency(totalProfit)} · Custo da feira:{' '}
-                  {formatCurrency(totalFairCost)} · Lucro líquido:{' '}
-                  {formatCurrency(totalProfit - totalFairCost)}
-                </td>
-                <td className="pt-2 text-right font-semibold text-blush-700">
-                  {formatCurrency(totalRevenue)}
-                </td>
-                <td className="pt-2 text-right font-semibold text-emerald-600">
-                  {formatCurrency(totalProfit)}
-                </td>
-              </tr>
-            </tfoot>
           </table>
+
+          <div className="mb-4 mt-3 flex flex-wrap items-center gap-3.5 rounded-control bg-bone-200 px-3.5 py-2.5 text-aux text-ink-600">
+            <span>
+              Lucro bruto{' '}
+              <strong className="font-semibold tabular-nums text-ink-900">
+                {formatCurrency(lucroBruto)}
+              </strong>
+            </span>
+            <span className="text-ink-200">−</span>
+            <span className="tabular-nums">
+              Inscrição {formatCurrency(fair.enrollmentCost)}
+              {extras > 0 && ` + extras ${formatCurrency(extras)}`}
+            </span>
+            <span className="ml-auto text-body">
+              Líquido da feira{' '}
+              <strong
+                className={`font-bold tabular-nums ${liquido >= 0 ? 'text-sage-500' : 'text-clay-500'}`}
+              >
+                {formatCurrency(liquido)}
+              </strong>
+            </span>
+          </div>
         </div>
       )}
     </div>

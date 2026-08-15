@@ -4,6 +4,7 @@ import {
   estaArquivado,
   estoqueAtivo,
   insumosAtivos,
+  mensagemDeArquivamento,
   produtosAtivos,
   variacaoInativa,
   variacoesAtivas
@@ -133,6 +134,35 @@ describe('contagem de alertas', () => {
       esgotadas: 0,
       abaixoDoMinimo: 0
     })
+  })
+})
+
+describe('aviso ao arquivar insumo', () => {
+  it('should_use_the_singular_for_a_single_variation', () => {
+    const msg = mensagemDeArquivamento(insumo({ usadoPorVariacoesAtivas: 1 }), 'un.')
+
+    expect(msg).toContain('é usado em 1 variação ativa.')
+  })
+
+  it('should_use_the_plural_for_more_than_one', () => {
+    const msg = mensagemDeArquivamento(insumo({ usadoPorVariacoesAtivas: 3 }), 'un.')
+
+    expect(msg).toContain('é usado em 3 variações ativas.')
+  })
+
+  it('should_mention_the_remaining_stock_with_its_unit', () => {
+    const msg = mensagemDeArquivamento(insumo({ stockQuantity: 1800 }), 'cm')
+
+    expect(msg).toContain('ainda tem 1.800 cm em estoque.')
+  })
+
+  it('should_join_both_reasons_when_they_apply_together', () => {
+    const msg = mensagemDeArquivamento(
+      insumo({ usadoPorVariacoesAtivas: 2, stockQuantity: 120 }),
+      'un.'
+    )
+
+    expect(msg).toContain('é usado em 2 variações ativas e ainda tem 120 un. em estoque.')
   })
 })
 

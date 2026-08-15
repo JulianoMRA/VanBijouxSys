@@ -48,6 +48,26 @@ export function contarAlertasDeEstoque(produtos: Product[]): {
   }
 }
 
+/**
+ * Arquivar insumo em uso é permitido — ela decide. Mas não em silêncio: o
+ * texto diz o que ainda depende dele antes de confirmar.
+ */
+export function mensagemDeArquivamento(insumo: Insumo, unidade: string): string {
+  const partes: string[] = []
+
+  const usos = insumo.usadoPorVariacoesAtivas
+  if (usos > 0) {
+    partes.push(
+      `é usado em ${usos} variaç${usos !== 1 ? 'ões' : 'ão'} ativa${usos !== 1 ? 's' : ''}`
+    )
+  }
+  if (insumo.stockQuantity > 0) {
+    partes.push(`ainda tem ${insumo.stockQuantity.toLocaleString('pt-BR')} ${unidade} em estoque`)
+  }
+
+  return `"${insumo.name}" ${partes.join(' e ')}. Arquivar tira ele dos avisos e dos seletores de receita; as receitas que já usam continuam valendo, e dá para desarquivar depois.`
+}
+
 /** Estoque somado de um produto, ignorando o que está arquivado. */
 export function estoqueAtivo(produto: Product): number {
   return variacoesAtivas(produto).reduce((total, v) => total + v.stockQuantity, 0)

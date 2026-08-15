@@ -5,7 +5,9 @@ import {
   contarAlertasDeEstoque,
   estaArquivado,
   estoqueAtivo,
-  variacoesAtivas
+  insumosArquivadosDaReceita,
+  variacoesAtivas,
+  variacoesComInsumoArquivado
 } from '../utils/arquivamento'
 import ActionMenu from '../components/ui/ActionMenu'
 import ConfirmDialog from '../components/ui/ConfirmDialog'
@@ -395,6 +397,7 @@ export default function Products(): JSX.Element {
                 (v) => v.stockQuantity > 0 && v.stockQuantity < v.minimumStock
               ).length
               const arquivadasNoProduto = product.variations.filter(estaArquivado).length
+              const comInsumoArquivado = variacoesComInsumoArquivado(product)
 
               return (
                 <div
@@ -428,6 +431,12 @@ export default function Products(): JSX.Element {
                         )}
                         {!arquivado && baixas > 0 && (
                           <Tag texto={`${baixas} abaixo do mínimo`} tom="alerta" />
+                        )}
+                        {!arquivado && comInsumoArquivado.length > 0 && (
+                          <Tag
+                            texto={`${comInsumoArquivado.length} com insumo arquivado`}
+                            tom="alerta"
+                          />
                         )}
                       </div>
                       <p className="mt-0.5 truncate text-aux text-ink-300">
@@ -630,6 +639,7 @@ export default function Products(): JSX.Element {
                                   {variacoes.map((v) => {
                                     const estoque = estoqueInfo(v)
                                     const variacaoArquivada = estaArquivado(v)
+                                    const insumosSumidos = insumosArquivadosDaReceita(v)
                                     const custoInsumos = v.insumos.reduce(
                                       (s, i) => s + i.costPerUnit * i.quantity,
                                       0
@@ -649,6 +659,16 @@ export default function Products(): JSX.Element {
                                           {variacaoArquivada && (
                                             <span className="ml-2">
                                               <Tag texto="ARQUIVADA" tom="neutro" />
+                                            </span>
+                                          )}
+                                          {!variacaoArquivada && insumosSumidos.length > 0 && (
+                                            <span
+                                              className="ml-2"
+                                              title={`Receita usa insumo arquivado: ${insumosSumidos
+                                                .map((i) => i.insumoName)
+                                                .join(', ')}`}
+                                            >
+                                              <Tag texto="INSUMO ARQUIVADO" tom="alerta" />
                                             </span>
                                           )}
                                         </td>

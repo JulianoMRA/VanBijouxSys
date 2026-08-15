@@ -55,7 +55,9 @@ export function registerProductHandlers(): void {
             insumoName: insumos.name,
             unit: insumos.unit,
             costPerUnit: insumos.costPerUnit,
-            quantity: variationInsumos.quantity
+            quantity: variationInsumos.quantity,
+            // A tela marca as variações que dependem de insumo arquivado.
+            archivedAt: insumos.archivedAt
           })
           .from(variationInsumos)
           .innerJoin(insumos, eq(variationInsumos.insumoId, insumos.id))

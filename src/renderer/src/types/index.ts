@@ -22,6 +22,8 @@ export interface VariationInsumo {
   unit: InsumoUnit
   costPerUnit: number
   quantity: number
+  /** Arquivamento do insumo em si, não do vínculo com a variação. */
+  archivedAt: string | null
 }
 
 export type CreateInsumoInput = {

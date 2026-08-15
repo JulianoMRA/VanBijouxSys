@@ -1,5 +1,32 @@
 # Changelog
 
+## [1.8.0] - 2026-08-15
+
+### Alterado
+
+- **Visual**: as sete telas foram reconstruídas. O rosa saturado dá lugar a um vinho único como cor de ação, sobre fundo e cards em tons neutros quentes; a barra lateral fica clara e integrada ao conteúdo; os números passam a usar alinhamento tabular, o que faz as colunas de valores baterem umas com as outras.
+- **Dashboard**: o mural de alertas de estoque virou uma linha só, que diz o que precisa de atenção e aponta o item mais vendido entre os que estão em falta — a lista completa continua a um clique. Os quatro cards de caixa viraram um só, e as duas pizzas de categoria viraram um card de barras que mostra unidades e faturamento juntos.
+- **Produtos**: as variações agora aparecem em tabela, com barra de estoque proporcional ao mínimo e a margem de cada uma.
+- **Vendas**: a lista virou tabela contínua; a linha de pagamento diz forma, taxa e data de recebimento de uma vez; abrir a venda mostra os itens e o fechamento (custo, taxa, líquido, lucro).
+- **Estoque**: passa a ordenar por reposição — esgotados primeiro, depois os mais distantes do mínimo.
+- **Feiras**: próximas e realizadas ganham selo de data, e as realizadas mostram faturado, custo e líquido lado a lado.
+- Ações repetidas de cada linha (editar, excluir, ver detalhes) foram recolhidas num menu, deixando visível só a ação principal.
+
+### Adicionado
+
+- **Vendas**: busca por produto, variação ou feira.
+- **Caixa**: coluna de saldo, mostrando com quanto o caixa ficou depois de cada movimentação.
+- **Estoque**: estimativa de quanto custa repor tudo que está abaixo do mínimo, e contador de itens a repor na barra lateral.
+- **Precificação**: antes de aplicar um preço a uma variação, a tela mostra o preço atual, o novo e o tamanho da mudança.
+- **Estoque**: custo unitário abaixo de dez centavos passa a aparecer com quatro casas — o fio de nylon custa R$ 0,0120/cm e a tela mostrava "R$ 0,01", o que não fechava com o valor total da linha.
+
+### Interno
+
+- Paleta e tokens antigos removidos do Tailwind; a fonte Playfair Display sai e entra a Fraunces.
+- Nenhuma alteração no processo principal, no IPC ou no banco de dados.
+
+---
+
 ## [1.7.1] - 2026-08-13
 
 ### Adicionado

@@ -157,6 +157,23 @@ export const MIGRACOES: Migracao[] = [
         sqlite.exec('ALTER TABLE sales ADD COLUMN received_at TEXT')
       }
     }
+  },
+  {
+    versao: 2,
+    nome: 'arquivamento-de-produtos-variacoes-e-insumos',
+    /**
+     * `archived_at` nulo significa ativo. Arquivar não escreve nas variações do
+     * produto: quem lê deriva o estado (variação inativa = ela arquivada OU o
+     * produto dela arquivado). Assim desarquivar o produto devolve exatamente o
+     * estado anterior, sem ressuscitar variação que já estava arquivada sozinha.
+     */
+    aplicar: (sqlite) => {
+      for (const tabela of ['products', 'product_variations', 'insumos']) {
+        if (!temColuna(sqlite, tabela, 'archived_at')) {
+          sqlite.exec(`ALTER TABLE ${tabela} ADD COLUMN archived_at TEXT`)
+        }
+      }
+    }
   }
 ]
 

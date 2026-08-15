@@ -32,7 +32,8 @@ export function registerProductHandlers(): void {
         categoryId: products.categoryId,
         categoryName: categories.name,
         description: products.description,
-        createdAt: products.createdAt
+        createdAt: products.createdAt,
+        archivedAt: products.archivedAt
       })
       .from(products)
       .innerJoin(categories, eq(products.categoryId, categories.id))
@@ -95,6 +96,20 @@ export function registerProductHandlers(): void {
   handleIpc('products:delete', (id: number) => {
     const db = getDb()
     db.delete(products).where(eq(products.id, id)).run()
+    return { success: true }
+  })
+
+  /**
+   * Arquivar tira o produto dos alertas, das listas e dos seletores, mas não
+   * toca no histórico: as vendas antigas continuam apontando para ele. As
+   * variações não são escritas — quem lê deriva o estado a partir do produto.
+   */
+  handleIpc('products:setArchived', (id: number, archived: boolean) => {
+    const db = getDb()
+    db.update(products)
+      .set({ archivedAt: archived ? sql`CURRENT_TIMESTAMP` : null })
+      .where(eq(products.id, id))
+      .run()
     return { success: true }
   })
 
@@ -175,6 +190,15 @@ export function registerProductHandlers(): void {
   handleIpc('variations:delete', (id: number) => {
     const db = getDb()
     db.delete(productVariations).where(eq(productVariations.id, id)).run()
+    return { success: true }
+  })
+
+  handleIpc('variations:setArchived', (id: number, archived: boolean) => {
+    const db = getDb()
+    db.update(productVariations)
+      .set({ archivedAt: archived ? sql`CURRENT_TIMESTAMP` : null })
+      .where(eq(productVariations.id, id))
+      .run()
     return { success: true }
   })
 

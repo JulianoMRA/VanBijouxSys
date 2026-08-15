@@ -1,4 +1,10 @@
 import { getSqlite } from '../database'
+import {
+  SQL_INSUMOS_ABAIXO_DO_MINIMO,
+  SQL_INSUMOS_ESGOTADOS,
+  SQL_VARIACOES_ABAIXO_DO_MINIMO,
+  SQL_VARIACOES_ESGOTADAS
+} from '../database/consultas-estoque'
 import { ErroDeNegocio, handleIpc } from './handle'
 
 export interface DashboardStats {
@@ -373,60 +379,18 @@ export function registerDashboardHandlers(): void {
       )
       .all(...dateParams) as DashboardStats['topVariations']
 
-    const outOfStock = sqlite
-      .prepare(
-        `SELECT
-            pv.id,
-            p.name    AS productName,
-            c.name    AS categoryName,
-            pv.identifier,
-            pv.stock_quantity  AS stockQuantity,
-            pv.minimum_stock   AS minimumStock
-           FROM product_variations pv
-           JOIN products p ON p.id = pv.product_id
-           JOIN categories c ON c.id = p.category_id
-           WHERE pv.stock_quantity = 0
-           ORDER BY p.name, pv.identifier`
-      )
-      .all() as DashboardStats['outOfStock']
+    const outOfStock = sqlite.prepare(SQL_VARIACOES_ESGOTADAS).all() as DashboardStats['outOfStock']
 
     const lowStock = sqlite
-      .prepare(
-        `SELECT
-            pv.id,
-            p.name    AS productName,
-            c.name    AS categoryName,
-            pv.identifier,
-            pv.stock_quantity  AS stockQuantity,
-            pv.minimum_stock   AS minimumStock
-           FROM product_variations pv
-           JOIN products p ON p.id = pv.product_id
-           JOIN categories c ON c.id = p.category_id
-           WHERE pv.stock_quantity > 0 AND pv.stock_quantity < pv.minimum_stock
-           ORDER BY (pv.stock_quantity - pv.minimum_stock) ASC`
-      )
+      .prepare(SQL_VARIACOES_ABAIXO_DO_MINIMO)
       .all() as DashboardStats['lowStock']
 
     const outOfInsumos = sqlite
-      .prepare(
-        `SELECT id, name, unit,
-            stock_quantity AS stockQuantity,
-            minimum_stock  AS minimumStock
-           FROM insumos
-           WHERE minimum_stock > 0 AND stock_quantity = 0
-           ORDER BY name`
-      )
+      .prepare(SQL_INSUMOS_ESGOTADOS)
       .all() as DashboardStats['outOfInsumos']
 
     const lowInsumos = sqlite
-      .prepare(
-        `SELECT id, name, unit,
-            stock_quantity AS stockQuantity,
-            minimum_stock  AS minimumStock
-           FROM insumos
-           WHERE minimum_stock > 0 AND stock_quantity > 0 AND stock_quantity < minimum_stock
-           ORDER BY (stock_quantity - minimum_stock) ASC`
-      )
+      .prepare(SQL_INSUMOS_ABAIXO_DO_MINIMO)
       .all() as DashboardStats['lowInsumos']
 
     // Vendas 'A receber' pendentes (received_at IS NULL) NÃO entram no caixa.

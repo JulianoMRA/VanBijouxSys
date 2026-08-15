@@ -8,6 +8,10 @@ export interface Insumo {
   stockQuantity: number
   minimumStock: number
   createdAt: string
+  /** Nulo = ativo. Arquivado sai dos alertas, da lista e dos seletores. */
+  archivedAt: string | null
+  /** Quantas variações ativas usam este insumo — alimenta o aviso ao arquivar. */
+  usadoPorVariacoesAtivas: number
 }
 
 export interface VariationInsumo {
@@ -45,6 +49,8 @@ export interface ProductVariation {
   minimumStock: number
   laborCost: number
   createdAt: string
+  /** Nulo = ativa. O produto arquivado também inativa a variação. */
+  archivedAt: string | null
   insumos: VariationInsumo[]
 }
 
@@ -55,6 +61,8 @@ export interface Product {
   categoryName: string
   description: string | null
   createdAt: string
+  /** Nulo = ativo. Arquivar o produto inativa as variações por derivação. */
+  archivedAt: string | null
   variations: ProductVariation[]
 }
 

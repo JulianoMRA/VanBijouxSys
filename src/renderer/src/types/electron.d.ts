@@ -36,12 +36,14 @@ declare global {
         create: (data: CreateProductInput) => Promise<{ id: number }>
         update: (data: UpdateProductInput) => Promise<{ success: boolean }>
         delete: (id: number) => Promise<{ success: boolean }>
+        setArchived: (id: number, archived: boolean) => Promise<{ success: boolean }>
       }
       variations: {
         create: (data: CreateVariationInput) => Promise<{ id: number }>
         update: (data: UpdateVariationInput) => Promise<{ success: boolean }>
         delete: (id: number) => Promise<{ success: boolean }>
         addStock: (id: number, quantity: number) => Promise<{ success: boolean }>
+        setArchived: (id: number, archived: boolean) => Promise<{ success: boolean }>
       }
       fairs: {
         getAll: () => Promise<Fair[]>
@@ -70,6 +72,7 @@ declare global {
         update: (data: UpdateInsumoInput) => Promise<{ success: boolean }>
         addStock: (id: number, quantity: number) => Promise<{ success: boolean }>
         delete: (id: number) => Promise<{ success: boolean }>
+        setArchived: (id: number, archived: boolean) => Promise<{ success: boolean }>
         exportCsv: (
           csvContent: string,
           defaultFileName: string

@@ -1,4 +1,4 @@
-import type { Insumo, Product, ProductVariation } from '../types'
+import type { Insumo, Product, ProductVariation, VariationInsumo } from '../types'
 
 interface Arquivavel {
   archivedAt: string | null
@@ -46,6 +46,22 @@ export function contarAlertasDeEstoque(produtos: Product[]): {
     abaixoDoMinimo: ativas.filter((v) => v.stockQuantity > 0 && v.stockQuantity < v.minimumStock)
       .length
   }
+}
+
+/**
+ * Insumos arquivados que a receita da variação ainda usa.
+ *
+ * Arquivar insumo não arquiva o que é feito com ele — trocar o fecho e seguir
+ * fazendo a peça é decisão dela. Mas ela precisa enxergar a dependência para
+ * decidir, e é isso que a tela de Produtos marca.
+ */
+export function insumosArquivadosDaReceita(variacao: ProductVariation): VariationInsumo[] {
+  return variacao.insumos.filter(estaArquivado)
+}
+
+/** Variações ativas do produto cuja receita depende de algum insumo arquivado. */
+export function variacoesComInsumoArquivado(produto: Product): ProductVariation[] {
+  return variacoesAtivas(produto).filter((v) => insumosArquivadosDaReceita(v).length > 0)
 }
 
 /**

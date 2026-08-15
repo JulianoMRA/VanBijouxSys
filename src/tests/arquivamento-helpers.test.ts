@@ -3,14 +3,30 @@ import {
   contarAlertasDeEstoque,
   estaArquivado,
   estoqueAtivo,
+  insumosArquivadosDaReceita,
   insumosAtivos,
   mensagemDeArquivamento,
   opcoesComSelecionados,
   produtosAtivos,
   variacaoInativa,
-  variacoesAtivas
+  variacoesAtivas,
+  variacoesComInsumoArquivado
 } from '../renderer/src/utils/arquivamento'
-import type { Insumo, Product, ProductVariation } from '../renderer/src/types'
+import type { Insumo, Product, ProductVariation, VariationInsumo } from '../renderer/src/types'
+
+function itemDeReceita(over: Partial<VariationInsumo> = {}): VariationInsumo {
+  return {
+    id: 1,
+    variationId: 1,
+    insumoId: 1,
+    insumoName: 'Fecho lagosta',
+    unit: 'unidade',
+    costPerUnit: 0.45,
+    quantity: 1,
+    archivedAt: null,
+    ...over
+  }
+}
 
 function variacao(over: Partial<ProductVariation> = {}): ProductVariation {
   return {
@@ -135,6 +151,53 @@ describe('contagem de alertas', () => {
       esgotadas: 0,
       abaixoDoMinimo: 0
     })
+  })
+})
+
+describe('receita que depende de insumo arquivado', () => {
+  const arquivado = '2026-08-15 10:00:00'
+
+  it('should_find_nothing_while_every_insumo_is_active', () => {
+    const v = variacao({ insumos: [itemDeReceita(), itemDeReceita({ id: 2, insumoId: 2 })] })
+
+    expect(insumosArquivadosDaReceita(v)).toEqual([])
+  })
+
+  it('should_point_out_which_insumo_was_archived', () => {
+    const v = variacao({
+      insumos: [
+        itemDeReceita({ insumoName: 'Corrente dourada' }),
+        itemDeReceita({ id: 2, insumoId: 2, insumoName: 'Fecho lagosta', archivedAt: arquivado })
+      ]
+    })
+
+    expect(insumosArquivadosDaReceita(v).map((i) => i.insumoName)).toEqual(['Fecho lagosta'])
+  })
+
+  it('should_list_the_active_variations_that_depend_on_something_archived', () => {
+    const comProblema = variacao({ id: 1, insumos: [itemDeReceita({ archivedAt: arquivado })] })
+    const semProblema = variacao({ id: 2, insumos: [itemDeReceita()] })
+    const p = produto({ variations: [comProblema, semProblema] })
+
+    expect(variacoesComInsumoArquivado(p).map((v) => v.id)).toEqual([1])
+  })
+
+  it('should_ignore_a_variation_that_is_archived_itself', () => {
+    // Ela já está fora de circulação: cobrar atenção sobre a receita seria ruído.
+    const arquivadaComProblema = variacao({
+      id: 1,
+      archivedAt: arquivado,
+      insumos: [itemDeReceita({ archivedAt: arquivado })]
+    })
+
+    expect(variacoesComInsumoArquivado(produto({ variations: [arquivadaComProblema] }))).toEqual([])
+  })
+
+  it('should_ignore_everything_when_the_product_is_archived', () => {
+    const v = variacao({ insumos: [itemDeReceita({ archivedAt: arquivado })] })
+    const p = produto({ archivedAt: arquivado, variations: [v] })
+
+    expect(variacoesComInsumoArquivado(p)).toEqual([])
   })
 })
 

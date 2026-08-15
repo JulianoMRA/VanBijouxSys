@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import Modal from '../ui/Modal'
+import { estaArquivado, variacaoInativa } from '../../utils/arquivamento'
 import type {
   Fair,
   Product,
@@ -108,9 +109,26 @@ export default function SaleForm({ sale, onSave, onClose }: SaleFormProps): JSX.
     setFeePercentage(loadLastFee(method))
   }
 
+  /**
+   * O que já está na venda continua disponível mesmo depois de arquivado —
+   * senão editar uma venda antiga faria o item sumir da lista sem aviso.
+   */
+  const variacoesJaEscolhidas = [
+    ...items.map((i) => i.variationId),
+    ...(sale?.items.map((i) => i.variationId) ?? [])
+  ].filter((id): id is number => id !== '')
+
+  const produtosDisponiveis = products.filter(
+    (p) => !estaArquivado(p) || p.variations.some((v) => variacoesJaEscolhidas.includes(v.id))
+  )
+
   function getVariations(productId: number | ''): ProductVariation[] {
     if (productId === '') return []
-    return products.find((p) => p.id === productId)?.variations ?? []
+    const produto = products.find((p) => p.id === productId)
+    if (!produto) return []
+    return produto.variations.filter(
+      (v) => !variacaoInativa(produto, v) || variacoesJaEscolhidas.includes(v.id)
+    )
   }
 
   function updateItem(key: number, changes: Partial<ItemRow>): void {
@@ -404,7 +422,7 @@ export default function SaleForm({ sale, onSave, onClose }: SaleFormProps): JSX.
                         }
                       >
                         <option value="">Selecione…</option>
-                        {products.map((p) => (
+                        {produtosDisponiveis.map((p) => (
                           <option key={p.id} value={p.id}>
                             {p.name}
                           </option>

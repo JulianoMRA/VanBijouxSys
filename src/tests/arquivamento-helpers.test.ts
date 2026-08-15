@@ -5,6 +5,7 @@ import {
   estoqueAtivo,
   insumosAtivos,
   mensagemDeArquivamento,
+  opcoesComSelecionados,
   produtosAtivos,
   variacaoInativa,
   variacoesAtivas
@@ -134,6 +135,36 @@ describe('contagem de alertas', () => {
       esgotadas: 0,
       abaixoDoMinimo: 0
     })
+  })
+})
+
+describe('opções de seletor', () => {
+  const arquivado = '2026-08-15 10:00:00'
+
+  it('should_offer_only_the_active_ones_by_default', () => {
+    const lista = [insumo({ id: 1 }), insumo({ id: 2, archivedAt: arquivado })]
+
+    expect(opcoesComSelecionados(lista, []).map((i) => i.id)).toEqual([1])
+  })
+
+  it('should_keep_an_archived_item_that_is_already_selected', () => {
+    // Editar uma venda antiga com variação arquivada depois: sem esta regra o
+    // item sumiria da lista e a venda seria salva sem ele.
+    const lista = [insumo({ id: 1 }), insumo({ id: 2, archivedAt: arquivado })]
+
+    expect(opcoesComSelecionados(lista, [2]).map((i) => i.id)).toEqual([1, 2])
+  })
+
+  it('should_not_duplicate_an_active_item_that_is_selected', () => {
+    const lista = [insumo({ id: 1 }), insumo({ id: 2 })]
+
+    expect(opcoesComSelecionados(lista, [1, 2]).map((i) => i.id)).toEqual([1, 2])
+  })
+
+  it('should_ignore_selected_ids_that_are_not_in_the_list', () => {
+    const lista = [insumo({ id: 1, archivedAt: arquivado })]
+
+    expect(opcoesComSelecionados(lista, [99])).toEqual([])
   })
 })
 

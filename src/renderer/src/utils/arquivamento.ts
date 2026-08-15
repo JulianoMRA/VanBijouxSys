@@ -49,6 +49,20 @@ export function contarAlertasDeEstoque(produtos: Product[]): {
 }
 
 /**
+ * Opções de um seletor: o que está ativo, mais o que já estava escolhido.
+ *
+ * A segunda parte não é detalhe. Sem ela, editar uma venda antiga que contém
+ * uma variação arquivada depois faria o item sumir da lista — e a venda seria
+ * salva sem ele, em silêncio.
+ */
+export function opcoesComSelecionados<T extends Arquivavel & { id: number }>(
+  todos: T[],
+  jaSelecionados: number[]
+): T[] {
+  return todos.filter((item) => !estaArquivado(item) || jaSelecionados.includes(item.id))
+}
+
+/**
  * Arquivar insumo em uso é permitido — ela decide. Mas não em silêncio: o
  * texto diz o que ainda depende dele antes de confirmar.
  */

@@ -15,6 +15,7 @@ import ProductForm from '../components/products/ProductForm'
 import VariationForm from '../components/products/VariationForm'
 import VariationDetailsModal from '../components/products/VariationDetailsModal'
 import AddStockForm from '../components/products/AddStockForm'
+import ExcluirVariacaoDialog from '../components/products/ExcluirVariacaoDialog'
 import Toast from '../components/ui/Toast'
 import { useToast } from '../hooks/useToast'
 import type { Category, Product, ProductVariation } from '../types'
@@ -40,25 +41,38 @@ interface EstoqueInfo {
   barra: string
   classeTexto: string
   valor: string
+  dica: string
 }
 
 function estoqueInfo(v: ProductVariation): EstoqueInfo {
-  if (v.stockQuantity === 0) {
-    return { pct: 0, barra: '#b3413f', classeTexto: 'text-clay-500', valor: '0 un.' }
+  const minimo = `Mínimo: ${v.minimumStock} un.`
+  if (v.stockQuantity <= 0) {
+    return {
+      pct: 0,
+      barra: '#b3413f',
+      classeTexto: 'text-clay-500',
+      valor: `${v.stockQuantity} un.`,
+      dica:
+        v.stockQuantity < 0
+          ? 'Vendeu mais do que o estoque registrado. Se as peças foram feitas, lance a produção em "+ Estoque".'
+          : minimo
+    }
   }
   if (v.stockQuantity < v.minimumStock) {
     return {
       pct: v.minimumStock > 0 ? (v.stockQuantity / v.minimumStock) * 100 : 100,
       barra: '#c98b2e',
       classeTexto: 'text-honey-500',
-      valor: `${v.stockQuantity} / ${v.minimumStock}`
+      valor: `${v.stockQuantity} / ${v.minimumStock}`,
+      dica: minimo
     }
   }
   return {
     pct: 100,
     barra: '#5d8f76',
     classeTexto: 'text-ink-900',
-    valor: `${v.stockQuantity} un.`
+    valor: `${v.stockQuantity} un.`,
+    dica: minimo
   }
 }
 
@@ -244,10 +258,13 @@ export default function Products(): JSX.Element {
     }
   }
 
-  async function handleDeleteVariation(variation: ProductVariation): Promise<void> {
+  async function handleDeleteVariation(
+    variation: ProductVariation,
+    devolverInsumos: boolean
+  ): Promise<void> {
     setErrorMessage('')
     try {
-      await window.api.variations.delete(variation.id)
+      await window.api.variations.delete(variation.id, { devolverInsumos })
       await loadData()
     } catch (err) {
       setErrorMessage(
@@ -392,7 +409,7 @@ export default function Products(): JSX.Element {
               const isExpanded = expandedProduct === product.id
               const arquivado = estaArquivado(product)
               const ativas = variacoesAtivas(product)
-              const esgotadas = ativas.filter((v) => v.stockQuantity === 0).length
+              const esgotadas = ativas.filter((v) => v.stockQuantity <= 0).length
               const baixas = ativas.filter(
                 (v) => v.stockQuantity > 0 && v.stockQuantity < v.minimumStock
               ).length
@@ -675,7 +692,7 @@ export default function Products(): JSX.Element {
                                         <td className="px-3 py-3">
                                           <div
                                             className="flex items-center gap-2.5"
-                                            title={`Mínimo: ${v.minimumStock} un.`}
+                                            title={estoque.dica}
                                           >
                                             <div className="h-[5px] w-[52px] overflow-hidden rounded-full bg-bone-300">
                                               <div
@@ -856,12 +873,10 @@ export default function Products(): JSX.Element {
         />
       )}
       {modal?.type === 'deleteVariation' && (
-        <ConfirmDialog
-          title="Excluir variação"
-          message={`Excluir a variação "${modal.variation.identifier}" de "${modal.product.name}"?`}
-          confirmLabel="Excluir"
-          danger
-          onConfirm={() => handleDeleteVariation(modal.variation)}
+        <ExcluirVariacaoDialog
+          product={modal.product}
+          variation={modal.variation}
+          onConfirm={(devolverInsumos) => handleDeleteVariation(modal.variation, devolverInsumos)}
           onClose={() => setModal(null)}
         />
       )}

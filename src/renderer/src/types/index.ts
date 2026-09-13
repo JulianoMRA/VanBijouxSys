@@ -76,18 +76,45 @@ export type CreateProductInput = {
 
 export type UpdateProductInput = CreateProductInput & { id: number }
 
+/**
+ * Por que o estoque de peças mudou. Só `producao` mexe nos insumos: peças a mais
+ * consomem a receita, peças a menos devolvem. `contagem` corrige o número sem
+ * tocar neles — peças que já estavam prontas, perdidas ou contadas errado.
+ */
+export type MotivoDeAjuste = 'producao' | 'contagem'
+
+export interface AjusteDeEstoque {
+  novoEstoque: number
+  motivo: MotivoDeAjuste
+}
+
 export type CreateVariationInput = {
   productId: number
   identifier: string
   costPrice: number
   salePrice: number
   stockQuantity: number
+  /** Só tem efeito com estoque inicial acima de zero. */
+  motivoDoEstoqueInicial: MotivoDeAjuste
   minimumStock: number
   laborCost: number
-  insumos?: { insumoId: number; quantity: number }[]
+  /** Obrigatória: o update substitui a receita inteira pelo que vier aqui. */
+  insumos: { insumoId: number; quantity: number }[]
 }
 
-export type UpdateVariationInput = CreateVariationInput & { id: number }
+export type UpdateVariationInput = Omit<
+  CreateVariationInput,
+  'stockQuantity' | 'motivoDoEstoqueInicial'
+> & {
+  id: number
+  /** Ausente quando o estoque não mudou no formulário. */
+  ajusteDeEstoque?: AjusteDeEstoque
+}
+
+export interface DeleteVariationOptions {
+  /** Devolve aos insumos o que a receita usa para as peças em estoque. */
+  devolverInsumos: boolean
+}
 
 export interface FairAdditionalCost {
   id?: number

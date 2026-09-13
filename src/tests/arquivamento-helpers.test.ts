@@ -127,6 +127,13 @@ describe('contagem de alertas', () => {
     expect(contarAlertasDeEstoque([p])).toEqual({ esgotadas: 1, abaixoDoMinimo: 1 })
   })
 
+  it('should_count_an_oversold_variation_as_out_of_stock', () => {
+    const vendidaSemProducao = variacao({ id: 4, stockQuantity: -2, minimumStock: 3 })
+    const p = produto({ variations: [vendidaSemProducao, normal] })
+
+    expect(contarAlertasDeEstoque([p])).toEqual({ esgotadas: 1, abaixoDoMinimo: 0 })
+  })
+
   it('should_ignore_an_archived_variation', () => {
     const p = produto({
       variations: [{ ...esgotada, archivedAt: '2026-08-15 10:00:00' }, baixa, normal]

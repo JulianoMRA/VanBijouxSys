@@ -20,7 +20,7 @@ export const SQL_VARIACOES_ESGOTADAS = `
   FROM product_variations pv
   JOIN products p ON p.id = pv.product_id
   JOIN categories c ON c.id = p.category_id
-  WHERE pv.stock_quantity = 0
+  WHERE pv.stock_quantity <= 0
     AND pv.archived_at IS NULL
     AND p.archived_at IS NULL
   ORDER BY p.name, pv.identifier
@@ -50,7 +50,7 @@ export const SQL_INSUMOS_ESGOTADOS = `
     minimum_stock  AS minimumStock
   FROM insumos
   WHERE minimum_stock > 0
-    AND stock_quantity = 0
+    AND stock_quantity <= 0
     AND archived_at IS NULL
   ORDER BY name
 `

@@ -42,7 +42,7 @@ export function contarAlertasDeEstoque(produtos: Product[]): {
 } {
   const ativas = produtosAtivos(produtos).flatMap(variacoesAtivas)
   return {
-    esgotadas: ativas.filter((v) => v.stockQuantity === 0).length,
+    esgotadas: ativas.filter((v) => v.stockQuantity <= 0).length,
     abaixoDoMinimo: ativas.filter((v) => v.stockQuantity > 0 && v.stockQuantity < v.minimumStock)
       .length
   }

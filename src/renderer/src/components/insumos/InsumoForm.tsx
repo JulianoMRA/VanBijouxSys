@@ -44,7 +44,8 @@ export default function InsumoForm({
       setError('Custo por unidade inválido.')
       return
     }
-    if (isNaN(stock) || stock < 0) {
+    // Saldo negativo salvo continua valendo: só não se digita um negativo novo.
+    if (isNaN(stock) || (stock < 0 && stock !== insumo?.stockQuantity)) {
       setError('Quantidade em estoque inválida.')
       return
     }
@@ -93,14 +94,16 @@ export default function InsumoForm({
         })
       }
       onClose()
-    } catch {
-      setError('Erro ao salvar. Tente novamente.')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erro ao salvar. Tente novamente.')
     } finally {
       setSaving(false)
     }
   }
 
   const unitLabel = UNITS.find((u) => u.value === unit)?.label ?? ''
+  const unidadeTravada = isEditing && insumo.usadoPorVariacoesAtivas > 0
+  const unidadeMudou = isEditing && unit !== insumo.unit
 
   return (
     <Modal title={isEditing ? 'Editar Insumo' : 'Novo Insumo'} onClose={onClose} size="sm">
@@ -123,8 +126,9 @@ export default function InsumoForm({
               <button
                 key={u.value}
                 type="button"
+                disabled={unidadeTravada && unit !== u.value}
                 onClick={() => setUnit(u.value)}
-                className={`flex-1 rounded-control py-2 text-body font-medium transition-colors ${
+                className={`flex-1 rounded-control py-2 text-body font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
                   unit === u.value
                     ? 'bg-wine-500 text-bone-50'
                     : 'bg-bone-200 text-ink-600 hover:bg-bone-300'
@@ -134,6 +138,16 @@ export default function InsumoForm({
               </button>
             ))}
           </div>
+          {unidadeTravada && (
+            <p className="text-micro text-ink-300 mt-1">
+              Usado em receitas: trocar a unidade mudaria o sentido das quantidades delas.
+            </p>
+          )}
+          {unidadeMudou && insumo.stockQuantity !== 0 && (
+            <p className="text-micro text-honey-500 mt-1">
+              Nada é convertido. Informe abaixo o estoque atual contado em {unit}.
+            </p>
+          )}
         </div>
 
         <div>
@@ -163,7 +177,7 @@ export default function InsumoForm({
             <input
               className="input"
               type="number"
-              min="0"
+              min={Math.min(0, insumo?.stockQuantity ?? 0)}
               step="0.01"
               value={stockQuantity}
               onChange={(e) => setStockQuantity(e.target.value)}

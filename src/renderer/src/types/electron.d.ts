@@ -5,6 +5,7 @@ import type {
   UpdateProductInput,
   CreateVariationInput,
   UpdateVariationInput,
+  DeleteVariationOptions,
   Fair,
   CreateFairInput,
   UpdateFairInput,
@@ -41,8 +42,9 @@ declare global {
       variations: {
         create: (data: CreateVariationInput) => Promise<{ id: number }>
         update: (data: UpdateVariationInput) => Promise<{ success: boolean }>
-        delete: (id: number) => Promise<{ success: boolean }>
+        delete: (id: number, opcoes?: DeleteVariationOptions) => Promise<{ success: boolean }>
         addStock: (id: number, quantity: number) => Promise<{ success: boolean }>
+        setSalePrice: (id: number, salePrice: number) => Promise<{ success: boolean }>
         setArchived: (id: number, archived: boolean) => Promise<{ success: boolean }>
       }
       fairs: {

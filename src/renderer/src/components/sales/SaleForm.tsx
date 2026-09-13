@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import Modal from '../ui/Modal'
 import { estaArquivado, variacaoInativa } from '../../utils/arquivamento'
+import { custoUnitarioDoItem } from '../../utils/itens-de-venda'
 import type {
   Fair,
   Product,
@@ -19,6 +20,8 @@ interface SaleFormProps {
 
 interface ItemRow {
   key: number
+  /** Id do item já gravado, na edição. Ausente em linha adicionada agora. */
+  saleItemId?: number
   productId: number | ''
   variationId: number | ''
   quantity: string
@@ -92,6 +95,7 @@ export default function SaleForm({ sale, onSave, onClose }: SaleFormProps): JSX.
           const product = prods.find((p) => p.variations.some((v) => v.id === item.variationId))
           return {
             key: item.id,
+            saleItemId: item.id,
             productId: product?.id ?? '',
             variationId: item.variationId as number | '',
             quantity: String(item.quantity),
@@ -174,7 +178,7 @@ export default function SaleForm({ sale, onSave, onClose }: SaleFormProps): JSX.
         variationId: variation.id,
         quantity: qty,
         unitPrice: price,
-        unitCost: variation.costPrice
+        unitCost: custoUnitarioDoItem(item.saleItemId, variation, sale?.items ?? [])
       })
     }
     return result
@@ -506,9 +510,12 @@ export default function SaleForm({ sale, onSave, onClose }: SaleFormProps): JSX.
                       const effectiveStock =
                         selectedVariation.stockQuantity +
                         (originalQuantities[selectedVariation.id] ?? 0)
-                      return parseInt(item.quantity) > effectiveStock ? (
+                      const quantidade = parseInt(item.quantity)
+                      return quantidade > effectiveStock ? (
                         <p className="text-micro font-medium text-honey-500">
-                          ⚠ Quantidade maior que o estoque disponível ({effectiveStock} un.)
+                          O estoque registrado é {effectiveStock} un. e vai ficar em{' '}
+                          {effectiveStock - quantidade}. Se as peças já foram feitas, lance a
+                          produção em Produtos, &quot;+ Estoque&quot;, para os insumos acompanharem.
                         </p>
                       ) : null
                     })()}

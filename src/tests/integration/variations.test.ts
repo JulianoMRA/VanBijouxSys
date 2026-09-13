@@ -1,130 +1,321 @@
-import { describe, it, expect, beforeEach } from 'vitest'
-import { type Database } from 'sql.js'
-import { createTestDb, queryOne, queryAll } from '../helpers/testDb'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { prepararAmbienteIpc, type AmbienteIpc } from '../helpers/ambiente-ipc'
+import { queryOne } from '../helpers/testDb'
+import {
+  criarInsumo,
+  criarVariacao,
+  estoqueDaVariacao,
+  estoqueDoInsumo,
+  itensDaReceita,
+  registrarVenda
+} from '../helpers/estoque'
 
-let db: Database
+vi.mock('electron', async () => (await import('../helpers/ambiente-ipc')).electronFalso)
+vi.mock('../../main/database', async () => (await import('../helpers/ambiente-ipc')).bancoFalso)
+
+let ambiente: AmbienteIpc
+let fio: number
 
 beforeEach(async () => {
-  db = await createTestDb()
-  // Semente: categoria, produto, insumo
-  db.run(`INSERT INTO products (name, category_id) VALUES ('Colar Azul', 1)`)
-  db.run(
-    `INSERT INTO insumos (name, unit, cost_per_unit, stock_quantity) VALUES ('Fio de nylon', 'cm', 0.05, 100)`
-  )
+  ambiente = await prepararAmbienteIpc()
+  fio = await criarInsumo(ambiente, { stockQuantity: 100 })
 })
 
-describe('variations:create com estoque inicial', () => {
-  it('should deduct insumo stock when creating variation with initial stock', () => {
-    // Cria variação com 5 peças no estoque; receita: 10 cm por peça
-    db.run(
-      `INSERT INTO product_variations (product_id, identifier, cost_price, sale_price, stock_quantity) VALUES (1, 'P-Azul-M', 5, 20, 5)`
-    )
-    const varId = queryOne<{ id: number }>(db, 'SELECT last_insert_rowid() AS id')!.id
-    db.run(`INSERT INTO variation_insumos (variation_id, insumo_id, quantity) VALUES (?, 1, 10)`, [
-      varId
-    ])
+describe('variations:create', () => {
+  it('should_deduct_recipe_times_initial_stock_when_created_with_stock', async () => {
+    await criarVariacao(ambiente, { stockQuantity: 5, receita: [{ insumoId: fio, quantity: 10 }] })
 
-    // Simula a dedução: 5 peças × 10 cm = 50 cm
-    db.run(`UPDATE insumos SET stock_quantity = MAX(0, stock_quantity - ?) WHERE id = 1`, [10 * 5])
-
-    const insumo = queryOne<{ stock_quantity: number }>(
-      db,
-      'SELECT stock_quantity FROM insumos WHERE id = 1'
-    )
-    expect(insumo!.stock_quantity).toBe(50) // 100 - 50
+    expect(estoqueDoInsumo(ambiente, fio)).toBe(50)
   })
 
-  it('should not go below zero when deducting more than available', () => {
-    db.run(
-      `INSERT INTO product_variations (product_id, identifier, stock_quantity) VALUES (1, 'P-Azul-G', 200)`
-    )
-    const varId = queryOne<{ id: number }>(db, 'SELECT last_insert_rowid() AS id')!.id
-    db.run(`INSERT INTO variation_insumos (variation_id, insumo_id, quantity) VALUES (?, 1, 1)`, [
-      varId
-    ])
+  it('should_not_deduct_insumos_when_the_initial_pieces_were_already_made', async () => {
+    const variacao = await criarVariacao(ambiente, {
+      stockQuantity: 5,
+      motivoDoEstoqueInicial: 'contagem',
+      receita: [{ insumoId: fio, quantity: 10 }]
+    })
 
-    // 200 peças × 1 cm = 200 cm, mas só há 100 cm disponíveis
-    db.run(`UPDATE insumos SET stock_quantity = MAX(0, stock_quantity - ?) WHERE id = 1`, [1 * 200])
+    expect(estoqueDaVariacao(ambiente, variacao)).toBe(5)
+    expect(estoqueDoInsumo(ambiente, fio)).toBe(100)
+  })
 
-    const insumo = queryOne<{ stock_quantity: number }>(
-      db,
-      'SELECT stock_quantity FROM insumos WHERE id = 1'
-    )
-    expect(insumo!.stock_quantity).toBe(0)
+  it('should_not_touch_insumos_when_created_without_stock', async () => {
+    const variacao = await criarVariacao(ambiente, { receita: [{ insumoId: fio, quantity: 10 }] })
+
+    expect(estoqueDoInsumo(ambiente, fio)).toBe(100)
+    expect(itensDaReceita(ambiente, variacao)).toBe(1)
+  })
+
+  it('should_let_insumo_go_negative_when_initial_stock_needs_more_than_available', async () => {
+    await criarVariacao(ambiente, { stockQuantity: 200, receita: [{ insumoId: fio, quantity: 1 }] })
+
+    expect(estoqueDoInsumo(ambiente, fio)).toBe(-100)
   })
 })
 
 describe('variations:addStock', () => {
-  it('should increase variation stock and deduct insumos', () => {
-    db.run(
-      `INSERT INTO product_variations (product_id, identifier, stock_quantity) VALUES (1, 'P-Azul-P', 0)`
-    )
-    const varId = queryOne<{ id: number }>(db, 'SELECT last_insert_rowid() AS id')!.id
-    db.run(`INSERT INTO variation_insumos (variation_id, insumo_id, quantity) VALUES (?, 1, 10)`, [
-      varId
-    ])
+  it('should_add_pieces_and_deduct_recipe_times_quantity', async () => {
+    const variacao = await criarVariacao(ambiente, { receita: [{ insumoId: fio, quantity: 10 }] })
 
-    const qty = 3
-    db.run(`UPDATE product_variations SET stock_quantity = stock_quantity + ? WHERE id = ?`, [
-      qty,
-      varId
-    ])
-    const recipe = queryAll<{ quantity: number; insumo_id: number }>(
-      db,
-      'SELECT * FROM variation_insumos WHERE variation_id = ?',
-      [varId]
-    )
-    for (const item of recipe) {
-      db.run(`UPDATE insumos SET stock_quantity = MAX(0, stock_quantity - ?) WHERE id = ?`, [
-        item.quantity * qty,
-        item.insumo_id
-      ])
-    }
+    await ambiente.chamar('variations:addStock', variacao, 3)
 
-    const variation = queryOne<{ stock_quantity: number }>(
-      db,
-      'SELECT stock_quantity FROM product_variations WHERE id = ?',
-      [varId]
-    )
-    const insumo = queryOne<{ stock_quantity: number }>(
-      db,
-      'SELECT stock_quantity FROM insumos WHERE id = 1'
-    )
-    expect(variation!.stock_quantity).toBe(3)
-    expect(insumo!.stock_quantity).toBe(70) // 100 - 3×10
+    expect(estoqueDaVariacao(ambiente, variacao)).toBe(3)
+    expect(estoqueDoInsumo(ambiente, fio)).toBe(70)
   })
 
-  it('should clamp insumo stock at zero when not enough available', () => {
-    db.run(
-      `INSERT INTO product_variations (product_id, identifier, stock_quantity) VALUES (1, 'P-Azul-G', 0)`
-    )
-    const varId = queryOne<{ id: number }>(db, 'SELECT last_insert_rowid() AS id')!.id
-    db.run(`INSERT INTO variation_insumos (variation_id, insumo_id, quantity) VALUES (?, 1, 50)`, [
-      varId
-    ])
+  it('should_let_insumo_go_negative_when_production_needs_more_than_available', async () => {
+    const variacao = await criarVariacao(ambiente, { receita: [{ insumoId: fio, quantity: 50 }] })
 
-    // Adiciona 5 peças × 50 cm = 250 cm, mas só há 100 disponíveis
-    db.run(`UPDATE insumos SET stock_quantity = MAX(0, stock_quantity - ?) WHERE id = 1`, [50 * 5])
+    await ambiente.chamar('variations:addStock', variacao, 5)
 
-    const insumo = queryOne<{ stock_quantity: number }>(
-      db,
-      'SELECT stock_quantity FROM insumos WHERE id = 1'
+    expect(estoqueDoInsumo(ambiente, fio)).toBe(-150)
+  })
+
+  it('should_reach_the_same_balance_whatever_is_registered_first', async () => {
+    const produzindoAntes = await criarInsumo(ambiente, { name: 'Fio A', stockQuantity: 50 })
+    const comprandoAntes = await criarInsumo(ambiente, { name: 'Fio B', stockQuantity: 50 })
+    const pulseiraA = await criarVariacao(ambiente, {
+      receita: [{ insumoId: produzindoAntes, quantity: 20 }]
+    })
+    const pulseiraB = await criarVariacao(ambiente, {
+      receita: [{ insumoId: comprandoAntes, quantity: 20 }]
+    })
+
+    await ambiente.chamar('variations:addStock', pulseiraA, 5)
+    await ambiente.chamar('insumos:addStock', produzindoAntes, 200)
+    await ambiente.chamar('insumos:addStock', comprandoAntes, 200)
+    await ambiente.chamar('variations:addStock', pulseiraB, 5)
+
+    expect(estoqueDoInsumo(ambiente, produzindoAntes)).toBe(150)
+    expect(estoqueDoInsumo(ambiente, comprandoAntes)).toBe(150)
+  })
+
+  it('should_round_fractional_deductions_so_an_empty_insumo_is_exactly_zero', async () => {
+    const cola = await criarInsumo(ambiente, { name: 'Cola', unit: 'g', stockQuantity: 0.3 })
+    const variacao = await criarVariacao(ambiente, { receita: [{ insumoId: cola, quantity: 0.1 }] })
+
+    for (let i = 0; i < 3; i++) await ambiente.chamar('variations:addStock', variacao, 1)
+
+    const saldo = estoqueDoInsumo(ambiente, cola)
+    expect(saldo).toBe(0)
+    expect(Object.is(saldo, -0)).toBe(false)
+  })
+
+  it('should_reject_an_unknown_variation', async () => {
+    await expect(ambiente.chamar('variations:addStock', 999, 1)).rejects.toThrow(
+      'Variação não encontrada.'
     )
-    expect(insumo!.stock_quantity).toBe(0)
   })
 })
 
-describe('variations:delete cascade', () => {
-  it('should delete variation_insumos when variation is deleted', () => {
-    db.run(`INSERT INTO product_variations (product_id, identifier) VALUES (1, 'P-Azul-P')`)
-    const varId = queryOne<{ id: number }>(db, 'SELECT last_insert_rowid() AS id')!.id
-    db.run(`INSERT INTO variation_insumos (variation_id, insumo_id, quantity) VALUES (?, 1, 10)`, [
-      varId
-    ])
+describe('variations:setSalePrice', () => {
+  function linhaDaVariacao(id: number): Record<string, unknown> {
+    return queryOne(ambiente.banco, 'SELECT * FROM product_variations WHERE id = ?', [id])!
+  }
 
-    db.run(`DELETE FROM product_variations WHERE id = ?`, [varId])
+  it('should_keep_the_recipe_so_later_production_still_deducts_insumos', async () => {
+    const variacao = await criarVariacao(ambiente, { receita: [{ insumoId: fio, quantity: 10 }] })
 
-    const recipes = queryAll(db, 'SELECT * FROM variation_insumos WHERE variation_id = ?', [varId])
-    expect(recipes).toHaveLength(0)
+    await ambiente.chamar('variations:setSalePrice', variacao, 27)
+    await ambiente.chamar('variations:addStock', variacao, 2)
+
+    expect(itensDaReceita(ambiente, variacao)).toBe(1)
+    expect(estoqueDoInsumo(ambiente, fio)).toBe(80)
+  })
+
+  it('should_change_only_the_sale_price', async () => {
+    const variacao = await criarVariacao(ambiente, {
+      stockQuantity: 4,
+      costPrice: 3.5,
+      salePrice: 25,
+      minimumStock: 2,
+      laborCost: 5,
+      receita: [{ insumoId: fio, quantity: 10 }]
+    })
+    const antes = linhaDaVariacao(variacao)
+
+    await ambiente.chamar('variations:setSalePrice', variacao, 27)
+
+    expect(linhaDaVariacao(variacao)).toEqual({ ...antes, sale_price: 27 })
+  })
+
+  it('should_reject_a_negative_price', async () => {
+    const variacao = await criarVariacao(ambiente, { receita: [] })
+
+    await expect(ambiente.chamar('variations:setSalePrice', variacao, -1)).rejects.toThrow(
+      'Preço de venda inválido.'
+    )
+  })
+
+  it('should_reject_an_unknown_variation', async () => {
+    await expect(ambiente.chamar('variations:setSalePrice', 999, 27)).rejects.toThrow(
+      'Variação não encontrada.'
+    )
+  })
+})
+
+describe('variations:update', () => {
+  it('should_refuse_an_update_without_the_recipe_instead_of_erasing_it', async () => {
+    const variacao = await criarVariacao(ambiente, { receita: [{ insumoId: fio, quantity: 10 }] })
+
+    const semReceita = {
+      id: variacao,
+      productId: 1,
+      identifier: 'Rosa',
+      costPrice: 3,
+      salePrice: 27,
+      stockQuantity: 0,
+      minimumStock: 1,
+      laborCost: 0
+    }
+    await expect(ambiente.chamar('variations:update', semReceita)).rejects.toThrow()
+
+    expect(itensDaReceita(ambiente, variacao)).toBe(1)
+    expect(queryOne(ambiente.banco, 'SELECT sale_price FROM product_variations')).toEqual({
+      sale_price: 25
+    })
+  })
+})
+
+describe('variations:update com ajuste de estoque', () => {
+  const RECEITA_DE_10 = (): Array<{ insumoId: number; quantity: number }> => [
+    { insumoId: fio, quantity: 10 }
+  ]
+
+  async function variacaoCom4Pecas(): Promise<number> {
+    const variacao = await criarVariacao(ambiente, { receita: RECEITA_DE_10() })
+    await ambiente.chamar('variations:addStock', variacao, 4)
+    return variacao
+  }
+
+  function salvarFormulario(
+    variacao: number,
+    extra: Record<string, unknown> = {}
+  ): Promise<unknown> {
+    return ambiente.chamar('variations:update', {
+      id: variacao,
+      productId: 1,
+      identifier: 'Rosa',
+      costPrice: 3,
+      salePrice: 25,
+      minimumStock: 1,
+      laborCost: 0,
+      insumos: RECEITA_DE_10(),
+      ...extra
+    })
+  }
+
+  it('should_keep_the_stock_when_the_form_did_not_change_it', async () => {
+    const variacao = await variacaoCom4Pecas()
+
+    await salvarFormulario(variacao, { stockQuantity: 99 })
+
+    expect(estoqueDaVariacao(ambiente, variacao)).toBe(4)
+    expect(estoqueDoInsumo(ambiente, fio)).toBe(60)
+  })
+
+  it('should_deduct_insumos_when_stock_is_raised_as_production', async () => {
+    const variacao = await variacaoCom4Pecas()
+
+    await salvarFormulario(variacao, { ajusteDeEstoque: { novoEstoque: 7, motivo: 'producao' } })
+
+    expect(estoqueDaVariacao(ambiente, variacao)).toBe(7)
+    expect(estoqueDoInsumo(ambiente, fio)).toBe(30)
+  })
+
+  it('should_return_insumos_when_production_registered_by_mistake_is_undone', async () => {
+    const variacao = await variacaoCom4Pecas()
+
+    await salvarFormulario(variacao, { ajusteDeEstoque: { novoEstoque: 1, motivo: 'producao' } })
+
+    expect(estoqueDaVariacao(ambiente, variacao)).toBe(1)
+    expect(estoqueDoInsumo(ambiente, fio)).toBe(90)
+  })
+
+  it('should_not_touch_insumos_when_the_count_is_corrected', async () => {
+    const variacao = await variacaoCom4Pecas()
+
+    await salvarFormulario(variacao, { ajusteDeEstoque: { novoEstoque: 2, motivo: 'contagem' } })
+
+    expect(estoqueDaVariacao(ambiente, variacao)).toBe(2)
+    expect(estoqueDoInsumo(ambiente, fio)).toBe(60)
+  })
+
+  it('should_measure_the_adjustment_against_the_saved_stock_not_the_screen', async () => {
+    const variacao = await variacaoCom4Pecas()
+    await registrarVenda(ambiente, [{ variationId: variacao, quantity: 1 }])
+
+    await salvarFormulario(variacao, { ajusteDeEstoque: { novoEstoque: 5, motivo: 'producao' } })
+
+    expect(estoqueDaVariacao(ambiente, variacao)).toBe(5)
+    expect(estoqueDoInsumo(ambiente, fio)).toBe(40)
+  })
+
+  it('should_use_the_recipe_being_saved_for_the_adjustment', async () => {
+    const variacao = await criarVariacao(ambiente, { receita: RECEITA_DE_10() })
+
+    await salvarFormulario(variacao, {
+      insumos: [{ insumoId: fio, quantity: 12 }],
+      ajusteDeEstoque: { novoEstoque: 2, motivo: 'producao' }
+    })
+
+    expect(estoqueDoInsumo(ambiente, fio)).toBe(76)
+  })
+
+  it('should_reject_a_negative_target_and_change_nothing', async () => {
+    const variacao = await variacaoCom4Pecas()
+
+    await expect(
+      salvarFormulario(variacao, {
+        identifier: 'Rosa claro',
+        ajusteDeEstoque: { novoEstoque: -1, motivo: 'contagem' }
+      })
+    ).rejects.toThrow('Quantidade em estoque inválida.')
+
+    expect(estoqueDaVariacao(ambiente, variacao)).toBe(4)
+    expect(queryOne(ambiente.banco, 'SELECT identifier FROM product_variations')).toEqual({
+      identifier: 'Rosa'
+    })
+  })
+})
+
+describe('variations:delete', () => {
+  it('should_delete_the_recipe_together_with_the_variation', async () => {
+    const variacao = await criarVariacao(ambiente, { receita: [{ insumoId: fio, quantity: 10 }] })
+
+    await ambiente.chamar('variations:delete', variacao)
+
+    expect(itensDaReceita(ambiente, variacao)).toBe(0)
+  })
+
+  it('should_keep_insumos_when_deleting_without_returning_them', async () => {
+    const variacao = await criarVariacao(ambiente, { receita: [{ insumoId: fio, quantity: 10 }] })
+    await ambiente.chamar('variations:addStock', variacao, 3)
+
+    await ambiente.chamar('variations:delete', variacao)
+
+    expect(estoqueDoInsumo(ambiente, fio)).toBe(70)
+  })
+
+  it('should_return_insumos_when_deleting_a_variation_registered_by_mistake', async () => {
+    const variacao = await criarVariacao(ambiente, { receita: [{ insumoId: fio, quantity: 10 }] })
+    await ambiente.chamar('variations:addStock', variacao, 3)
+
+    await ambiente.chamar('variations:delete', variacao, { devolverInsumos: true })
+
+    expect(estoqueDoInsumo(ambiente, fio)).toBe(100)
+  })
+
+  it('should_keep_insumos_untouched_when_the_delete_is_refused', async () => {
+    const variacao = await criarVariacao(ambiente, { receita: [{ insumoId: fio, quantity: 10 }] })
+    await ambiente.chamar('variations:addStock', variacao, 3)
+    await registrarVenda(ambiente, [{ variationId: variacao, quantity: 1 }])
+
+    await expect(
+      ambiente.chamar('variations:delete', variacao, { devolverInsumos: true })
+    ).rejects.toThrow('Esta variação não pode ser excluída porque já foi vendida')
+
+    expect(estoqueDoInsumo(ambiente, fio)).toBe(70)
+    expect(estoqueDaVariacao(ambiente, variacao)).toBe(2)
   })
 })

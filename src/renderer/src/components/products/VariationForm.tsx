@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react'
 import Modal from '../ui/Modal'
 import InsumoForm from '../insumos/InsumoForm'
+import MotivoDoEstoqueDialog from './MotivoDoEstoqueDialog'
 import { opcoesComSelecionados } from '../../utils/arquivamento'
-import type { Insumo, ProductVariation } from '../../types'
+import { precisaPerguntarMotivo } from '../../utils/ajuste-de-estoque'
+import type { CreateVariationInput, Insumo, MotivoDeAjuste, ProductVariation } from '../../types'
 
 const LABOR_COST_KEY = 'pricing_default_labor_cost'
 
@@ -15,6 +17,11 @@ interface InsumoRow {
   insumoId: number | ''
   quantity: string
 }
+
+type DadosDaVariacao = Omit<
+  CreateVariationInput,
+  'productId' | 'stockQuantity' | 'motivoDoEstoqueInicial'
+> & { estoque: number }
 
 interface VariationFormProps {
   productId: number
@@ -56,6 +63,7 @@ export default function VariationForm({
   )
   const [showInsumoForm, setShowInsumoForm] = useState(false)
   const [pendingRowKey, setPendingRowKey] = useState<number | null>(null)
+  const [aguardandoMotivo, setAguardandoMotivo] = useState<DadosDaVariacao | null>(null)
 
   const isEditing = !!variation
 
@@ -129,11 +137,10 @@ export default function VariationForm({
     }
   }
 
-  async function handleSubmit(e: React.FormEvent): Promise<void> {
-    e.preventDefault()
+  function lerFormulario(): DadosDaVariacao | null {
     if (!identifier.trim()) {
       setError('O identificador é obrigatório.')
-      return
+      return null
     }
     const cost = parseFloat(costPrice)
     const sale = parseFloat(salePrice)
@@ -142,69 +149,86 @@ export default function VariationForm({
 
     if (isNaN(cost) || cost < 0) {
       setError('Preço de custo inválido.')
-      return
+      return null
     }
     if (isNaN(sale) || sale < 0) {
       setError('Preço de venda inválido.')
-      return
+      return null
     }
-    if (isNaN(stock) || stock < 0) {
+    // Saldo negativo salvo continua valendo: só não se digita um negativo novo.
+    if (isNaN(stock) || (stock < 0 && stock !== variation?.stockQuantity)) {
       setError('Quantidade em estoque inválida.')
-      return
+      return null
     }
     if (isNaN(minStock) || minStock < 0) {
       setError('Estoque mínimo inválido.')
-      return
+      return null
     }
 
     for (const row of insumoRows) {
       if (row.insumoId === '') {
         setError('Selecione o insumo em todas as linhas ou remova as vazias.')
-        return
+        return null
       }
       const qty = parseFloat(row.quantity)
       if (isNaN(qty) || qty <= 0) {
         setError('Informe a quantidade de cada insumo.')
-        return
+        return null
       }
     }
 
-    const parsedInsumos = insumoRows
-      .filter((r) => r.insumoId !== '')
-      .map((r) => ({ insumoId: r.insumoId as number, quantity: parseFloat(r.quantity) }))
+    return {
+      identifier: identifier.trim(),
+      costPrice: cost,
+      salePrice: sale,
+      estoque: stock,
+      minimumStock: minStock,
+      laborCost: parseFloat(laborCost) || 0,
+      insumos: insumoRows
+        .filter((r) => r.insumoId !== '')
+        .map((r) => ({ insumoId: r.insumoId as number, quantity: parseFloat(r.quantity) }))
+    }
+  }
 
+  async function handleSubmit(e: React.FormEvent): Promise<void> {
+    e.preventDefault()
+    const dados = lerFormulario()
+    if (!dados) return
+
+    const anterior = variation ? variation.stockQuantity : null
+    if (precisaPerguntarMotivo(anterior, dados.estoque, dados.insumos.length > 0)) {
+      setAguardandoMotivo(dados)
+      return
+    }
+    // Sem receita o motivo não move insumo nenhum.
+    await salvar(dados, 'contagem')
+  }
+
+  async function salvar(dados: DadosDaVariacao, motivo: MotivoDeAjuste): Promise<void> {
+    setAguardandoMotivo(null)
     setSaving(true)
     try {
-      const parsedLaborCost = parseFloat(laborCost) || 0
-
+      const { estoque, ...campos } = dados
       if (isEditing) {
         await window.api.variations.update({
+          ...campos,
           id: variation.id,
           productId,
-          identifier: identifier.trim(),
-          costPrice: cost,
-          salePrice: sale,
-          stockQuantity: stock,
-          minimumStock: minStock,
-          laborCost: parsedLaborCost,
-          insumos: parsedInsumos
+          ajusteDeEstoque:
+            estoque !== variation.stockQuantity ? { novoEstoque: estoque, motivo } : undefined
         })
       } else {
         await window.api.variations.create({
+          ...campos,
           productId,
-          identifier: identifier.trim(),
-          costPrice: cost,
-          salePrice: sale,
-          stockQuantity: stock,
-          minimumStock: minStock,
-          laborCost: parsedLaborCost,
-          insumos: parsedInsumos
+          stockQuantity: estoque,
+          motivoDoEstoqueInicial: motivo
         })
       }
       onSave()
       onClose()
-    } catch {
-      setError('Erro ao salvar. Tente novamente.')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erro ao salvar. Tente novamente.')
     } finally {
       setSaving(false)
     }
@@ -463,10 +487,17 @@ export default function VariationForm({
               <input
                 className="input"
                 type="number"
-                min="0"
+                min={Math.min(0, variation?.stockQuantity ?? 0)}
                 value={stockQuantity}
                 onChange={(e) => setStockQuantity(e.target.value)}
               />
+              {hasInsumos && (
+                <p className="text-micro text-ink-300 mt-1">
+                  {isEditing
+                    ? 'Se mudar, o app pergunta se foi produção ou correção de contagem.'
+                    : 'Com estoque inicial, o app pergunta se as peças foram feitas agora.'}
+                </p>
+              )}
             </div>
             <div>
               <label className="label">Estoque mínimo</label>
@@ -495,6 +526,15 @@ export default function VariationForm({
           </div>
         </form>
       </Modal>
+
+      {aguardandoMotivo && (
+        <MotivoDoEstoqueDialog
+          estoqueAnterior={variation ? variation.stockQuantity : null}
+          novoEstoque={aguardandoMotivo.estoque}
+          onEscolher={(motivo) => salvar(aguardandoMotivo, motivo)}
+          onClose={() => setAguardandoMotivo(null)}
+        />
+      )}
 
       {showInsumoForm && (
         <InsumoForm

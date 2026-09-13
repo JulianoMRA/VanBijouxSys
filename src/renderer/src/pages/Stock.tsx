@@ -66,6 +66,11 @@ function formatarCustoUnitario(valor: number): string {
   })
 }
 
+/** Saldo negativo não é material na prateleira: não vale dinheiro, só indica o que falta lançar. */
+function valorEmEstoque(insumo: Insumo): number {
+  return Math.max(insumo.stockQuantity, 0) * insumo.costPerUnit
+}
+
 /** Quanto falta em dinheiro para todos os insumos voltarem ao mínimo. */
 function custoDeReposicao(insumos: Insumo[]): number {
   return insumos.reduce((total, i) => {
@@ -178,8 +183,8 @@ export default function Stock(): JSX.Element {
   const precisamReposicao = ativos.filter((i) => stockStatus(i) !== 'ok')
   const esgotados = ativos.filter((i) => stockStatus(i) === 'out')
   const baixos = ativos.filter((i) => stockStatus(i) === 'low')
-  const totalStockValue = ativos.reduce((s, i) => s + i.stockQuantity * i.costPerUnit, 0)
-  const valorArquivado = arquivados.reduce((s, i) => s + i.stockQuantity * i.costPerUnit, 0)
+  const totalStockValue = ativos.reduce((s, i) => s + valorEmEstoque(i), 0)
+  const valorArquivado = arquivados.reduce((s, i) => s + valorEmEstoque(i), 0)
   const valorReposicao = custoDeReposicao(precisamReposicao)
 
   const displayedInsumos = useMemo(() => {
@@ -432,7 +437,8 @@ export default function Stock(): JSX.Element {
                       const ul = unitLabel(insumo.unit)
                       const pct =
                         insumo.minimumStock > 0
-                          ? Math.min((insumo.stockQuantity / insumo.minimumStock) * 100, 100)
+                          ? Math.min(Math.max(insumo.stockQuantity, 0) / insumo.minimumStock, 1) *
+                            100
                           : insumo.stockQuantity > 0
                             ? 100
                             : 0
@@ -474,9 +480,11 @@ export default function Stock(): JSX.Element {
                             <div
                               className="flex items-center gap-2.5"
                               title={
-                                insumo.minimumStock > 0
-                                  ? `Mínimo: ${insumo.minimumStock.toLocaleString('pt-BR')} ${ul}`
-                                  : 'Sem mínimo definido'
+                                insumo.stockQuantity < 0
+                                  ? 'Saldo negativo: a produção registrada usou mais do que as compras registradas. Falta lançar uma compra, ou a receita pede mais do que se usa.'
+                                  : insumo.minimumStock > 0
+                                    ? `Mínimo: ${insumo.minimumStock.toLocaleString('pt-BR')} ${ul}`
+                                    : 'Sem mínimo definido'
                               }
                             >
                               <div className="h-[5px] w-14 overflow-hidden rounded-full bg-bone-300">
@@ -499,7 +507,7 @@ export default function Stock(): JSX.Element {
                             {formatarCustoUnitario(insumo.costPerUnit)}
                           </td>
                           <td className="px-3 py-3 text-right font-semibold tabular-nums text-ink-900">
-                            {formatCurrency(insumo.stockQuantity * insumo.costPerUnit)}
+                            {formatCurrency(valorEmEstoque(insumo))}
                           </td>
                           <td className="py-3 pl-3 pr-[22px]">
                             <div className="flex items-center justify-end gap-2">

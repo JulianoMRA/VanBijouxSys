@@ -71,6 +71,18 @@ describe('filterAndSortVariations', () => {
       expect(result[0].identifier).toBe('Rosa')
     })
 
+    it('should_include_an_oversold_variation_in_sem_estoque', () => {
+      const comNegativa = [
+        ...variations,
+        makeVariation({ id: 5, identifier: 'Lilás', stockQuantity: -2, minimumStock: 1 })
+      ]
+      const result = filterAndSortVariations(comNegativa, {
+        ...defaultParams,
+        stockFilter: 'sem-estoque'
+      })
+      expect(result.map((v) => v.identifier).sort()).toEqual(['Lilás', 'Rosa'])
+    })
+
     it('should filter estoque-baixo (quantity > 0 and < minimum)', () => {
       const result = filterAndSortVariations(variations, {
         ...defaultParams,

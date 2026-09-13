@@ -1,131 +1,149 @@
-import { describe, it, expect, beforeEach } from 'vitest'
-import { type Database } from 'sql.js'
-import { createTestDb, queryOne, queryAll } from '../helpers/testDb'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { prepararAmbienteIpc, type AmbienteIpc } from '../helpers/ambiente-ipc'
+import { queryAll, queryOne } from '../helpers/testDb'
+import { SQL_VARIACOES_ESGOTADAS } from '../../main/database/consultas-estoque'
+import {
+  criarInsumo,
+  criarVariacao,
+  estoqueDaVariacao,
+  estoqueDoInsumo,
+  registrarVenda
+} from '../helpers/estoque'
 
-let db: Database
+vi.mock('electron', async () => (await import('../helpers/ambiente-ipc')).electronFalso)
+vi.mock('../../main/database', async () => (await import('../helpers/ambiente-ipc')).bancoFalso)
+
+let ambiente: AmbienteIpc
+let fio: number
+let variacao: number
 
 beforeEach(async () => {
-  db = await createTestDb()
-  db.run(`INSERT INTO products (name, category_id) VALUES ('Pulseira Rosa', 2)`)
-  db.run(
-    `INSERT INTO product_variations (product_id, identifier, cost_price, sale_price, stock_quantity) VALUES (1, 'P-Rosa-M', 10, 35, 10)`
-  )
+  ambiente = await prepararAmbienteIpc()
+  fio = await criarInsumo(ambiente, { stockQuantity: 1000 })
+  variacao = await criarVariacao(ambiente, { receita: [{ insumoId: fio, quantity: 20 }] })
+  await ambiente.chamar('variations:addStock', variacao, 10)
 })
 
-function createSale(variationId: number, qty: number, unitPrice: number, unitCost: number): number {
-  const totalAmount = qty * unitPrice
-  const totalCost = qty * unitCost
-
-  db.run(
-    `INSERT INTO sales (channel, total_amount, total_cost, sold_at) VALUES ('WhatsApp', ?, ?, '2025-03-15')`,
-    [totalAmount, totalCost]
-  )
-  const saleId = queryOne<{ id: number }>(db, 'SELECT last_insert_rowid() AS id')!.id
-
-  db.run(
-    `INSERT INTO sale_items (sale_id, variation_id, quantity, unit_price, unit_cost) VALUES (?, ?, ?, ?, ?)`,
-    [saleId, variationId, qty, unitPrice, unitCost]
-  )
-  db.run(`UPDATE product_variations SET stock_quantity = MAX(0, stock_quantity - ?) WHERE id = ?`, [
-    qty,
-    variationId
-  ])
-
-  return saleId
-}
-
 describe('sales:create', () => {
-  it('should decrease variation stock on sale', () => {
-    createSale(1, 3, 35, 10)
+  it('should_decrease_variation_stock_by_the_quantity_sold', async () => {
+    await registrarVenda(ambiente, [{ variationId: variacao, quantity: 3 }])
 
-    const v = queryOne<{ stock_quantity: number }>(
-      db,
-      'SELECT stock_quantity FROM product_variations WHERE id = 1'
-    )
-    expect(v!.stock_quantity).toBe(7) // 10 - 3
+    expect(estoqueDaVariacao(ambiente, variacao)).toBe(7)
   })
 
-  it('should clamp stock at zero when selling more than available', () => {
-    createSale(1, 20, 35, 10) // 20 > 10 disponíveis
+  it('should_persist_the_sale_with_totals_and_items', async () => {
+    const venda = await registrarVenda(ambiente, [
+      { variationId: variacao, quantity: 2, unitCost: 10 }
+    ])
 
-    const v = queryOne<{ stock_quantity: number }>(
-      db,
-      'SELECT stock_quantity FROM product_variations WHERE id = 1'
+    const registro = queryOne<{ total_amount: number; total_cost: number }>(
+      ambiente.banco,
+      'SELECT total_amount, total_cost FROM sales WHERE id = ?',
+      [venda]
     )
-    expect(v!.stock_quantity).toBe(0)
+    expect(registro).toEqual({ total_amount: 50, total_cost: 20 })
+    expect(
+      queryAll(ambiente.banco, 'SELECT * FROM sale_items WHERE sale_id = ?', [venda])
+    ).toHaveLength(1)
   })
 
-  it('should persist sale and sale items', () => {
-    const saleId = createSale(1, 2, 35, 10)
+  it('should_not_touch_insumos_because_they_were_deducted_at_production', async () => {
+    await registrarVenda(ambiente, [{ variationId: variacao, quantity: 10 }])
 
-    const sale = queryOne<{ total_amount: number; total_cost: number }>(
-      db,
-      'SELECT * FROM sales WHERE id = ?',
-      [saleId]
-    )
-    expect(sale!.total_amount).toBe(70)
-    expect(sale!.total_cost).toBe(20)
+    expect(estoqueDoInsumo(ambiente, fio)).toBe(800)
+  })
 
-    const items = queryAll(db, 'SELECT * FROM sale_items WHERE sale_id = ?', [saleId])
-    expect(items).toHaveLength(1)
+  it('should_go_negative_when_selling_more_than_the_registered_stock', async () => {
+    await registrarVenda(ambiente, [{ variationId: variacao, quantity: 13 }])
+
+    expect(estoqueDaVariacao(ambiente, variacao)).toBe(-3)
+  })
+
+  it('should_net_out_the_deficit_when_the_missing_production_is_registered', async () => {
+    await registrarVenda(ambiente, [{ variationId: variacao, quantity: 13 }])
+
+    await ambiente.chamar('variations:addStock', variacao, 3)
+
+    expect(estoqueDaVariacao(ambiente, variacao)).toBe(0)
+    expect(estoqueDoInsumo(ambiente, fio)).toBe(1000 - 13 * 20)
+  })
+
+  it('should_list_an_oversold_variation_as_out_of_stock', async () => {
+    await registrarVenda(ambiente, [{ variationId: variacao, quantity: 13 }])
+
+    expect(queryAll(ambiente.banco, SQL_VARIACOES_ESGOTADAS)).toHaveLength(1)
   })
 })
 
 describe('sales:delete', () => {
-  it('should restore variation stock on delete', () => {
-    const saleId = createSale(1, 3, 35, 10)
+  it('should_return_the_sold_quantity_to_the_variation', async () => {
+    const venda = await registrarVenda(ambiente, [{ variationId: variacao, quantity: 3 }])
 
-    // Restaura estoque (mesma lógica do handler)
-    const items = queryAll<{ variation_id: number; quantity: number }>(
-      db,
-      'SELECT variation_id, quantity FROM sale_items WHERE sale_id = ?',
-      [saleId]
-    )
-    for (const item of items) {
-      db.run(`UPDATE product_variations SET stock_quantity = stock_quantity + ? WHERE id = ?`, [
-        item.quantity,
-        item.variation_id
-      ])
-    }
-    db.run(`DELETE FROM sales WHERE id = ?`, [saleId])
+    await ambiente.chamar('sales:delete', venda)
 
-    const v = queryOne<{ stock_quantity: number }>(
-      db,
-      'SELECT stock_quantity FROM product_variations WHERE id = 1'
-    )
-    expect(v!.stock_quantity).toBe(10) // voltou ao original
+    expect(estoqueDaVariacao(ambiente, variacao)).toBe(10)
   })
 
-  it('should cascade delete sale_items when sale is deleted', () => {
-    const saleId = createSale(1, 2, 35, 10)
-    db.run(`DELETE FROM sales WHERE id = ?`, [saleId])
+  it('should_delete_the_items_together_with_the_sale', async () => {
+    const venda = await registrarVenda(ambiente, [{ variationId: variacao, quantity: 2 }])
 
-    const items = queryAll(db, 'SELECT * FROM sale_items WHERE sale_id = ?', [saleId])
-    expect(items).toHaveLength(0)
+    await ambiente.chamar('sales:delete', venda)
+
+    expect(
+      queryAll(ambiente.banco, 'SELECT * FROM sale_items WHERE sale_id = ?', [venda])
+    ).toHaveLength(0)
   })
 
-  it('should not affect other sales stock when deleting one', () => {
-    createSale(1, 2, 35, 10) // estoque: 8
-    const saleId2 = createSale(1, 1, 35, 10) // estoque: 7
+  it('should_restore_only_the_deleted_sale', async () => {
+    await registrarVenda(ambiente, [{ variationId: variacao, quantity: 2 }])
+    const segunda = await registrarVenda(ambiente, [{ variationId: variacao, quantity: 1 }])
 
-    // Deleta só a segunda venda
-    const items = queryAll<{ variation_id: number; quantity: number }>(
-      db,
-      'SELECT variation_id, quantity FROM sale_items WHERE sale_id = ?',
-      [saleId2]
-    )
-    for (const item of items) {
-      db.run(`UPDATE product_variations SET stock_quantity = stock_quantity + ? WHERE id = ?`, [
-        item.quantity,
-        item.variation_id
-      ])
-    }
-    db.run(`DELETE FROM sales WHERE id = ?`, [saleId2])
+    await ambiente.chamar('sales:delete', segunda)
 
-    const v = queryOne<{ stock_quantity: number }>(
-      db,
-      'SELECT stock_quantity FROM product_variations WHERE id = 1'
-    )
-    expect(v!.stock_quantity).toBe(8) // restaurou 1 da segunda venda, mas não a primeira
+    expect(estoqueDaVariacao(ambiente, variacao)).toBe(8)
+  })
+
+  it('should_restore_exactly_the_previous_stock_when_an_oversold_sale_is_deleted', async () => {
+    const venda = await registrarVenda(ambiente, [{ variationId: variacao, quantity: 13 }])
+
+    await ambiente.chamar('sales:delete', venda)
+
+    expect(estoqueDaVariacao(ambiente, variacao)).toBe(10)
+  })
+})
+
+describe('sales:update', () => {
+  it('should_restore_the_old_items_before_applying_the_new_ones', async () => {
+    const venda = await registrarVenda(ambiente, [{ variationId: variacao, quantity: 3 }])
+
+    await ambiente.chamar('sales:update', {
+      id: venda,
+      channel: 'WhatsApp',
+      soldAt: '2026-09-10',
+      paymentMethod: 'pix',
+      feePercentage: 0,
+      feeAmount: 0,
+      netAmount: 125,
+      items: [{ variationId: variacao, quantity: 5, unitPrice: 25, unitCost: 3 }]
+    })
+
+    expect(estoqueDaVariacao(ambiente, variacao)).toBe(5)
+  })
+
+  it('should_keep_the_balance_exact_when_an_oversold_sale_is_edited', async () => {
+    const venda = await registrarVenda(ambiente, [{ variationId: variacao, quantity: 13 }])
+
+    await ambiente.chamar('sales:update', {
+      id: venda,
+      channel: 'WhatsApp',
+      soldAt: '2026-09-10',
+      paymentMethod: 'pix',
+      feePercentage: 0,
+      feeAmount: 0,
+      netAmount: 300,
+      items: [{ variationId: variacao, quantity: 12, unitPrice: 25, unitCost: 3 }]
+    })
+
+    expect(estoqueDaVariacao(ambiente, variacao)).toBe(-2)
   })
 })

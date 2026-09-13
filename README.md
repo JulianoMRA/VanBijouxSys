@@ -82,13 +82,13 @@ O `postinstall` recompila o `better-sqlite3` para o Electron automaticamente. O 
 
 Não há CI. As checagens rodam em hooks locais instalados pelo husky:
 
-| Hook         | O que roda                          |
-| ------------ | ----------------------------------- |
-| `pre-commit` | `lint-staged` (ESLint + Prettier)   |
-| `commit-msg` | `commitlint` (Conventional Commits) |
-| `pre-push`   | `npm run typecheck && npm test`     |
+| Hook         | O que roda                                      |
+| ------------ | ----------------------------------------------- |
+| `pre-commit` | `lint-staged` (ESLint + Prettier)               |
+| `commit-msg` | `commitlint` (Conventional Commits)             |
+| `pre-push`   | `npm run lint && npm run typecheck && npm test` |
 
-O `npm install` instala os hooks pelo script `prepare`.
+O `npm install` instala os hooks pelo script `prepare`. O fluxo de branches, PRs e commits está em [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Banco de dados
 
@@ -118,18 +118,9 @@ Quando existe migração pendente e o banco já existia, um backup é criado **a
 
 ## Publicando uma versão
 
-O app se atualiza pelas releases do GitHub via electron-updater. O fluxo é:
+O app se atualiza pelas releases do GitHub via electron-updater. O repositório é público, então o app baixa a atualização sem token nenhum; o arquivo que o updater lê é o `latest.yml` anexado à release.
 
-1. Subir a versão do `package.json` (`npm version patch|minor|major`, que já cria o commit e a tag) e registrar as mudanças no CHANGELOG.
-2. Gerar e publicar:
-
-```bash
-npm run build && npx electron-builder --win --publish always
-```
-
-O `electron-builder` precisa de um token no ambiente (`GH_TOKEN`) com permissão de escrita em releases; ele sobe o instalador e o `latest.yml`, que é o arquivo lido pelo updater. O repositório é público, então o app baixa a atualização sem token nenhum.
-
-Duas ressalvas: o instalador não é assinado, então o SmartScreen alerta na instalação; e o `artifactName` precisa continuar sem espaços, senão o nome do arquivo diverge do que o `latest.yml` referencia e a atualização falha com 404.
+O passo a passo — branch de documentação, `npm version`, build e `gh release create` com os três arquivos — está em [CONTRIBUTING.md](CONTRIBUTING.md#release), junto com as ressalvas sobre instalador sem assinatura e nome do artefato.
 
 ## Erros no IPC
 

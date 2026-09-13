@@ -5,6 +5,8 @@ import ConfirmDialog from '../components/ui/ConfirmDialog'
 import ActionMenu from '../components/ui/ActionMenu'
 import Toast from '../components/ui/Toast'
 import ExpenseForm from '../components/cash/ExpenseForm'
+import CampoNumerico from '../components/ui/CampoNumerico'
+import { formatarNumeroParaCampo, interpretarNumero } from '../utils/numero'
 import { useToast } from '../hooks/useToast'
 import { formatCurrency, formatDate } from '../utils/format'
 import {
@@ -182,8 +184,8 @@ export default function Cash(): JSX.Element {
   }
 
   async function handleSaveOpeningBalance(): Promise<void> {
-    const value = parseFloat(balanceInput.replace(',', '.'))
-    if (isNaN(value) || value < 0) return
+    const value = interpretarNumero(balanceInput)
+    if (value === null || value < 0) return
     await window.api.cashSettings.setOpeningBalance(value)
     setOpeningBalance(value)
     setShowOpeningBalance(false)
@@ -192,7 +194,7 @@ export default function Cash(): JSX.Element {
 
   function abrirSaldoDeAbertura(): void {
     setShowOpeningBalance(true)
-    setBalanceInput(openingBalance.toString())
+    setBalanceInput(formatarNumeroParaCampo(openingBalance))
   }
 
   return (
@@ -594,13 +596,10 @@ export default function Cash(): JSX.Element {
             </p>
             <div>
               <label className="label">Valor (R$)</label>
-              <input
+              <CampoNumerico
                 className="input"
-                type="number"
-                min="0"
-                step="0.01"
                 value={balanceInput}
-                onChange={(e) => setBalanceInput(e.target.value)}
+                onChange={setBalanceInput}
                 placeholder="0,00"
                 autoFocus
               />

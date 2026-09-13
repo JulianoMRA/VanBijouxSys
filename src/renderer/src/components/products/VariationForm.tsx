@@ -4,12 +4,19 @@ import InsumoForm from '../insumos/InsumoForm'
 import MotivoDoEstoqueDialog from './MotivoDoEstoqueDialog'
 import { opcoesComSelecionados } from '../../utils/arquivamento'
 import { precisaPerguntarMotivo } from '../../utils/ajuste-de-estoque'
+import {
+  formatarNumeroParaCampo,
+  interpretarNumero,
+  numeroDoArmazenamento,
+  numeroParaArmazenamento
+} from '../../utils/numero'
+import CampoNumerico from '../ui/CampoNumerico'
 import type { CreateVariationInput, Insumo, MotivoDeAjuste, ProductVariation } from '../../types'
 
 const LABOR_COST_KEY = 'pricing_default_labor_cost'
 
 function loadDefaultLaborCost(): string {
-  return localStorage.getItem(LABOR_COST_KEY) ?? ''
+  return numeroDoArmazenamento(localStorage.getItem(LABOR_COST_KEY))
 }
 
 interface InsumoRow {
@@ -41,16 +48,24 @@ export default function VariationForm({
   onClose
 }: VariationFormProps): JSX.Element {
   const [identifier, setIdentifier] = useState(variation?.identifier ?? '')
-  const [costPrice, setCostPrice] = useState(variation?.costPrice.toString() ?? '')
-  const [salePrice, setSalePrice] = useState(variation?.salePrice.toString() ?? '')
-  const [stockQuantity, setStockQuantity] = useState(variation?.stockQuantity.toString() ?? '0')
-  const [minimumStock, setMinimumStock] = useState(variation?.minimumStock.toString() ?? '1')
+  const [costPrice, setCostPrice] = useState(
+    variation ? formatarNumeroParaCampo(variation.costPrice) : ''
+  )
+  const [salePrice, setSalePrice] = useState(
+    variation ? formatarNumeroParaCampo(variation.salePrice) : ''
+  )
+  const [stockQuantity, setStockQuantity] = useState(
+    variation ? formatarNumeroParaCampo(variation.stockQuantity) : '0'
+  )
+  const [minimumStock, setMinimumStock] = useState(
+    variation ? formatarNumeroParaCampo(variation.minimumStock) : '1'
+  )
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
   const [showCalc, setShowCalc] = useState(false)
   const [laborCost, setLaborCost] = useState(() =>
-    variation?.laborCost ? variation.laborCost.toString() : loadDefaultLaborCost()
+    variation?.laborCost ? formatarNumeroParaCampo(variation.laborCost) : loadDefaultLaborCost()
   )
 
   const [allInsumos, setAllInsumos] = useState<Insumo[]>([])
@@ -58,7 +73,7 @@ export default function VariationForm({
     variation?.insumos.map((vi) => ({
       key: rowKey++,
       insumoId: vi.insumoId,
-      quantity: vi.quantity.toString()
+      quantity: formatarNumeroParaCampo(vi.quantity)
     })) ?? []
   )
   const [showInsumoForm, setShowInsumoForm] = useState(false)
@@ -85,14 +100,14 @@ export default function VariationForm({
   const insumosCost = insumoRows.reduce((sum, row) => {
     if (row.insumoId === '') return sum
     const insumo = allInsumos.find((i) => i.id === row.insumoId)
-    const qty = parseFloat(row.quantity)
-    if (!insumo || isNaN(qty)) return sum
+    const qty = interpretarNumero(row.quantity)
+    if (!insumo || qty === null) return sum
     return sum + insumo.costPerUnit * qty
   }, 0)
 
   const hasInsumos = insumoRows.length > 0 && insumoRows.some((r) => r.insumoId !== '')
-  const materialsForCalc = hasInsumos ? insumosCost : parseFloat(costPrice) || 0
-  const labor = parseFloat(laborCost) || 0
+  const materialsForCalc = hasInsumos ? insumosCost : (interpretarNumero(costPrice) ?? 0)
+  const labor = interpretarNumero(laborCost) ?? 0
   const suggestedPrice = Math.ceil((materialsForCalc * 3 + labor) * 1.1 + 1)
   const hasCalcResult = materialsForCalc > 0 || labor > 0
 
@@ -109,15 +124,15 @@ export default function VariationForm({
   }
 
   function saveDefaultLaborCost(): void {
-    localStorage.setItem(LABOR_COST_KEY, laborCost)
+    localStorage.setItem(LABOR_COST_KEY, numeroParaArmazenamento(laborCost) ?? '')
   }
 
   function useSuggestedPrice(): void {
-    setSalePrice(suggestedPrice.toString())
+    setSalePrice(formatarNumeroParaCampo(suggestedPrice))
   }
 
   function useInsumosCost(): void {
-    setCostPrice(insumosCost.toFixed(2))
+    setCostPrice(formatarNumeroParaCampo(Math.round(insumosCost * 100) / 100))
   }
 
   function handleInsumoSelect(key: number, value: string): void {
@@ -142,26 +157,35 @@ export default function VariationForm({
       setError('O identificador é obrigatório.')
       return null
     }
-    const cost = parseFloat(costPrice)
-    const sale = parseFloat(salePrice)
-    const stock = parseInt(stockQuantity)
-    const minStock = parseInt(minimumStock)
+    const cost = interpretarNumero(costPrice)
+    const sale = interpretarNumero(salePrice)
+    const stock = interpretarNumero(stockQuantity)
+    const minStock = interpretarNumero(minimumStock)
+    const labor = laborCost.trim() === '' ? 0 : interpretarNumero(laborCost)
 
-    if (isNaN(cost) || cost < 0) {
+    if (cost === null || cost < 0) {
       setError('Preço de custo inválido.')
       return null
     }
-    if (isNaN(sale) || sale < 0) {
+    if (sale === null || sale < 0) {
       setError('Preço de venda inválido.')
       return null
     }
     // Saldo negativo salvo continua valendo: só não se digita um negativo novo.
-    if (isNaN(stock) || (stock < 0 && stock !== variation?.stockQuantity)) {
+    if (
+      stock === null ||
+      !Number.isInteger(stock) ||
+      (stock < 0 && stock !== variation?.stockQuantity)
+    ) {
       setError('Quantidade em estoque inválida.')
       return null
     }
-    if (isNaN(minStock) || minStock < 0) {
+    if (minStock === null || !Number.isInteger(minStock) || minStock < 0) {
       setError('Estoque mínimo inválido.')
+      return null
+    }
+    if (labor === null || labor < 0) {
+      setError('Mão de obra inválida.')
       return null
     }
 
@@ -170,8 +194,8 @@ export default function VariationForm({
         setError('Selecione o insumo em todas as linhas ou remova as vazias.')
         return null
       }
-      const qty = parseFloat(row.quantity)
-      if (isNaN(qty) || qty <= 0) {
+      const qty = interpretarNumero(row.quantity)
+      if (qty === null || qty <= 0) {
         setError('Informe a quantidade de cada insumo.')
         return null
       }
@@ -183,10 +207,13 @@ export default function VariationForm({
       salePrice: sale,
       estoque: stock,
       minimumStock: minStock,
-      laborCost: parseFloat(laborCost) || 0,
+      laborCost: labor,
       insumos: insumoRows
         .filter((r) => r.insumoId !== '')
-        .map((r) => ({ insumoId: r.insumoId as number, quantity: parseFloat(r.quantity) }))
+        .map((r) => ({
+          insumoId: r.insumoId as number,
+          quantity: interpretarNumero(r.quantity) as number
+        }))
     }
   }
 
@@ -259,13 +286,10 @@ export default function VariationForm({
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="label">Preço de custo (R$)</label>
-              <input
+              <CampoNumerico
                 className="input"
-                type="number"
-                min="0"
-                step="0.01"
                 value={costPrice}
-                onChange={(e) => setCostPrice(e.target.value)}
+                onChange={setCostPrice}
                 placeholder="0,00"
               />
               {hasInsumos && (
@@ -279,13 +303,10 @@ export default function VariationForm({
             </div>
             <div>
               <label className="label">Preço de venda (R$)</label>
-              <input
+              <CampoNumerico
                 className="input"
-                type="number"
-                min="0"
-                step="0.01"
                 value={salePrice}
-                onChange={(e) => setSalePrice(e.target.value)}
+                onChange={setSalePrice}
                 placeholder="0,00"
               />
             </div>
@@ -314,8 +335,8 @@ export default function VariationForm({
                   const selectedInsumo =
                     row.insumoId !== '' ? allInsumos.find((i) => i.id === row.insumoId) : null
                   const rowCost =
-                    selectedInsumo && parseFloat(row.quantity)
-                      ? selectedInsumo.costPerUnit * parseFloat(row.quantity)
+                    selectedInsumo && interpretarNumero(row.quantity)
+                      ? selectedInsumo.costPerUnit * (interpretarNumero(row.quantity) as number)
                       : null
 
                   return (
@@ -336,14 +357,11 @@ export default function VariationForm({
                       </select>
 
                       <div className="relative w-28 shrink-0">
-                        <input
+                        <CampoNumerico
                           className="input pr-8"
-                          type="number"
-                          min="0"
-                          step="0.01"
                           placeholder="Qtd."
                           value={row.quantity}
-                          onChange={(e) => updateRow(row.key, { quantity: e.target.value })}
+                          onChange={(texto) => updateRow(row.key, { quantity: texto })}
                         />
                         {selectedInsumo && (
                           <span className="absolute right-3 top-1/2 -translate-y-1/2 text-ink-300 text-micro pointer-events-none">
@@ -414,14 +432,11 @@ export default function VariationForm({
                     <span className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-300 text-body pointer-events-none">
                       R$
                     </span>
-                    <input
+                    <CampoNumerico
                       className="input pl-8"
-                      type="number"
-                      min="0"
-                      step="0.01"
                       placeholder="0,00"
                       value={laborCost}
-                      onChange={(e) => setLaborCost(e.target.value)}
+                      onChange={setLaborCost}
                     />
                   </div>
                 </div>
@@ -484,13 +499,7 @@ export default function VariationForm({
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="label">Quantidade em estoque</label>
-              <input
-                className="input"
-                type="number"
-                min={Math.min(0, variation?.stockQuantity ?? 0)}
-                value={stockQuantity}
-                onChange={(e) => setStockQuantity(e.target.value)}
-              />
+              <CampoNumerico className="input" value={stockQuantity} onChange={setStockQuantity} />
               {hasInsumos && (
                 <p className="text-micro text-ink-300 mt-1">
                   {isEditing
@@ -501,13 +510,7 @@ export default function VariationForm({
             </div>
             <div>
               <label className="label">Estoque mínimo</label>
-              <input
-                className="input"
-                type="number"
-                min="0"
-                value={minimumStock}
-                onChange={(e) => setMinimumStock(e.target.value)}
-              />
+              <CampoNumerico className="input" value={minimumStock} onChange={setMinimumStock} />
               <p className="text-micro text-ink-300 mt-1">
                 Alerta aparece quando estoque ficar abaixo deste valor.
               </p>

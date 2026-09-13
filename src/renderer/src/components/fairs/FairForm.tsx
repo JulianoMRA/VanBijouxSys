@@ -1,5 +1,7 @@
 import { useState } from 'react'
 import Modal from '../ui/Modal'
+import CampoNumerico from '../ui/CampoNumerico'
+import { formatarNumeroParaCampo, interpretarNumero } from '../../utils/numero'
 import type { Fair } from '../../types'
 
 interface FairFormProps {
@@ -41,12 +43,14 @@ export default function FairForm({ fair, onSave, onClose }: FairFormProps): JSX.
   const [organizer, setOrganizer] = useState(fair?.organizer ?? '')
   const [startDate, setStartDate] = useState(fair?.date ?? '')
   const [duration, setDuration] = useState(fair ? getDurationDays(fair.date, fair.endDate) : 1)
-  const [enrollmentCost, setEnrollmentCost] = useState(fair?.enrollmentCost.toString() ?? '0')
+  const [enrollmentCost, setEnrollmentCost] = useState(
+    fair ? formatarNumeroParaCampo(fair.enrollmentCost) : '0'
+  )
   const [additionalCosts, setAdditionalCosts] = useState<CostRow[]>(
     fair?.additionalCosts.map((c) => ({
       key: costKeyCounter++,
       description: c.description,
-      amount: c.amount.toString()
+      amount: formatarNumeroParaCampo(c.amount)
     })) ?? []
   )
   const [saving, setSaving] = useState(false)
@@ -67,11 +71,11 @@ export default function FairForm({ fair, onSave, onClose }: FairFormProps): JSX.
     setAdditionalCosts((prev) => prev.map((c) => (c.key === key ? { ...c, [field]: value } : c)))
   }
 
-  const enrollmentValue = parseFloat(enrollmentCost) || 0
-  const additionalTotal = additionalCosts.reduce((sum, c) => {
-    const val = parseFloat(c.amount)
-    return sum + (isNaN(val) ? 0 : val)
-  }, 0)
+  const enrollmentValue = interpretarNumero(enrollmentCost) ?? 0
+  const additionalTotal = additionalCosts.reduce(
+    (sum, c) => sum + (interpretarNumero(c.amount) ?? 0),
+    0
+  )
   const totalFairCost = enrollmentValue + additionalTotal
 
   async function handleSubmit(e: React.FormEvent): Promise<void> {
@@ -88,8 +92,8 @@ export default function FairForm({ fair, onSave, onClose }: FairFormProps): JSX.
       setError('A data de início é obrigatória.')
       return
     }
-    const cost = parseFloat(enrollmentCost)
-    if (isNaN(cost) || cost < 0) {
+    const cost = interpretarNumero(enrollmentCost)
+    if (cost === null || cost < 0) {
       setError('Custo de inscrição inválido.')
       return
     }
@@ -99,8 +103,8 @@ export default function FairForm({ fair, onSave, onClose }: FairFormProps): JSX.
         setError('Preencha a descrição de todos os custos adicionais.')
         return
       }
-      const val = parseFloat(c.amount)
-      if (isNaN(val) || val < 0) {
+      const val = interpretarNumero(c.amount)
+      if (val === null || val < 0) {
         setError('Valor inválido em custos adicionais.')
         return
       }
@@ -108,7 +112,7 @@ export default function FairForm({ fair, onSave, onClose }: FairFormProps): JSX.
 
     const parsedCosts = additionalCosts.map((c) => ({
       description: c.description.trim(),
-      amount: parseFloat(c.amount)
+      amount: interpretarNumero(c.amount) as number
     }))
 
     setSaving(true)
@@ -217,13 +221,10 @@ export default function FairForm({ fair, onSave, onClose }: FairFormProps): JSX.
             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-300 text-body pointer-events-none">
               R$
             </span>
-            <input
+            <CampoNumerico
               className="input pl-8"
-              type="number"
-              min="0"
-              step="0.01"
               value={enrollmentCost}
-              onChange={(e) => setEnrollmentCost(e.target.value)}
+              onChange={setEnrollmentCost}
             />
           </div>
         </div>
@@ -259,14 +260,11 @@ export default function FairForm({ fair, onSave, onClose }: FairFormProps): JSX.
                     <span className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-300 text-body pointer-events-none">
                       R$
                     </span>
-                    <input
+                    <CampoNumerico
                       className="input pl-8"
-                      type="number"
-                      min="0"
-                      step="0.01"
                       placeholder="0,00"
                       value={cost.amount}
-                      onChange={(e) => updateCost(cost.key, 'amount', e.target.value)}
+                      onChange={(texto) => updateCost(cost.key, 'amount', texto)}
                     />
                   </div>
                   <button
@@ -294,8 +292,8 @@ export default function FairForm({ fair, onSave, onClose }: FairFormProps): JSX.
               </div>
             )}
             {additionalCosts.map((c) => {
-              const val = parseFloat(c.amount)
-              if (!c.description || isNaN(val)) return null
+              const val = interpretarNumero(c.amount)
+              if (!c.description || val === null) return null
               return (
                 <div key={c.key} className="flex justify-between text-ink-500">
                   <span>{c.description}</span>

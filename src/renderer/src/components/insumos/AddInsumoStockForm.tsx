@@ -1,5 +1,7 @@
 import { useState } from 'react'
 import Modal from '../ui/Modal'
+import CampoNumerico from '../ui/CampoNumerico'
+import { interpretarNumero } from '../../utils/numero'
 import type { Insumo } from '../../types'
 
 interface AddInsumoStockFormProps {
@@ -18,11 +20,12 @@ export default function AddInsumoStockForm({
   const [error, setError] = useState('')
 
   const unitLabel = insumo.unit === 'unidade' ? 'un.' : insumo.unit
+  const quantidadeLida = interpretarNumero(quantity)
 
   async function handleSubmit(e: React.FormEvent): Promise<void> {
     e.preventDefault()
-    const qty = parseFloat(quantity)
-    if (isNaN(qty) || qty <= 0) {
+    const qty = quantidadeLida
+    if (qty === null || qty <= 0) {
       setError('Informe uma quantidade válida.')
       return
     }
@@ -51,21 +54,18 @@ export default function AddInsumoStockForm({
 
         <div>
           <label className="label">Quantidade a adicionar ({unitLabel})</label>
-          <input
+          <CampoNumerico
             className="input"
-            type="number"
-            min="0.01"
-            step="0.01"
             placeholder="0"
             value={quantity}
-            onChange={(e) => setQuantity(e.target.value)}
+            onChange={setQuantity}
             autoFocus
           />
         </div>
 
-        {quantity && !isNaN(parseFloat(quantity)) && (
+        {quantidadeLida !== null && (
           <p className="text-micro font-medium text-wine-500">
-            Novo estoque: {(insumo.stockQuantity + parseFloat(quantity)).toLocaleString('pt-BR')}{' '}
+            Novo estoque: {(insumo.stockQuantity + quantidadeLida).toLocaleString('pt-BR')}{' '}
             {unitLabel}
           </p>
         )}

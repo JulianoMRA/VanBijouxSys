@@ -155,7 +155,8 @@ export default function VariationForm({
       setError('Preço de venda inválido.')
       return null
     }
-    if (isNaN(stock) || stock < 0) {
+    // Saldo negativo salvo continua valendo: só não se digita um negativo novo.
+    if (isNaN(stock) || (stock < 0 && stock !== variation?.stockQuantity)) {
       setError('Quantidade em estoque inválida.')
       return null
     }
@@ -486,7 +487,7 @@ export default function VariationForm({
               <input
                 className="input"
                 type="number"
-                min="0"
+                min={Math.min(0, variation?.stockQuantity ?? 0)}
                 value={stockQuantity}
                 onChange={(e) => setStockQuantity(e.target.value)}
               />

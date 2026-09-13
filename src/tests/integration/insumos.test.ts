@@ -1,7 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { prepararAmbienteIpc, type AmbienteIpc } from '../helpers/ambiente-ipc'
 import { queryAll, queryOne } from '../helpers/testDb'
-import { SQL_INSUMOS_ABAIXO_DO_MINIMO } from '../../main/database/consultas-estoque'
+import {
+  SQL_INSUMOS_ABAIXO_DO_MINIMO,
+  SQL_INSUMOS_ESGOTADOS
+} from '../../main/database/consultas-estoque'
 import { criarInsumo, criarVariacao, estoqueDoInsumo } from '../helpers/estoque'
 
 vi.mock('electron', async () => (await import('../helpers/ambiente-ipc')).electronFalso)
@@ -79,6 +82,23 @@ describe('insumos:addStock', () => {
       'Insumo não encontrado.'
     )
   })
+
+  it('should_round_fractional_purchases_to_four_decimals', async () => {
+    const cola = await criarInsumo(ambiente, { name: 'Cola', unit: 'g', stockQuantity: 0.1 })
+
+    await ambiente.chamar('insumos:addStock', cola, 0.2)
+
+    expect(estoqueDoInsumo(ambiente, cola)).toBe(0.3)
+  })
+
+  it('should_bring_a_negative_balance_back_by_the_purchased_quantity', async () => {
+    const variacao = await criarVariacao(ambiente, { receita: [{ insumoId: fio, quantity: 50 }] })
+    await ambiente.chamar('variations:addStock', variacao, 5)
+
+    await ambiente.chamar('insumos:addStock', fio, 100)
+
+    expect(estoqueDoInsumo(ambiente, fio)).toBe(50)
+  })
 })
 
 describe('insumos:delete', () => {
@@ -115,6 +135,15 @@ describe('alerta de reposição', () => {
     })
 
     expect(abaixoDoMinimo()).toEqual(['Fio de nylon'])
+  })
+
+  it('should_list_a_negative_insumo_as_out_of_stock_and_not_as_low', async () => {
+    const variacao = await criarVariacao(ambiente, { receita: [{ insumoId: fio, quantity: 50 }] })
+    await ambiente.chamar('variations:addStock', variacao, 5)
+
+    const esgotados = queryAll<{ name: string }>(ambiente.banco, SQL_INSUMOS_ESGOTADOS)
+    expect(esgotados.map((i) => i.name)).toEqual(['Fio de nylon'])
+    expect(abaixoDoMinimo()).toEqual([])
   })
 
   it('should_not_flag_insumos_at_or_above_their_minimum', () => {

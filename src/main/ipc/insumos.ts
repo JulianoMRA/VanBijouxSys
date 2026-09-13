@@ -4,6 +4,7 @@ import { eq, sql } from 'drizzle-orm'
 import { getDb, getSqlite } from '../database'
 import { insumos } from '../database/schema'
 import { SQL_INSUMOS_COM_USO } from '../database/consultas-estoque'
+import { saldoArredondado } from '../database/saldo'
 import { ErroDeNegocio, handleIpc } from './handle'
 import type { CreateInsumoInput, Insumo, UpdateInsumoInput } from '../../renderer/src/types'
 
@@ -47,13 +48,12 @@ export function registerInsumoHandlers(): void {
 
   handleIpc('insumos:addStock', (id: number, quantity: number) => {
     const db = getDb()
-    const insumo = db.select().from(insumos).where(eq(insumos.id, id)).get()
-    if (!insumo) throw new ErroDeNegocio('Insumo não encontrado.')
-
-    db.update(insumos)
-      .set({ stockQuantity: insumo.stockQuantity + quantity })
+    const resultado = db
+      .update(insumos)
+      .set({ stockQuantity: saldoArredondado(quantity) })
       .where(eq(insumos.id, id))
       .run()
+    if (resultado.changes === 0) throw new ErroDeNegocio('Insumo não encontrado.')
     return { success: true }
   })
 

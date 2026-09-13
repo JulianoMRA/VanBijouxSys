@@ -46,10 +46,10 @@ describe('variations:create', () => {
     expect(itensDaReceita(ambiente, variacao)).toBe(1)
   })
 
-  it('should_clamp_insumo_at_zero_when_initial_stock_needs_more_than_available', async () => {
+  it('should_let_insumo_go_negative_when_initial_stock_needs_more_than_available', async () => {
     await criarVariacao(ambiente, { stockQuantity: 200, receita: [{ insumoId: fio, quantity: 1 }] })
 
-    expect(estoqueDoInsumo(ambiente, fio)).toBe(0)
+    expect(estoqueDoInsumo(ambiente, fio)).toBe(-100)
   })
 })
 
@@ -63,12 +63,42 @@ describe('variations:addStock', () => {
     expect(estoqueDoInsumo(ambiente, fio)).toBe(70)
   })
 
-  it('should_clamp_insumo_at_zero_when_production_needs_more_than_available', async () => {
+  it('should_let_insumo_go_negative_when_production_needs_more_than_available', async () => {
     const variacao = await criarVariacao(ambiente, { receita: [{ insumoId: fio, quantity: 50 }] })
 
     await ambiente.chamar('variations:addStock', variacao, 5)
 
-    expect(estoqueDoInsumo(ambiente, fio)).toBe(0)
+    expect(estoqueDoInsumo(ambiente, fio)).toBe(-150)
+  })
+
+  it('should_reach_the_same_balance_whatever_is_registered_first', async () => {
+    const produzindoAntes = await criarInsumo(ambiente, { name: 'Fio A', stockQuantity: 50 })
+    const comprandoAntes = await criarInsumo(ambiente, { name: 'Fio B', stockQuantity: 50 })
+    const pulseiraA = await criarVariacao(ambiente, {
+      receita: [{ insumoId: produzindoAntes, quantity: 20 }]
+    })
+    const pulseiraB = await criarVariacao(ambiente, {
+      receita: [{ insumoId: comprandoAntes, quantity: 20 }]
+    })
+
+    await ambiente.chamar('variations:addStock', pulseiraA, 5)
+    await ambiente.chamar('insumos:addStock', produzindoAntes, 200)
+    await ambiente.chamar('insumos:addStock', comprandoAntes, 200)
+    await ambiente.chamar('variations:addStock', pulseiraB, 5)
+
+    expect(estoqueDoInsumo(ambiente, produzindoAntes)).toBe(150)
+    expect(estoqueDoInsumo(ambiente, comprandoAntes)).toBe(150)
+  })
+
+  it('should_round_fractional_deductions_so_an_empty_insumo_is_exactly_zero', async () => {
+    const cola = await criarInsumo(ambiente, { name: 'Cola', unit: 'g', stockQuantity: 0.3 })
+    const variacao = await criarVariacao(ambiente, { receita: [{ insumoId: cola, quantity: 0.1 }] })
+
+    for (let i = 0; i < 3; i++) await ambiente.chamar('variations:addStock', variacao, 1)
+
+    const saldo = estoqueDoInsumo(ambiente, cola)
+    expect(saldo).toBe(0)
+    expect(Object.is(saldo, -0)).toBe(false)
   })
 
   it('should_reject_an_unknown_variation', async () => {

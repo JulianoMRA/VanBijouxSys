@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { prepararAmbienteIpc, type AmbienteIpc } from '../helpers/ambiente-ipc'
 import { queryAll, queryOne } from '../helpers/testDb'
+import { SQL_VARIACOES_ESGOTADAS } from '../../main/database/consultas-estoque'
 import {
   criarInsumo,
   criarVariacao,
@@ -52,10 +53,25 @@ describe('sales:create', () => {
     expect(estoqueDoInsumo(ambiente, fio)).toBe(800)
   })
 
-  it('should_clamp_variation_stock_at_zero_when_selling_more_than_available', async () => {
-    await registrarVenda(ambiente, [{ variationId: variacao, quantity: 20 }])
+  it('should_go_negative_when_selling_more_than_the_registered_stock', async () => {
+    await registrarVenda(ambiente, [{ variationId: variacao, quantity: 13 }])
+
+    expect(estoqueDaVariacao(ambiente, variacao)).toBe(-3)
+  })
+
+  it('should_net_out_the_deficit_when_the_missing_production_is_registered', async () => {
+    await registrarVenda(ambiente, [{ variationId: variacao, quantity: 13 }])
+
+    await ambiente.chamar('variations:addStock', variacao, 3)
 
     expect(estoqueDaVariacao(ambiente, variacao)).toBe(0)
+    expect(estoqueDoInsumo(ambiente, fio)).toBe(1000 - 13 * 20)
+  })
+
+  it('should_list_an_oversold_variation_as_out_of_stock', async () => {
+    await registrarVenda(ambiente, [{ variationId: variacao, quantity: 13 }])
+
+    expect(queryAll(ambiente.banco, SQL_VARIACOES_ESGOTADAS)).toHaveLength(1)
   })
 })
 
@@ -86,6 +102,14 @@ describe('sales:delete', () => {
 
     expect(estoqueDaVariacao(ambiente, variacao)).toBe(8)
   })
+
+  it('should_restore_exactly_the_previous_stock_when_an_oversold_sale_is_deleted', async () => {
+    const venda = await registrarVenda(ambiente, [{ variationId: variacao, quantity: 13 }])
+
+    await ambiente.chamar('sales:delete', venda)
+
+    expect(estoqueDaVariacao(ambiente, variacao)).toBe(10)
+  })
 })
 
 describe('sales:update', () => {
@@ -104,5 +128,22 @@ describe('sales:update', () => {
     })
 
     expect(estoqueDaVariacao(ambiente, variacao)).toBe(5)
+  })
+
+  it('should_keep_the_balance_exact_when_an_oversold_sale_is_edited', async () => {
+    const venda = await registrarVenda(ambiente, [{ variationId: variacao, quantity: 13 }])
+
+    await ambiente.chamar('sales:update', {
+      id: venda,
+      channel: 'WhatsApp',
+      soldAt: '2026-09-10',
+      paymentMethod: 'pix',
+      feePercentage: 0,
+      feeAmount: 0,
+      netAmount: 300,
+      items: [{ variationId: variacao, quantity: 12, unitPrice: 25, unitCost: 3 }]
+    })
+
+    expect(estoqueDaVariacao(ambiente, variacao)).toBe(-2)
   })
 })

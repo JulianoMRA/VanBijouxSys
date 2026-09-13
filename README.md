@@ -141,7 +141,9 @@ Todo handler é registrado por `handleIpc` ([src/main/ipc/handle.ts](src/main/ip
 
 **Regras de negócio.** A fórmula de precificação e a formatação de datas/valores ficam em `src/renderer/src/utils/` (`pricing.ts`, `format.ts`). Mudanças ali têm teste dedicado em `src/tests/pricing.test.ts` e `format.test.ts` — atualize junto.
 
-**Dedução de estoque.** Insumos são deduzidos na fabricação (quando se adiciona estoque a uma variação), não na venda. Todas as deduções usam `MAX(0, estoque - quantidade)` para não permitir negativo. A edição de venda faz restauração + novo desconto.
+**Dedução de estoque.** Insumos são deduzidos na fabricação, não na venda. Toda escrita de estoque de peças fora das vendas passa por `movimentarEstoqueDaVariacao` em [src/main/ipc/products.ts](src/main/ipc/products.ts): o "+ Estoque", o estoque inicial e o ajuste pelo formulário, que sempre carrega um motivo — só `producao` move insumo, `contagem` corrige o número sem tocar neles. O saldo pode ficar negativo de propósito: negativo em peça quer dizer venda sem produção registrada, e em insumo, compra não lançada ou receita maior que o real. Truncar em zero descartava essa diferença e fazia o resultado depender da ordem dos lançamentos. O saldo de insumo é arredondado para 4 casas ([src/main/database/saldo.ts](src/main/database/saldo.ts)), e a edição de venda faz restauração + novo desconto.
+
+**Testes de handler.** Os testes de integração de estoque chamam os handlers reais por [src/tests/helpers/ambiente-ipc.ts](src/tests/helpers/ambiente-ipc.ts), que substitui `electron` e o banco por sql.js com as migrações reais. Não copie o SQL do handler para dentro do teste: a cópia não protege o código que roda na máquina da usuária.
 
 **Ícone do instalador.** O `build:win` depende de `resources/icon.ico`. Para regenerar a partir do SVG, existe `scripts/create-icon.mjs`.
 

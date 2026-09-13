@@ -31,7 +31,7 @@ export function filterAndSortVariations(
     const matchesSearch = v.identifier.toLowerCase().includes(search.toLowerCase())
 
     let matchesStock = true
-    if (stockFilter === 'sem-estoque') matchesStock = v.stockQuantity === 0
+    if (stockFilter === 'sem-estoque') matchesStock = v.stockQuantity <= 0
     else if (stockFilter === 'estoque-baixo')
       matchesStock = v.stockQuantity > 0 && v.stockQuantity < v.minimumStock
     else if (stockFilter === 'normal') matchesStock = v.stockQuantity >= v.minimumStock

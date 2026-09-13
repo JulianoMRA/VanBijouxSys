@@ -9,6 +9,7 @@ import {
 } from '../database/schema'
 import { sql } from 'drizzle-orm'
 import { ErroDeNegocio, handleIpc } from './handle'
+import { saldoArredondado } from '../database/saldo'
 import type {
   CreateProductInput,
   UpdateProductInput,
@@ -319,7 +320,7 @@ function movimentarEstoqueDaVariacao(
     .all()
   for (const item of receita) {
     db.update(insumos)
-      .set({ stockQuantity: sql`MAX(0, stock_quantity - ${item.quantity * pecas})` })
+      .set({ stockQuantity: saldoArredondado(-item.quantity * pecas) })
       .where(eq(insumos.id, item.insumoId))
       .run()
   }

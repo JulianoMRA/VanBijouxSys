@@ -506,9 +506,12 @@ export default function SaleForm({ sale, onSave, onClose }: SaleFormProps): JSX.
                       const effectiveStock =
                         selectedVariation.stockQuantity +
                         (originalQuantities[selectedVariation.id] ?? 0)
-                      return parseInt(item.quantity) > effectiveStock ? (
+                      const quantidade = parseInt(item.quantity)
+                      return quantidade > effectiveStock ? (
                         <p className="text-micro font-medium text-honey-500">
-                          ⚠ Quantidade maior que o estoque disponível ({effectiveStock} un.)
+                          O estoque registrado é {effectiveStock} un. e vai ficar em{' '}
+                          {effectiveStock - quantidade}. Se as peças já foram feitas, lance a
+                          produção em Produtos, &quot;+ Estoque&quot;, para os insumos acompanharem.
                         </p>
                       ) : null
                     })()}

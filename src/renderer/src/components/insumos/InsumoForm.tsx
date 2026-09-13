@@ -44,7 +44,8 @@ export default function InsumoForm({
       setError('Custo por unidade inválido.')
       return
     }
-    if (isNaN(stock) || stock < 0) {
+    // Saldo negativo salvo continua valendo: só não se digita um negativo novo.
+    if (isNaN(stock) || (stock < 0 && stock !== insumo?.stockQuantity)) {
       setError('Quantidade em estoque inválida.')
       return
     }
@@ -163,7 +164,7 @@ export default function InsumoForm({
             <input
               className="input"
               type="number"
-              min="0"
+              min={Math.min(0, insumo?.stockQuantity ?? 0)}
               step="0.01"
               value={stockQuantity}
               onChange={(e) => setStockQuantity(e.target.value)}

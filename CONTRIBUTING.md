@@ -76,6 +76,20 @@ Não há CI hospedada. Antes de abrir PR, na ordem:
 
 Mudança visível no renderer também passa por conferência visual antes do PR.
 
+### `.only` é barrado
+
+A suíte falha se encontrar `it.only` ou `describe.only`. É proposital: sem CI, um
+`.only` esquecido deixava a suíte verde pulando o resto do arquivo, com saída 0.
+
+Para depurar um teste isolado, prefira filtrar sem `.only`, porque aí não há o que
+esquecer no commit:
+
+```bash
+npx vitest run -t "nome do teste"
+```
+
+Se precisar mesmo do `.only`, a escotilha é `VANBIJOUX_ALLOW_ONLY=1 npm test`.
+
 ---
 
 ## Release

@@ -1,107 +1,123 @@
-import { describe, it, expect, beforeEach } from 'vitest'
-import { type Database } from 'sql.js'
-import { createTestDb, queryOne, queryAll } from '../helpers/testDb'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { prepararAmbienteIpc, type AmbienteIpc } from '../helpers/ambiente-ipc'
+import { queryAll, queryOne } from '../helpers/testDb'
+import { SQL_INSUMOS_ABAIXO_DO_MINIMO } from '../../main/database/consultas-estoque'
+import { criarInsumo, criarVariacao, estoqueDoInsumo } from '../helpers/estoque'
 
-let db: Database
+vi.mock('electron', async () => (await import('../helpers/ambiente-ipc')).electronFalso)
+vi.mock('../../main/database', async () => (await import('../helpers/ambiente-ipc')).bancoFalso)
+
+let ambiente: AmbienteIpc
+let fio: number
+let micanga: number
 
 beforeEach(async () => {
-  db = await createTestDb()
-  db.run(
-    `INSERT INTO insumos (name, unit, cost_per_unit, stock_quantity, minimum_stock) VALUES ('Fio de nylon', 'cm', 0.05, 200, 50)`
-  )
-  db.run(
-    `INSERT INTO insumos (name, unit, cost_per_unit, stock_quantity, minimum_stock) VALUES ('Miçanga', 'unidade', 0.10, 500, 100)`
-  )
+  ambiente = await prepararAmbienteIpc()
+  fio = await criarInsumo(ambiente, { stockQuantity: 200, minimumStock: 50, costPerUnit: 0.05 })
+  micanga = await criarInsumo(ambiente, {
+    name: 'Miçanga',
+    unit: 'unidade',
+    stockQuantity: 500,
+    minimumStock: 100,
+    costPerUnit: 0.1
+  })
 })
 
 describe('insumos:create', () => {
-  it('should insert and retrieve insumo correctly', () => {
-    db.run(
-      `INSERT INTO insumos (name, unit, cost_per_unit, stock_quantity, minimum_stock) VALUES ('Elástico', 'cm', 0.02, 300, 80)`
-    )
+  it('should_persist_every_field', async () => {
+    const id = await criarInsumo(ambiente, {
+      name: 'Elástico',
+      stockQuantity: 300,
+      minimumStock: 80,
+      costPerUnit: 0.02
+    })
 
-    const insumo = queryOne<{ name: string; stock_quantity: number }>(
-      db,
-      `SELECT * FROM insumos WHERE name = 'Elástico'`
+    const insumo = queryOne(
+      ambiente.banco,
+      'SELECT name, unit, stock_quantity, minimum_stock, cost_per_unit FROM insumos WHERE id = ?',
+      [id]
     )
-    expect(insumo!.name).toBe('Elástico')
-    expect(insumo!.stock_quantity).toBe(300)
+    expect(insumo).toEqual({
+      name: 'Elástico',
+      unit: 'cm',
+      stock_quantity: 300,
+      minimum_stock: 80,
+      cost_per_unit: 0.02
+    })
   })
 })
 
 describe('insumos:update', () => {
-  it('should update insumo fields', () => {
-    db.run(`UPDATE insumos SET cost_per_unit = 0.08, minimum_stock = 60 WHERE id = 1`)
+  it('should_update_cost_and_minimum_stock', async () => {
+    await ambiente.chamar('insumos:update', {
+      id: fio,
+      name: 'Fio de nylon',
+      unit: 'cm',
+      costPerUnit: 0.08,
+      stockQuantity: 200,
+      minimumStock: 60
+    })
 
-    const insumo = queryOne<{ cost_per_unit: number; minimum_stock: number }>(
-      db,
-      'SELECT * FROM insumos WHERE id = 1'
+    const insumo = queryOne(
+      ambiente.banco,
+      'SELECT cost_per_unit, minimum_stock FROM insumos WHERE id = ?',
+      [fio]
     )
-    expect(insumo!.cost_per_unit).toBe(0.08)
-    expect(insumo!.minimum_stock).toBe(60)
+    expect(insumo).toEqual({ cost_per_unit: 0.08, minimum_stock: 60 })
   })
 })
 
 describe('insumos:addStock', () => {
-  it('should increase stock quantity', () => {
-    db.run(`UPDATE insumos SET stock_quantity = stock_quantity + ? WHERE id = 1`, [100])
+  it('should_add_the_purchased_quantity', async () => {
+    await ambiente.chamar('insumos:addStock', fio, 100)
 
-    const insumo = queryOne<{ stock_quantity: number }>(
-      db,
-      'SELECT stock_quantity FROM insumos WHERE id = 1'
-    )
-    expect(insumo!.stock_quantity).toBe(300)
+    expect(estoqueDoInsumo(ambiente, fio)).toBe(300)
   })
 
-  it('should not go below zero (MAX(0) protection)', () => {
-    db.run(`UPDATE insumos SET stock_quantity = MAX(0, stock_quantity - ?) WHERE id = 1`, [9999])
-
-    const insumo = queryOne<{ stock_quantity: number }>(
-      db,
-      'SELECT stock_quantity FROM insumos WHERE id = 1'
+  it('should_reject_an_unknown_insumo', async () => {
+    await expect(ambiente.chamar('insumos:addStock', 999, 1)).rejects.toThrow(
+      'Insumo não encontrado.'
     )
-    expect(insumo!.stock_quantity).toBe(0)
   })
 })
 
 describe('insumos:delete', () => {
-  it('should delete insumo that is not referenced', () => {
-    db.run(`DELETE FROM insumos WHERE id = 2`)
+  it('should_delete_an_insumo_that_no_recipe_uses', async () => {
+    await ambiente.chamar('insumos:delete', micanga)
 
-    const insumos = queryAll(db, 'SELECT * FROM insumos')
-    expect(insumos).toHaveLength(1)
+    expect(queryAll(ambiente.banco, 'SELECT id FROM insumos')).toEqual([{ id: fio }])
   })
 
-  it('should fail to delete insumo referenced by variation_insumos', () => {
-    db.run(`INSERT INTO products (name, category_id) VALUES ('Colar', 1)`)
-    db.run(`INSERT INTO product_variations (product_id, identifier) VALUES (1, 'Colar-P')`)
-    const varId = queryOne<{ id: number }>(db, 'SELECT last_insert_rowid() AS id')!.id
-    db.run(`INSERT INTO variation_insumos (variation_id, insumo_id, quantity) VALUES (?, 1, 5)`, [
-      varId
-    ])
+  it('should_refuse_to_delete_an_insumo_used_by_a_recipe', async () => {
+    await criarVariacao(ambiente, { receita: [{ insumoId: fio, quantity: 5 }] })
 
-    expect(() => db.run(`DELETE FROM insumos WHERE id = 1`)).toThrow()
+    await expect(ambiente.chamar('insumos:delete', fio)).rejects.toThrow(
+      'Este insumo não pode ser excluído porque está vinculado a variações de produtos.'
+    )
   })
 })
 
-describe('low stock query', () => {
-  it('should return insumos below minimum stock', () => {
-    db.run(`UPDATE insumos SET stock_quantity = 30 WHERE id = 1`) // abaixo do mínimo de 50
-
-    const lowInsumos = queryAll<{ name: string }>(
-      db,
-      `SELECT * FROM insumos WHERE minimum_stock > 0 AND stock_quantity < minimum_stock`
+describe('alerta de reposição', () => {
+  function abaixoDoMinimo(): string[] {
+    return queryAll<{ name: string }>(ambiente.banco, SQL_INSUMOS_ABAIXO_DO_MINIMO).map(
+      (i) => i.name
     )
-    expect(lowInsumos).toHaveLength(1)
-    expect(lowInsumos[0].name).toBe('Fio de nylon')
+  }
+
+  it('should_flag_an_insumo_below_its_minimum', async () => {
+    await ambiente.chamar('insumos:update', {
+      id: fio,
+      name: 'Fio de nylon',
+      unit: 'cm',
+      costPerUnit: 0.05,
+      stockQuantity: 30,
+      minimumStock: 50
+    })
+
+    expect(abaixoDoMinimo()).toEqual(['Fio de nylon'])
   })
 
-  it('should not flag insumos at or above minimum stock', () => {
-    // Fio: 200 >= 50 ✓, Miçanga: 500 >= 100 ✓
-    const lowInsumos = queryAll(
-      db,
-      `SELECT * FROM insumos WHERE minimum_stock > 0 AND stock_quantity < minimum_stock`
-    )
-    expect(lowInsumos).toHaveLength(0)
+  it('should_not_flag_insumos_at_or_above_their_minimum', () => {
+    expect(abaixoDoMinimo()).toEqual([])
   })
 })

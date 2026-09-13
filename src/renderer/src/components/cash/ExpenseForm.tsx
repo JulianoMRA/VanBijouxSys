@@ -1,5 +1,7 @@
 import { useState } from 'react'
 import Modal from '../ui/Modal'
+import CampoNumerico from '../ui/CampoNumerico'
+import { formatarNumeroParaCampo, interpretarNumero } from '../../utils/numero'
 import type { CashExpense, ExpenseCategory, CreateCashExpenseInput } from '../../types'
 
 interface ExpenseFormProps {
@@ -17,7 +19,7 @@ export default function ExpenseForm({
 }: ExpenseFormProps): JSX.Element {
   const [categoryId, setCategoryId] = useState<number | ''>(expense?.categoryId ?? '')
   const [description, setDescription] = useState(expense?.description ?? '')
-  const [amount, setAmount] = useState(expense ? expense.amount.toString() : '')
+  const [amount, setAmount] = useState(expense ? formatarNumeroParaCampo(expense.amount) : '')
   const [expenseDate, setExpenseDate] = useState(() => {
     if (expense) return expense.expenseDate
     const d = new Date()
@@ -33,8 +35,8 @@ export default function ExpenseForm({
       setError('Selecione uma categoria.')
       return
     }
-    const parsedAmount = parseFloat(amount)
-    if (isNaN(parsedAmount) || parsedAmount <= 0) {
+    const parsedAmount = interpretarNumero(amount)
+    if (parsedAmount === null || parsedAmount <= 0) {
       setError('Informe um valor válido.')
       return
     }
@@ -111,15 +113,7 @@ export default function ExpenseForm({
 
         <div>
           <label className="label">Valor (R$)</label>
-          <input
-            className="input"
-            type="number"
-            min="0.01"
-            step="0.01"
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-            placeholder="0,00"
-          />
+          <CampoNumerico className="input" value={amount} onChange={setAmount} placeholder="0,00" />
         </div>
 
         <div>

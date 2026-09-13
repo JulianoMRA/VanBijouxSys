@@ -10,6 +10,7 @@ import {
   variacoesComInsumoArquivado
 } from '../utils/arquivamento'
 import ActionMenu from '../components/ui/ActionMenu'
+import CampoNumerico from '../components/ui/CampoNumerico'
 import ConfirmDialog from '../components/ui/ConfirmDialog'
 import ProductForm from '../components/products/ProductForm'
 import VariationForm from '../components/products/VariationForm'
@@ -592,24 +593,18 @@ export default function Products(): JSX.Element {
                                 <option value="estoque-baixo">Estoque baixo</option>
                                 <option value="normal">Estoque normal</option>
                               </select>
-                              <input
-                                type="number"
+                              <CampoNumerico
                                 className="input w-28 py-1.5 text-aux"
                                 placeholder="Preço mín."
                                 value={variationPriceMin}
-                                onChange={(e) => setVariationPriceMin(e.target.value)}
-                                min="0"
-                                step="0.01"
+                                onChange={setVariationPriceMin}
                               />
                               <span className="text-aux text-ink-300">—</span>
-                              <input
-                                type="number"
+                              <CampoNumerico
                                 className="input w-28 py-1.5 text-aux"
                                 placeholder="Preço máx."
                                 value={variationPriceMax}
-                                onChange={(e) => setVariationPriceMax(e.target.value)}
-                                min="0"
-                                step="0.01"
+                                onChange={setVariationPriceMax}
                               />
                               {filtrosAtivos && (
                                 <button

@@ -1,3 +1,4 @@
+import { interpretarNumero } from './numero'
 import type { ProductVariation } from '../types'
 
 export type VariationSortOption =
@@ -24,8 +25,8 @@ export function filterAndSortVariations(
   params: VariationFilterParams
 ): ProductVariation[] {
   const { search, stockFilter, priceMin, priceMax, sortBy } = params
-  const parsedMin = priceMin === '' ? null : Number(priceMin)
-  const parsedMax = priceMax === '' ? null : Number(priceMax)
+  const parsedMin = interpretarNumero(priceMin)
+  const parsedMax = interpretarNumero(priceMax)
 
   const result = variations.filter((v) => {
     const matchesSearch = v.identifier.toLowerCase().includes(search.toLowerCase())

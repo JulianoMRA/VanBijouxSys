@@ -1,5 +1,7 @@
 import { useState } from 'react'
 import Modal from '../ui/Modal'
+import CampoNumerico from '../ui/CampoNumerico'
+import { interpretarNumero } from '../../utils/numero'
 import type { ProductVariation } from '../../types'
 
 interface AddStockFormProps {
@@ -21,8 +23,8 @@ export default function AddStockForm({
 
   async function handleSubmit(e: React.FormEvent): Promise<void> {
     e.preventDefault()
-    const qty = parseInt(quantity)
-    if (isNaN(qty) || qty <= 0) {
+    const qty = interpretarNumero(quantity)
+    if (qty === null || !Number.isInteger(qty) || qty <= 0) {
       setError('Informe uma quantidade válida.')
       return
     }
@@ -54,14 +56,7 @@ export default function AddStockForm({
 
         <div>
           <label className="label">Quantidade a adicionar</label>
-          <input
-            className="input"
-            type="number"
-            min="1"
-            value={quantity}
-            onChange={(e) => setQuantity(e.target.value)}
-            autoFocus
-          />
+          <CampoNumerico className="input" value={quantity} onChange={setQuantity} autoFocus />
         </div>
 
         {error && <p className="text-body text-clay-500">{error}</p>}

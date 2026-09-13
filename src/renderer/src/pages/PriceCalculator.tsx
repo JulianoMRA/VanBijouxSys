@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { calcSuggestedPrice } from '../utils/pricing'
 import { formatCurrency } from '../utils/format'
+import { interpretarNumero, numeroDoArmazenamento, numeroParaArmazenamento } from '../utils/numero'
+import CampoNumerico from '../components/ui/CampoNumerico'
 import { estaArquivado, opcoesComSelecionados, variacoesAtivas } from '../utils/arquivamento'
 import type { Insumo, Product } from '../types'
 
@@ -145,7 +147,9 @@ export default function PriceCalculator(): JSX.Element {
   const [materials, setMaterials] = useState<MaterialRow[]>([
     { id: 'item-0', name: '', cost: '', insumoId: null, quantity: '' }
   ])
-  const [laborCost, setLaborCost] = useState(() => localStorage.getItem(LABOR_COST_KEY) ?? '')
+  const [laborCost, setLaborCost] = useState(() =>
+    numeroDoArmazenamento(localStorage.getItem(LABOR_COST_KEY))
+  )
   const [products, setProducts] = useState<Product[]>([])
   const [insumos, setInsumos] = useState<Insumo[]>([])
   const [laborSaved, setLaborSaved] = useState(false)
@@ -164,7 +168,7 @@ export default function PriceCalculator(): JSX.Element {
   }, [])
 
   function saveDefaultLaborCost(): void {
-    localStorage.setItem(LABOR_COST_KEY, laborCost)
+    localStorage.setItem(LABOR_COST_KEY, numeroParaArmazenamento(laborCost) ?? '')
     setLaborSaved(true)
     setTimeout(() => setLaborSaved(false), 2000)
   }
@@ -195,11 +199,9 @@ export default function PriceCalculator(): JSX.Element {
     if (m.insumoId !== null) {
       const insumo = insumos.find((i) => i.id === m.insumoId)
       if (!insumo) return 0
-      const qty = parseFloat(m.quantity)
-      return isNaN(qty) ? 0 : qty * insumo.costPerUnit
+      return (interpretarNumero(m.quantity) ?? 0) * insumo.costPerUnit
     }
-    const val = parseFloat(m.cost)
-    return isNaN(val) ? 0 : val
+    return interpretarNumero(m.cost) ?? 0
   }
 
   // Insumo arquivado sai da lista, mas continua visível se já foi escolhido
@@ -210,8 +212,7 @@ export default function PriceCalculator(): JSX.Element {
   )
 
   const totalMaterials = materials.reduce((sum, m) => sum + rowCost(m), 0)
-  const labor = parseFloat(laborCost)
-  const laborValue = isNaN(labor) ? 0 : labor
+  const laborValue = interpretarNumero(laborCost) ?? 0
 
   const step1 = totalMaterials * 3
   const step2 = step1 + laborValue
@@ -318,26 +319,20 @@ export default function PriceCalculator(): JSX.Element {
                       <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-aux text-ink-300">
                         R$
                       </span>
-                      <input
+                      <CampoNumerico
                         className="input py-1.5 pl-8 text-right text-aux tabular-nums"
-                        type="number"
-                        min="0"
-                        step="0.01"
                         placeholder="0,00"
                         value={m.cost}
-                        onChange={(e) => updateMaterial(m.id, 'cost', e.target.value)}
+                        onChange={(texto) => updateMaterial(m.id, 'cost', texto)}
                       />
                     </div>
                   ) : (
                     <div className="flex shrink-0 items-center gap-1.5">
-                      <input
+                      <CampoNumerico
                         className="input w-[68px] py-1.5 text-right text-aux tabular-nums"
-                        type="number"
-                        min="0"
-                        step="0.01"
                         placeholder="Qtd."
                         value={m.quantity}
-                        onChange={(e) => updateMaterial(m.id, 'quantity', e.target.value)}
+                        onChange={(texto) => updateMaterial(m.id, 'quantity', texto)}
                       />
                       <span className="w-7 text-aux text-ink-400">{unitLabel}</span>
                     </div>
@@ -389,14 +384,11 @@ export default function PriceCalculator(): JSX.Element {
               <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-body text-ink-300">
                 R$
               </span>
-              <input
+              <CampoNumerico
                 className="input pl-9 font-semibold tabular-nums"
-                type="number"
-                min="0"
-                step="0.01"
                 placeholder="0,00"
                 value={laborCost}
-                onChange={(e) => setLaborCost(e.target.value)}
+                onChange={setLaborCost}
               />
             </div>
             <p className="flex-1 text-aux text-ink-400">Seu tempo de confecção desta peça.</p>

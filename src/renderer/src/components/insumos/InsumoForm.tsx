@@ -1,5 +1,7 @@
 import { useState } from 'react'
 import Modal from '../ui/Modal'
+import CampoNumerico from '../ui/CampoNumerico'
+import { formatarNumeroParaCampo, interpretarNumero } from '../../utils/numero'
 import type { Insumo, InsumoUnit } from '../../types'
 
 interface InsumoFormProps {
@@ -23,9 +25,15 @@ export default function InsumoForm({
 }: InsumoFormProps): JSX.Element {
   const [name, setName] = useState(insumo?.name ?? initialName)
   const [unit, setUnit] = useState<InsumoUnit>(insumo?.unit ?? 'unidade')
-  const [costPerUnit, setCostPerUnit] = useState(insumo?.costPerUnit.toString() ?? '')
-  const [stockQuantity, setStockQuantity] = useState(insumo?.stockQuantity.toString() ?? '0')
-  const [minimumStock, setMinimumStock] = useState(insumo?.minimumStock.toString() ?? '0')
+  const [costPerUnit, setCostPerUnit] = useState(
+    insumo ? formatarNumeroParaCampo(insumo.costPerUnit) : ''
+  )
+  const [stockQuantity, setStockQuantity] = useState(
+    insumo ? formatarNumeroParaCampo(insumo.stockQuantity) : '0'
+  )
+  const [minimumStock, setMinimumStock] = useState(
+    insumo ? formatarNumeroParaCampo(insumo.minimumStock) : '0'
+  )
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
@@ -37,19 +45,19 @@ export default function InsumoForm({
       setError('O nome é obrigatório.')
       return
     }
-    const cost = parseFloat(costPerUnit)
-    const stock = parseFloat(stockQuantity)
-    const minStock = parseFloat(minimumStock)
-    if (isNaN(cost) || cost < 0) {
+    const cost = interpretarNumero(costPerUnit)
+    const stock = interpretarNumero(stockQuantity)
+    const minStock = interpretarNumero(minimumStock)
+    if (cost === null || cost < 0) {
       setError('Custo por unidade inválido.')
       return
     }
     // Saldo negativo salvo continua valendo: só não se digita um negativo novo.
-    if (isNaN(stock) || (stock < 0 && stock !== insumo?.stockQuantity)) {
+    if (stock === null || (stock < 0 && stock !== insumo?.stockQuantity)) {
       setError('Quantidade em estoque inválida.')
       return
     }
-    if (isNaN(minStock) || minStock < 0) {
+    if (minStock === null || minStock < 0) {
       setError('Estoque mínimo inválido.')
       return
     }
@@ -156,14 +164,11 @@ export default function InsumoForm({
             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-300 text-body pointer-events-none">
               R$
             </span>
-            <input
+            <CampoNumerico
               className="input pl-8"
-              type="number"
-              min="0"
-              step="0.0001"
               placeholder="0,0000"
               value={costPerUnit}
-              onChange={(e) => setCostPerUnit(e.target.value)}
+              onChange={setCostPerUnit}
             />
           </div>
           <p className="text-micro text-ink-300 mt-1">
@@ -174,25 +179,11 @@ export default function InsumoForm({
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="label">Estoque atual ({unit === 'unidade' ? 'un.' : unit})</label>
-            <input
-              className="input"
-              type="number"
-              min={Math.min(0, insumo?.stockQuantity ?? 0)}
-              step="0.01"
-              value={stockQuantity}
-              onChange={(e) => setStockQuantity(e.target.value)}
-            />
+            <CampoNumerico className="input" value={stockQuantity} onChange={setStockQuantity} />
           </div>
           <div>
             <label className="label">Estoque mínimo ({unit === 'unidade' ? 'un.' : unit})</label>
-            <input
-              className="input"
-              type="number"
-              min="0"
-              step="0.01"
-              value={minimumStock}
-              onChange={(e) => setMinimumStock(e.target.value)}
-            />
+            <CampoNumerico className="input" value={minimumStock} onChange={setMinimumStock} />
           </div>
         </div>
 

@@ -1,5 +1,11 @@
 import { useState } from 'react'
 import Modal from '../ui/Modal'
+import CampoNumerico from '../ui/CampoNumerico'
+import {
+  interpretarNumero,
+  numeroDoArmazenamento,
+  numeroParaArmazenamento
+} from '../../utils/numero'
 import { formatCurrency } from '../../utils/format'
 import type { PaymentMethod, Sale } from '../../types'
 
@@ -25,7 +31,7 @@ function todayIso(): string {
 
 function loadLastFee(method: ReceivedPaymentMethod): string {
   if (method === 'dinheiro') return '0'
-  return localStorage.getItem(`lastFee_${method}`) ?? ''
+  return numeroDoArmazenamento(localStorage.getItem(`lastFee_${method}`))
 }
 
 export default function MarkReceivedModal({
@@ -44,7 +50,8 @@ export default function MarkReceivedModal({
     setFeePercentage(loadLastFee(method))
   }
 
-  const feePercent = parseFloat(feePercentage) || 0
+  const feeLida = feePercentage.trim() === '' ? 0 : interpretarNumero(feePercentage)
+  const feePercent = feeLida ?? 0
   const feeAmount = (sale.totalAmount * feePercent) / 100
   const netAmount = sale.totalAmount - feeAmount
 
@@ -54,8 +61,12 @@ export default function MarkReceivedModal({
       setError('Informe a data de recebimento.')
       return
     }
+    if (feeLida === null || feeLida < 0 || feeLida > 100) {
+      setError('Informe uma taxa entre 0 e 100%.')
+      return
+    }
     if (paymentMethod !== 'dinheiro' && feePercent > 0) {
-      localStorage.setItem(`lastFee_${paymentMethod}`, feePercentage)
+      localStorage.setItem(`lastFee_${paymentMethod}`, numeroParaArmazenamento(feePercentage) ?? '')
     }
     setSaving(true)
     try {
@@ -122,14 +133,11 @@ export default function MarkReceivedModal({
               )
             </label>
             <div className="relative">
-              <input
+              <CampoNumerico
                 className="input pr-8"
-                type="number"
-                min="0"
-                max="100"
-                step="0.01"
+
                 value={feePercentage}
-                onChange={(e) => setFeePercentage(e.target.value)}
+                onChange={setFeePercentage}
                 placeholder="0,00"
               />
               <span className="absolute right-3 top-1/2 -translate-y-1/2 text-body text-ink-300">

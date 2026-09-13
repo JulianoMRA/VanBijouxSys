@@ -1,5 +1,12 @@
 import { useEffect, useState } from 'react'
 import Modal from '../ui/Modal'
+import CampoNumerico from '../ui/CampoNumerico'
+import {
+  formatarNumeroParaCampo,
+  interpretarNumero,
+  numeroDoArmazenamento,
+  numeroParaArmazenamento
+} from '../../utils/numero'
 import { estaArquivado, variacaoInativa } from '../../utils/arquivamento'
 import { custoUnitarioDoItem } from '../../utils/itens-de-venda'
 import type {
@@ -46,7 +53,7 @@ function formatCurrency(value: number): string {
 
 function loadLastFee(method: PaymentMethod): string {
   if (method === 'dinheiro' || method === 'areceber') return '0'
-  return localStorage.getItem(FEE_STORAGE_KEY(method)) ?? ''
+  return numeroDoArmazenamento(localStorage.getItem(FEE_STORAGE_KEY(method)))
 }
 
 export default function SaleForm({ sale, onSave, onClose }: SaleFormProps): JSX.Element {
@@ -61,7 +68,7 @@ export default function SaleForm({ sale, onSave, onClose }: SaleFormProps): JSX.
     sale?.paymentMethod ?? 'dinheiro'
   )
   const [feePercentage, setFeePercentage] = useState<string>(
-    sale ? String(sale.feePercentage) : '0'
+    sale ? formatarNumeroParaCampo(sale.feePercentage) : '0'
   )
   const [items, setItems] = useState<ItemRow[]>([
     { key: 0, productId: '', variationId: '', quantity: '1', unitPrice: '' }
@@ -98,8 +105,8 @@ export default function SaleForm({ sale, onSave, onClose }: SaleFormProps): JSX.
             saleItemId: item.id,
             productId: product?.id ?? '',
             variationId: item.variationId as number | '',
-            quantity: String(item.quantity),
-            unitPrice: String(item.unitPrice)
+            quantity: formatarNumeroParaCampo(item.quantity),
+            unitPrice: formatarNumeroParaCampo(item.unitPrice)
           }
         })
         setItems(itemRows)
@@ -147,7 +154,7 @@ export default function SaleForm({ sale, onSave, onClose }: SaleFormProps): JSX.
         if (changes.variationId !== undefined && changes.variationId !== '') {
           const variations = getVariations(updated.productId)
           const variation = variations.find((v) => v.id === changes.variationId)
-          if (variation) updated.unitPrice = variation.salePrice.toString()
+          if (variation) updated.unitPrice = formatarNumeroParaCampo(variation.salePrice)
         }
         return updated
       })
@@ -169,9 +176,10 @@ export default function SaleForm({ sale, onSave, onClose }: SaleFormProps): JSX.
     const result: CreateSaleItemInput[] = []
     for (const item of items) {
       if (item.variationId === '' || item.productId === '') return null
-      const qty = parseInt(item.quantity)
-      const price = parseFloat(item.unitPrice)
-      if (isNaN(qty) || qty <= 0 || isNaN(price) || price < 0) return null
+      const qty = interpretarNumero(item.quantity)
+      const price = interpretarNumero(item.unitPrice)
+      if (qty === null || !Number.isInteger(qty) || qty <= 0) return null
+      if (price === null || price < 0) return null
       const variation = getVariations(item.productId).find((v) => v.id === item.variationId)
       if (!variation) return null
       result.push({
@@ -189,7 +197,8 @@ export default function SaleForm({ sale, onSave, onClose }: SaleFormProps): JSX.
   const totalCost = saleItems?.reduce((s, i) => s + i.quantity * i.unitCost, 0) ?? 0
   const profit = totalAmount - totalCost
 
-  const feePercent = parseFloat(feePercentage) || 0
+  const feeLida = feePercentage.trim() === '' ? 0 : interpretarNumero(feePercentage)
+  const feePercent = feeLida ?? 0
   const feeAmount = (totalAmount * feePercent) / 100
   const netAmount = totalAmount - feeAmount
 
@@ -211,9 +220,16 @@ export default function SaleForm({ sale, onSave, onClose }: SaleFormProps): JSX.
       setError('Preencha todos os campos de cada item corretamente.')
       return
     }
+    if (feeLida === null || feeLida < 0 || feeLida > 100) {
+      setError('Informe uma taxa entre 0 e 100%.')
+      return
+    }
 
     if (paymentMethod !== 'dinheiro' && feePercent > 0) {
-      localStorage.setItem(FEE_STORAGE_KEY(paymentMethod), feePercentage)
+      localStorage.setItem(
+        FEE_STORAGE_KEY(paymentMethod),
+        numeroParaArmazenamento(feePercentage) ?? ''
+      )
     }
 
     setSaving(true)
@@ -359,14 +375,10 @@ export default function SaleForm({ sale, onSave, onClose }: SaleFormProps): JSX.
                 )
               </label>
               <div className="relative">
-                <input
+                <CampoNumerico
                   className="input pr-8"
-                  type="number"
-                  min="0"
-                  max="100"
-                  step="0.01"
                   value={feePercentage}
-                  onChange={(e) => setFeePercentage(e.target.value)}
+                  onChange={setFeePercentage}
                   placeholder="0,00"
                 />
                 <span className="absolute right-3 top-1/2 -translate-y-1/2 text-body text-ink-300">
@@ -461,25 +473,22 @@ export default function SaleForm({ sale, onSave, onClose }: SaleFormProps): JSX.
                   <div className="grid grid-cols-3 gap-2 items-end">
                     <div>
                       <label className="label">Qtd.</label>
-                      <input
+                      <CampoNumerico
                         className="input"
-                        type="number"
-                        min="1"
                         value={item.quantity}
-                        onChange={(e) => updateItem(item.key, { quantity: e.target.value })}
+                        onChange={(texto) => updateItem(item.key, { quantity: texto })}
                       />
                     </div>
                     <div>
                       <label className="label">Preço unit. (R$)</label>
-                      <input
+                      <CampoNumerico
                         className="input"
-                        type="number"
-                        min="0"
-                        step="0.01"
                         value={item.unitPrice}
-                        onChange={(e) => updateItem(item.key, { unitPrice: e.target.value })}
+                        onChange={(texto) => updateItem(item.key, { unitPrice: texto })}
                         placeholder={
-                          selectedVariation ? selectedVariation.salePrice.toString() : '0,00'
+                          selectedVariation
+                            ? formatarNumeroParaCampo(selectedVariation.salePrice)
+                            : '0,00'
                         }
                       />
                     </div>
@@ -487,7 +496,8 @@ export default function SaleForm({ sale, onSave, onClose }: SaleFormProps): JSX.
                       {item.unitPrice !== '' && item.quantity !== '' ? (
                         <span className="text-body font-semibold tabular-nums text-ink-900">
                           {formatCurrency(
-                            parseFloat(item.unitPrice || '0') * parseInt(item.quantity || '0')
+                            (interpretarNumero(item.unitPrice) ?? 0) *
+                              (interpretarNumero(item.quantity) ?? 0)
                           )}
                         </span>
                       ) : (
@@ -510,7 +520,7 @@ export default function SaleForm({ sale, onSave, onClose }: SaleFormProps): JSX.
                       const effectiveStock =
                         selectedVariation.stockQuantity +
                         (originalQuantities[selectedVariation.id] ?? 0)
-                      const quantidade = parseInt(item.quantity)
+                      const quantidade = interpretarNumero(item.quantity) ?? 0
                       return quantidade > effectiveStock ? (
                         <p className="text-micro font-medium text-honey-500">
                           O estoque registrado é {effectiveStock} un. e vai ficar em{' '}

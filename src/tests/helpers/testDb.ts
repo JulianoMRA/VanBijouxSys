@@ -1,4 +1,4 @@
-import initSqlJs, { type Database } from 'sql.js'
+import initSqlJs, { type Database, type SqlValue } from 'sql.js'
 
 export async function createTestDb(): Promise<Database> {
   const SQL = await initSqlJs()
@@ -162,7 +162,7 @@ export async function createEmptyDb(): Promise<Database> {
 export function queryAll<T = Record<string, unknown>>(
   db: Database,
   sql: string,
-  params: unknown[] = []
+  params: SqlValue[] = []
 ): T[] {
   const stmt = db.prepare(sql)
   stmt.bind(params)
@@ -178,7 +178,7 @@ export function queryAll<T = Record<string, unknown>>(
 export function queryOne<T = Record<string, unknown>>(
   db: Database,
   sql: string,
-  params: unknown[] = []
+  params: SqlValue[] = []
 ): T | undefined {
   return queryAll<T>(db, sql, params)[0]
 }

@@ -72,7 +72,7 @@ O `postinstall` recompila o `better-sqlite3` para o Electron automaticamente. O 
 | `npm run build:win`   | Gera instalador `.exe` (NSIS) em `dist/`                |
 | `npm test`            | Roda a suíte Vitest uma vez                             |
 | `npm run test:watch`  | Vitest em modo watch                                    |
-| `npm run typecheck`   | Verifica tipos dos dois projetos (main/preload e web)   |
+| `npm run typecheck`   | Verifica tipos de main/preload, renderer e testes       |
 | `npm run lint`        | ESLint em `src/`                                        |
 | `npm run lint:fix`    | ESLint corrigindo o que der                             |
 | `npm run format`      | Prettier no projeto inteiro                             |

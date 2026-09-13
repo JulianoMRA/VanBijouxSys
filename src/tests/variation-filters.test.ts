@@ -16,6 +16,7 @@ function makeVariation(
     minimumStock: 3,
     laborCost: 0,
     createdAt: '2025-01-01',
+    archivedAt: null,
     insumos: [],
     ...overrides
   }

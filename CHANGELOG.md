@@ -1,5 +1,25 @@
 # Changelog
 
+## [1.11.0] - 2026-09-13
+
+### Corrigido
+
+- **Estoque de insumos**: aplicar um preço pela Precificação apagava, sem avisar, a lista de insumos da variação. Dali em diante, cada "+ Estoque" daquela peça deixava de descontar material, o estoque de insumos ficava maior que o real e o aviso de reposição parava de aparecer. Agora a Precificação muda só o preço. **As listas que já foram apagadas não voltam sozinhas**: vale abrir "Ver detalhes" nas variações e conferir se a composição continua lá.
+- **Estoque de insumos**: vender mais peças do que o estoque registrado, ou excluir uma venda assim, fazia os números saírem do real. O estoque agora pode ficar negativo, e isso tem significado: peça vendida sem a produção registrada, ou compra de insumo ainda não lançada. Lançando o que faltou, o número volta ao certo.
+- **Produtos**: mudar a quantidade em estoque pelo "Editar variação" não mexia nos insumos. Agora o app pergunta o que aconteceu: se foi produção, os insumos acompanham; se foi só correção de contagem, eles não mudam. A mesma pergunta aparece ao cadastrar uma variação já com estoque.
+- **Produtos**: excluir uma variação cadastrada por engano ganha a opção de devolver os insumos das peças que ela tinha.
+- **Números digitados**: "1.000" era gravado como 1 em vários campos, como o "+ Estoque" de insumo, a venda, as despesas e o saldo inicial do caixa. Agora os campos entendem o jeito brasileiro de escrever números e, ao sair do campo, mostram como leram: "1.000" vira "1000".
+- **Insumos**: trocar a unidade (un., cm, g) de um insumo usado em receitas mudava o sentido das quantidades sem converter nada. A troca agora é bloqueada nesses casos.
+- **Vendas**: editar uma venda antiga regravava o custo dos itens com o custo de hoje, mudando o lucro daquele mês. O custo registrado na venda agora é mantido.
+
+### Interno
+
+- Os testes de integração de estoque passam a chamar os handlers reais, em vez de copiar o SQL deles.
+- Fluxo de branches, PRs e release documentado em CONTRIBUTING.md; o pre-push passa a rodar o lint.
+- A suíte de testes vai de 218 para 277.
+
+---
+
 ## [1.10.0] - 2026-08-15
 
 ### Corrigido

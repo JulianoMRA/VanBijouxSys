@@ -7,6 +7,9 @@ dist
 .env
 .env.*.local
 .claude/
+# Guia do Claude Code é local, como no Tally; o processo versionado vive no CONTRIBUTING.md.
+CLAUDE.md
+HANDOFF.md
 coverage/
 *.log
 .DS_Store

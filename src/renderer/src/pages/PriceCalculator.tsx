@@ -48,16 +48,7 @@ function ApplyToVariation({
     if (!selectedVariation) return
     setSaving(true)
     try {
-      await window.api.variations.update({
-        id: selectedVariation.id,
-        productId: selectedVariation.productId,
-        identifier: selectedVariation.identifier,
-        costPrice: selectedVariation.costPrice,
-        salePrice: suggestedPrice,
-        stockQuantity: selectedVariation.stockQuantity,
-        minimumStock: selectedVariation.minimumStock,
-        laborCost: selectedVariation.laborCost
-      })
+      await window.api.variations.setSalePrice(selectedVariation.id, suggestedPrice)
       setSuccess(true)
       setTimeout(() => {
         setSuccess(false)

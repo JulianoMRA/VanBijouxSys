@@ -51,6 +51,8 @@ const api = {
     update: (data: UpdateVariationInput) => invoke('variations:update', data),
     delete: (id: number) => invoke('variations:delete', id),
     addStock: (id: number, quantity: number) => invoke('variations:addStock', id, quantity),
+    setSalePrice: (id: number, salePrice: number) =>
+      invoke('variations:setSalePrice', id, salePrice),
     setArchived: (id: number, archived: boolean) => invoke('variations:setArchived', id, archived)
   },
   fairs: {

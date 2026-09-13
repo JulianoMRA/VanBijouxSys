@@ -84,7 +84,8 @@ export type CreateVariationInput = {
   stockQuantity: number
   minimumStock: number
   laborCost: number
-  insumos?: { insumoId: number; quantity: number }[]
+  /** Obrigatória: o update substitui a receita inteira pelo que vier aqui. */
+  insumos: { insumoId: number; quantity: number }[]
 }
 
 export type UpdateVariationInput = CreateVariationInput & { id: number }

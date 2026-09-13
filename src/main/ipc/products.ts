@@ -161,6 +161,12 @@ export function registerProductHandlers(): void {
   })
 
   handleIpc('variations:update', (data: UpdateVariationInput) => {
+    // A receita é substituída inteira. Sem ela no payload, o update apagaria a
+    // receita em silêncio e a produção seguinte deixaria de baixar insumos.
+    if (!Array.isArray(data.insumos)) {
+      throw new Error('variations:update recebido sem a receita; nada foi alterado')
+    }
+
     const sqlite = getSqlite()
     const db = getDb()
 
@@ -178,7 +184,7 @@ export function registerProductHandlers(): void {
         .run()
 
       db.delete(variationInsumos).where(eq(variationInsumos.variationId, data.id)).run()
-      for (const item of data.insumos ?? []) {
+      for (const item of data.insumos) {
         db.insert(variationInsumos)
           .values({ variationId: data.id, insumoId: item.insumoId, quantity: item.quantity })
           .run()
@@ -186,6 +192,21 @@ export function registerProductHandlers(): void {
     })
 
     atualizar()
+    return { success: true }
+  })
+
+  /** Aplicar preço pela Precificação não tem por que regravar estoque nem receita. */
+  handleIpc('variations:setSalePrice', (id: number, salePrice: number) => {
+    if (!Number.isFinite(salePrice) || salePrice < 0) {
+      throw new ErroDeNegocio('Preço de venda inválido.')
+    }
+    const db = getDb()
+    const resultado = db
+      .update(productVariations)
+      .set({ salePrice })
+      .where(eq(productVariations.id, id))
+      .run()
+    if (resultado.changes === 0) throw new ErroDeNegocio('Variação não encontrada.')
     return { success: true }
   })
 

@@ -43,6 +43,7 @@ declare global {
         update: (data: UpdateVariationInput) => Promise<{ success: boolean }>
         delete: (id: number) => Promise<{ success: boolean }>
         addStock: (id: number, quantity: number) => Promise<{ success: boolean }>
+        setSalePrice: (id: number, salePrice: number) => Promise<{ success: boolean }>
         setArchived: (id: number, archived: boolean) => Promise<{ success: boolean }>
       }
       fairs: {

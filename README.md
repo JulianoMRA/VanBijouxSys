@@ -53,7 +53,7 @@ src/
 
 ## Rodando localmente
 
-Requer Node.js 22+ e npm 10+.
+Requer Node.js 22.12 ou mais novo, o mínimo do `@electron/rebuild` que roda no `postinstall`. A versão usada no desenvolvimento está no [.nvmrc](.nvmrc).
 
 ```bash
 npm install

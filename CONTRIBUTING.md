@@ -9,6 +9,9 @@ conferir antes.
 
 ## Setup
 
+Node na versão do [.nvmrc](.nvmrc) (`nvm use`). O mínimo aceito, declarado em
+`engines`, é 22.12, exigido pelo `@electron/rebuild` do `postinstall`.
+
 ```bash
 npm install        # instala deps, recompila o better-sqlite3 e ativa o Husky
 npm run dev        # Electron + Vite com HMR no renderer

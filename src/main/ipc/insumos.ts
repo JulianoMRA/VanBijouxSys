@@ -11,6 +11,31 @@ import type { CreateInsumoInput, Insumo, UpdateInsumoInput } from '../../rendere
 /** Sem o BOM o Excel abre o CSV com a acentuação quebrada. */
 const BOM_UTF8 = String.fromCharCode(0xfeff)
 
+/**
+ * Trocar a unidade não converte nada: 20 cm de fio na receita viram 20 g. Com
+ * receita, a troca é recusada, porque as quantidades vivem em outra tela e
+ * ninguém veria a mudança de sentido — conta até variação arquivada, que pode
+ * voltar. Com saldo, a troca só vale junto com a contagem na unidade nova, que
+ * o formulário mostra ao lado do campo.
+ */
+function validarTrocaDeUnidade(data: UpdateInsumoInput, estoqueSalvo: number): void {
+  const { receitas } = getSqlite()
+    .prepare(
+      'SELECT COUNT(DISTINCT variation_id) AS receitas FROM variation_insumos WHERE insumo_id = ?'
+    )
+    .get(data.id) as { receitas: number }
+  if (receitas > 0) {
+    throw new ErroDeNegocio(
+      `A unidade não pode mudar: este insumo está em ${receitas} receita${receitas !== 1 ? 's' : ''}, e as quantidades passariam a valer em outra unidade. Cadastre um insumo novo com a unidade certa.`
+    )
+  }
+  if (estoqueSalvo !== 0 && data.stockQuantity === estoqueSalvo) {
+    throw new ErroDeNegocio(
+      'Para trocar a unidade, informe também o estoque atual na unidade nova.'
+    )
+  }
+}
+
 export function registerInsumoHandlers(): void {
   handleIpc('insumos:getAll', () => {
     return getSqlite().prepare(SQL_INSUMOS_COM_USO).all() as Insumo[]
@@ -33,6 +58,14 @@ export function registerInsumoHandlers(): void {
 
   handleIpc('insumos:update', (data: UpdateInsumoInput) => {
     const db = getDb()
+    const atual = db
+      .select({ unit: insumos.unit, stockQuantity: insumos.stockQuantity })
+      .from(insumos)
+      .where(eq(insumos.id, data.id))
+      .get()
+    if (!atual) throw new ErroDeNegocio('Insumo não encontrado.')
+    if (atual.unit !== data.unit) validarTrocaDeUnidade(data, atual.stockQuantity)
+
     db.update(insumos)
       .set({
         name: data.name,

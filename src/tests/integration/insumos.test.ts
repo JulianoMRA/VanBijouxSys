@@ -70,6 +70,66 @@ describe('insumos:update', () => {
   })
 })
 
+describe('insumos:update trocando a unidade', () => {
+  function salvar(id: number, dados: Record<string, unknown>): Promise<unknown> {
+    return ambiente.chamar('insumos:update', {
+      id,
+      name: 'Fio de nylon',
+      unit: 'cm',
+      costPerUnit: 0.05,
+      stockQuantity: 200,
+      minimumStock: 50,
+      ...dados
+    })
+  }
+
+  function unidade(id: number): string {
+    return queryOne<{ unit: string }>(ambiente.banco, 'SELECT unit FROM insumos WHERE id = ?', [
+      id
+    ])!.unit
+  }
+
+  it('should_refuse_when_a_recipe_uses_the_insumo', async () => {
+    await criarVariacao(ambiente, { receita: [{ insumoId: fio, quantity: 20 }] })
+
+    await expect(salvar(fio, { unit: 'g', stockQuantity: 0 })).rejects.toThrow(
+      'A unidade não pode mudar: este insumo está em 1 receita'
+    )
+    expect(unidade(fio)).toBe('cm')
+  })
+
+  it('should_refuse_even_when_only_an_archived_variation_uses_it', async () => {
+    const variacao = await criarVariacao(ambiente, { receita: [{ insumoId: fio, quantity: 20 }] })
+    await ambiente.chamar('variations:setArchived', variacao, true)
+
+    await expect(salvar(fio, { unit: 'g', stockQuantity: 0 })).rejects.toThrow(
+      'A unidade não pode mudar'
+    )
+  })
+
+  it('should_refuse_when_there_is_stock_and_it_was_not_recounted_in_the_new_unit', async () => {
+    await expect(salvar(fio, { unit: 'g' })).rejects.toThrow(
+      'Para trocar a unidade, informe também o estoque atual na unidade nova.'
+    )
+    expect(unidade(fio)).toBe('cm')
+  })
+
+  it('should_accept_when_the_stock_is_recounted_in_the_new_unit', async () => {
+    await salvar(fio, { unit: 'g', stockQuantity: 35 })
+
+    expect(unidade(fio)).toBe('g')
+    expect(estoqueDoInsumo(ambiente, fio)).toBe(35)
+  })
+
+  it('should_accept_on_an_unused_insumo_without_stock', async () => {
+    const cola = await criarInsumo(ambiente, { name: 'Cola', stockQuantity: 0 })
+
+    await salvar(cola, { name: 'Cola', unit: 'g', stockQuantity: 0 })
+
+    expect(unidade(cola)).toBe('g')
+  })
+})
+
 describe('insumos:addStock', () => {
   it('should_add_the_purchased_quantity', async () => {
     await ambiente.chamar('insumos:addStock', fio, 100)

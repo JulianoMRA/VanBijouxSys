@@ -15,6 +15,7 @@ import ProductForm from '../components/products/ProductForm'
 import VariationForm from '../components/products/VariationForm'
 import VariationDetailsModal from '../components/products/VariationDetailsModal'
 import AddStockForm from '../components/products/AddStockForm'
+import ExcluirVariacaoDialog from '../components/products/ExcluirVariacaoDialog'
 import Toast from '../components/ui/Toast'
 import { useToast } from '../hooks/useToast'
 import type { Category, Product, ProductVariation } from '../types'
@@ -244,10 +245,13 @@ export default function Products(): JSX.Element {
     }
   }
 
-  async function handleDeleteVariation(variation: ProductVariation): Promise<void> {
+  async function handleDeleteVariation(
+    variation: ProductVariation,
+    devolverInsumos: boolean
+  ): Promise<void> {
     setErrorMessage('')
     try {
-      await window.api.variations.delete(variation.id)
+      await window.api.variations.delete(variation.id, { devolverInsumos })
       await loadData()
     } catch (err) {
       setErrorMessage(
@@ -856,12 +860,10 @@ export default function Products(): JSX.Element {
         />
       )}
       {modal?.type === 'deleteVariation' && (
-        <ConfirmDialog
-          title="Excluir variação"
-          message={`Excluir a variação "${modal.variation.identifier}" de "${modal.product.name}"?`}
-          confirmLabel="Excluir"
-          danger
-          onConfirm={() => handleDeleteVariation(modal.variation)}
+        <ExcluirVariacaoDialog
+          product={modal.product}
+          variation={modal.variation}
+          onConfirm={(devolverInsumos) => handleDeleteVariation(modal.variation, devolverInsumos)}
           onClose={() => setModal(null)}
         />
       )}

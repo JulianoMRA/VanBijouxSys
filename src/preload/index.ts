@@ -5,6 +5,7 @@ import type {
   UpdateProductInput,
   CreateVariationInput,
   UpdateVariationInput,
+  DeleteVariationOptions,
   CreateFairInput,
   UpdateFairInput,
   CreateSaleInput,
@@ -49,7 +50,8 @@ const api = {
   variations: {
     create: (data: CreateVariationInput) => invoke('variations:create', data),
     update: (data: UpdateVariationInput) => invoke('variations:update', data),
-    delete: (id: number) => invoke('variations:delete', id),
+    delete: (id: number, opcoes?: DeleteVariationOptions) =>
+      invoke('variations:delete', id, opcoes),
     addStock: (id: number, quantity: number) => invoke('variations:addStock', id, quantity),
     setSalePrice: (id: number, salePrice: number) =>
       invoke('variations:setSalePrice', id, salePrice),

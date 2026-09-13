@@ -37,6 +37,7 @@ export async function criarVariacao(
     costPrice: 3,
     salePrice: 25,
     stockQuantity: 0,
+    motivoDoEstoqueInicial: 'producao',
     minimumStock: 1,
     laborCost: 0,
     ...resto,

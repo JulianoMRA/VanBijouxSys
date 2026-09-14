@@ -4,6 +4,9 @@
   "description": "Sistema de gestão de estoque e vendas para bijouterias",
   "main": "./out/main/index.js",
   "type": "module",
+  "engines": {
+    "node": ">=22.12.0"
+  },
   "scripts": {
     "dev": "electron-vite dev",
     "build": "electron-vite build",

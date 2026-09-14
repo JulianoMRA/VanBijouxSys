@@ -1,9 +1,10 @@
-import { app, shell, BrowserWindow } from 'electron'
+import { app, shell, BrowserWindow, dialog } from 'electron'
 import { join, resolve } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import log from 'electron-log/main'
-import { initDatabase } from './database'
+import { closeDatabase, initDatabase } from './database'
 import { backupDiario, criarBackup } from './database/backup'
+import { criarEncerramento } from './encerramento'
 import { registerAllHandlers } from './ipc'
 import { definirRegistro, registro } from './registro'
 import { iniciarAutoUpdate } from './updater'
@@ -21,6 +22,24 @@ if (pastaDeDadosIsolada) {
 // de handler só existiria na tela, e muitas vezes nem nela.
 log.transports.file.level = 'info'
 definirRegistro(log)
+
+// Registrado antes do boot para cobrir também as falhas dele. Sem isso, um banco
+// que não abre deixava o processo vivo e sem janela, e o atalho parecia não fazer nada.
+const encerramento = criarEncerramento({
+  registrar: (mensagem, erro) => registro.error(mensagem, erro),
+  mostrarErro: (titulo, conteudo) => dialog.showErrorBox(titulo, conteudo),
+  fecharBanco: closeDatabase,
+  sair: (codigo) => app.exit(codigo),
+  caminhoDoLog: () => log.transports.file.getFile().path
+})
+
+process.on('uncaughtException', (erro) => {
+  encerramento.falhaFatal('Aconteceu um erro inesperado.', erro)
+})
+process.on('unhandledRejection', (motivo) => {
+  encerramento.rejeicaoSemTratamento(motivo)
+})
+app.on('before-quit', () => encerramento.marcarSaidaNormal())
 
 function createWindow(): void {
   const mainWindow = new BrowserWindow({
@@ -94,7 +113,10 @@ if (!app.requestSingleInstanceLock()) {
 } else {
   app.on('second-instance', focarJanelaExistente)
 
-  app.whenReady().then(iniciar)
+  app
+    .whenReady()
+    .then(iniciar)
+    .catch((erro) => encerramento.falhaFatal('Não foi possível iniciar o aplicativo.', erro))
 
   app.on('window-all-closed', () => {
     if (process.platform !== 'darwin') {

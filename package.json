@@ -90,6 +90,9 @@
     "directories": {
       "output": "dist"
     },
+    "files": [
+      "out/**/*"
+    ],
     "win": {
       "target": "nsis",
       "icon": "resources/icon.ico"

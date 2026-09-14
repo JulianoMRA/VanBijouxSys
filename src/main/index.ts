@@ -6,6 +6,7 @@ import { closeDatabase, initDatabase } from './database'
 import { backupDiario, criarBackup } from './database/backup'
 import { criarEncerramento } from './encerramento'
 import { registerAllHandlers } from './ipc'
+import { ehNavegacaoInterna, urlExternaPermitida } from './navegacao'
 import { definirRegistro, registro } from './registro'
 import { iniciarAutoUpdate } from './updater'
 
@@ -41,6 +42,12 @@ process.on('unhandledRejection', (motivo) => {
 })
 app.on('before-quit', () => encerramento.marcarSaidaNormal())
 
+function abrirNoNavegador(rawUrl: string): void {
+  const url = urlExternaPermitida(rawUrl)
+  if (url) shell.openExternal(url)
+  else registro.warn('[janela] URL externa recusada:', rawUrl)
+}
+
 function createWindow(): void {
   const mainWindow = new BrowserWindow({
     width: 1280,
@@ -60,8 +67,16 @@ function createWindow(): void {
   })
 
   mainWindow.webContents.setWindowOpenHandler((details) => {
-    shell.openExternal(details.url)
+    abrirNoNavegador(details.url)
     return { action: 'deny' }
+  })
+
+  // Só o fragmento pode mudar dentro da janela; qualquer outro destino é cancelado
+  // e, se for http(s), vai para o navegador do sistema.
+  mainWindow.webContents.on('will-navigate', (event, url) => {
+    if (ehNavegacaoInterna(mainWindow.webContents.getURL(), url)) return
+    event.preventDefault()
+    abrirNoNavegador(url)
   })
 
   if (is.dev && process.env['ELECTRON_RENDERER_URL']) {

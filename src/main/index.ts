@@ -1,9 +1,11 @@
 import { app, shell, BrowserWindow } from 'electron'
 import { join, resolve } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
+import log from 'electron-log/main'
 import { initDatabase } from './database'
 import { backupDiario, criarBackup } from './database/backup'
 import { registerAllHandlers } from './ipc'
+import { definirRegistro, registro } from './registro'
 import { iniciarAutoUpdate } from './updater'
 
 // Sem `productName` no package.json, `npm run dev` abre a mesma pasta de dados do
@@ -14,6 +16,11 @@ const pastaDeDadosIsolada = process.env['VANBIJOUX_USER_DATA']
 if (pastaDeDadosIsolada) {
   app.setPath('userData', resolve(pastaDeDadosIsolada))
 }
+
+// O app empacotado não tem console: sem o arquivo, falha de backup, de migração ou
+// de handler só existiria na tela, e muitas vezes nem nela.
+log.transports.file.level = 'info'
+definirRegistro(log)
 
 function createWindow(): void {
   const mainWindow = new BrowserWindow({
@@ -61,7 +68,7 @@ async function iniciar(): Promise<void> {
 
   await initDatabase(async () => {
     const caminho = await criarBackup()
-    console.info(`[db] backup antes de migrar: ${caminho}`)
+    registro.info(`[db] backup antes de migrar: ${caminho}`)
   })
 
   registerAllHandlers()
@@ -69,7 +76,7 @@ async function iniciar(): Promise<void> {
 
   // Falha de backup não pode impedir a cliente de trabalhar — apenas registra.
   backupDiario().catch((err) => {
-    console.error('[backup] backup diário falhou:', err)
+    registro.error('[backup] backup diário falhou:', err)
   })
 
   iniciarAutoUpdate()

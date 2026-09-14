@@ -45,7 +45,14 @@ function createWindow(): void {
   }
 }
 
-app.whenReady().then(async () => {
+function focarJanelaExistente(): void {
+  const janela = BrowserWindow.getAllWindows()[0]
+  if (!janela) return
+  if (janela.isMinimized()) janela.restore()
+  janela.focus()
+}
+
+async function iniciar(): Promise<void> {
   electronApp.setAppUserModelId('com.vanbijouxsys')
 
   app.on('browser-window-created', (_, window) => {
@@ -70,10 +77,21 @@ app.whenReady().then(async () => {
   app.on('activate', function () {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
   })
-})
+}
 
-app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') {
-    app.quit()
-  }
-})
+// Uma segunda instância abriria outra conexão com o mesmo banco. Restaurar um
+// backup numa delas sobrescreve o arquivo e apaga o WAL com a outra ainda
+// escrevendo, e cada janela passaria a mostrar estoque sem ver as vendas da outra.
+if (!app.requestSingleInstanceLock()) {
+  app.quit()
+} else {
+  app.on('second-instance', focarJanelaExistente)
+
+  app.whenReady().then(iniciar)
+
+  app.on('window-all-closed', () => {
+    if (process.platform !== 'darwin') {
+      app.quit()
+    }
+  })
+}

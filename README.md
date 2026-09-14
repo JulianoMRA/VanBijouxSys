@@ -64,19 +64,20 @@ O `postinstall` recompila o `better-sqlite3` para o Electron automaticamente. O 
 
 ## Scripts
 
-| Comando               | O que faz                                               |
-| --------------------- | ------------------------------------------------------- |
-| `npm run dev`         | App em modo dev com HMR                                 |
-| `npm run build`       | Compila main, preload e renderer                        |
-| `npm run preview`     | Roda o build empacotado sem gerar instalador            |
-| `npm run build:win`   | Gera instalador `.exe` (NSIS) em `dist/`                |
-| `npm test`            | Roda a suíte Vitest uma vez                             |
-| `npm run test:watch`  | Vitest em modo watch                                    |
-| `npm run typecheck`   | Verifica tipos de main/preload, renderer e testes       |
-| `npm run lint`        | ESLint em `src/`                                        |
-| `npm run lint:fix`    | ESLint corrigindo o que der                             |
-| `npm run format`      | Prettier no projeto inteiro                             |
-| `npm run postinstall` | Recompila `better-sqlite3` para o Electron (automático) |
+| Comando                 | O que faz                                               |
+| ----------------------- | ------------------------------------------------------- |
+| `npm run dev`           | App em modo dev com HMR                                 |
+| `npm run build`         | Compila main, preload e renderer                        |
+| `npm run preview`       | Roda o build empacotado sem gerar instalador            |
+| `npm run build:win`     | Gera instalador `.exe` (NSIS) em `dist/`                |
+| `npm test`              | Roda a suíte Vitest uma vez                             |
+| `npm run test:coverage` | Suíte com cobertura e pisos por camada                  |
+| `npm run test:watch`    | Vitest em modo watch                                    |
+| `npm run typecheck`     | Verifica tipos de main/preload, renderer e testes       |
+| `npm run lint`          | ESLint em `src/`                                        |
+| `npm run lint:fix`      | ESLint corrigindo o que der                             |
+| `npm run format`        | Prettier no projeto inteiro                             |
+| `npm run postinstall`   | Recompila `better-sqlite3` para o Electron (automático) |
 
 ## Verificação
 

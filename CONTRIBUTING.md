@@ -79,10 +79,32 @@ Não há CI hospedada. Antes de abrir PR, na ordem:
 
 1. `npm run lint`
 2. `npm run typecheck`
-3. `npm test`
+3. `npm run test:coverage` (a suíte inteira, mais os pisos de cobertura)
 4. `npm run build`
 
 Mudança visível no renderer também passa por conferência visual antes do PR.
+
+### Cobertura
+
+`npm run test:coverage` mede todo o código de produção (`src/main`, `src/preload` e
+`src/renderer/src`) e falha abaixo dos pisos do `vitest.config.ts`. O relatório
+detalhado fica em `coverage/index.html`.
+
+| Camada                   | Piso (linhas) | Medido em 14/09/2026 |
+| ------------------------ | ------------- | -------------------- |
+| `src/main`               | 35%           | 38,8%                |
+| `src/renderer/src/utils` | 95%           | 96,8%                |
+| **global**               | **15%**       | **18,7%**            |
+
+Os pisos ficam no múltiplo de 5 logo abaixo do medido: seguram regressão sem
+quebrar no primeiro commit, e sobem quando a camada sobe. Preload e telas estão em
+0% e não têm piso próprio até existirem testes de tela.
+
+Dívida conhecida: os handlers de caixa, painel, feiras e backup estão em 0%. Os
+testes de integração de recebíveis, painel, exclusão e arquivamento montam o
+próprio SQL em vez de chamar o handler, e por isso não protegem o código que roda
+no app. O jeito certo é o de `insumos`, `sales` e `variations`, pelo
+`src/tests/helpers/ambiente-ipc.ts`.
 
 ### `.only` é barrado
 

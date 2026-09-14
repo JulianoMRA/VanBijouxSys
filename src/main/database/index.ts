@@ -3,6 +3,7 @@ import { drizzle } from 'drizzle-orm/better-sqlite3'
 import { app } from 'electron'
 import { existsSync } from 'fs'
 import { join } from 'path'
+import { registro } from '../registro'
 import * as schema from './schema'
 import { aplicarMigracoes, migracoesPendentes, versaoAtual } from './migrations'
 
@@ -36,7 +37,7 @@ export async function initDatabase(antesDeMigrar?: () => Promise<void>): Promise
     if (bancoJaExistia && antesDeMigrar) await antesDeMigrar()
 
     const aplicadas = aplicarMigracoes(sqlite)
-    console.info(`[db] migrações aplicadas: ${aplicadas.join(', ')}`)
+    registro.info(`[db] migrações aplicadas: ${aplicadas.join(', ')}`)
   }
 }
 

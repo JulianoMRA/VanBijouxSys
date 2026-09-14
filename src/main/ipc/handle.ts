@@ -1,5 +1,6 @@
 import { ipcMain } from 'electron'
-import { mensagemPara } from './mensagens'
+import { registro } from '../registro'
+import { ErroDeNegocio, mensagemPara } from './mensagens'
 
 export { ErroDeNegocio } from './mensagens'
 
@@ -16,7 +17,10 @@ export function handleIpc<Args extends unknown[], R>(
     try {
       return await fn(...(args as Args))
     } catch (err) {
-      console.error(`[${canal}]`, err)
+      // Recusa de negócio é esperada e já tem texto para a usuária; como `warn`,
+      // não se confunde no log com a falha que precisa de investigação.
+      if (err instanceof ErroDeNegocio) registro.warn(`[${canal}]`, err)
+      else registro.error(`[${canal}]`, err)
       throw new Error(mensagemPara(canal, err))
     }
   })

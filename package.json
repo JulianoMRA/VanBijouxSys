@@ -90,12 +90,21 @@
     "directories": {
       "output": "dist"
     },
+    "files": [
+      "out/**/*"
+    ],
     "win": {
       "target": "nsis",
       "icon": "resources/icon.ico"
     },
     "nsis": {
       "artifactName": "VanBijouxSys-Setup-${version}.${ext}"
+    },
+    "electronFuses": {
+      "runAsNode": false,
+      "enableNodeCliInspectArguments": false,
+      "enableNodeOptionsEnvironmentVariable": false,
+      "onlyLoadAppFromAsar": true
     }
   }
 }

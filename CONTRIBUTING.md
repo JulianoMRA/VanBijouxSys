@@ -17,6 +17,14 @@ npm install        # instala deps, recompila o better-sqlite3 e ativa o Husky
 npm run dev        # Electron + Vite com HMR no renderer
 ```
 
+O `npm run dev` usa a mesma pasta de dados do app instalado
+(`%APPDATA%/van-bijoux-sys`). Para testar sem tocar nesse banco, aponte para uma
+pasta isolada; banco, backups e log passam a viver nela:
+
+```bash
+VANBIJOUX_USER_DATA=/caminho/da/base-isolada npm run dev
+```
+
 ---
 
 ## Fluxo de trabalho

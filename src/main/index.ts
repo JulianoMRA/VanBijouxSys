@@ -1,10 +1,19 @@
 import { app, shell, BrowserWindow } from 'electron'
-import { join } from 'path'
+import { join, resolve } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import { initDatabase } from './database'
 import { backupDiario, criarBackup } from './database/backup'
 import { registerAllHandlers } from './ipc'
 import { iniciarAutoUpdate } from './updater'
+
+// Sem `productName` no package.json, `npm run dev` abre a mesma pasta de dados do
+// app instalado. VANBIJOUX_USER_DATA aponta para uma base isolada, para testar sem
+// tocar no banco de verdade. Precisa vir antes do lock de instância única, que é
+// por pasta de dados, e antes da primeira escrita de log, que mora dentro dela.
+const pastaDeDadosIsolada = process.env['VANBIJOUX_USER_DATA']
+if (pastaDeDadosIsolada) {
+  app.setPath('userData', resolve(pastaDeDadosIsolada))
+}
 
 function createWindow(): void {
   const mainWindow = new BrowserWindow({

@@ -1,5 +1,22 @@
 # Changelog
 
+## [1.12.0] - 2026-09-14
+
+### Corrigido
+
+- **Abrir o app duas vezes**: clicar no atalho com o app já aberto criava uma segunda janela ligada ao mesmo banco. Uma não via as vendas feitas na outra, e restaurar um backup numa delas podia estragar o que a outra estava gravando. Agora o segundo clique só traz para a frente a janela que já está aberta.
+- **App que não abria sem dizer nada**: se o banco de dados não pudesse ser aberto, nenhuma janela aparecia e o app continuava rodando escondido. Agora aparece uma mensagem com o erro e o lugar onde ele ficou registrado, e o app fecha.
+- **Erros ficam registrados**: falhas ao salvar, no backup diário ou ao atualizar a estrutura do banco passam a ser gravadas num arquivo de registro no computador. Nada muda na tela; é o que permite descobrir depois o que aconteceu.
+
+### Interno
+
+- Proteções do aplicativo: a janela não navega para fora do app e só abre links http e https no navegador; o executável deixa de aceitar ser usado para rodar outros scripts (fuses do Electron); a tela deixa de ter acesso às variáveis de ambiente do Windows e a canais internos genéricos.
+- O instalador passa a levar só o app e as dependências dele. Até a 1.11.0 ele incluía também arquivos de desenvolvimento do repositório.
+- `SECURITY.md` com o modelo de ameaças.
+- A suíte de testes vai de 277 para 299.
+
+---
+
 ## [1.11.0] - 2026-09-13
 
 ### Corrigido

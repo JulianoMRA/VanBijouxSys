@@ -1,5 +1,4 @@
 import { contextBridge, ipcRenderer } from 'electron'
-import { electronAPI } from '@electron-toolkit/preload'
 import type {
   CreateProductInput,
   UpdateProductInput,
@@ -118,14 +117,11 @@ const api = {
 
 if (process.contextIsolated) {
   try {
-    contextBridge.exposeInMainWorld('electron', electronAPI)
     contextBridge.exposeInMainWorld('api', api)
   } catch (error) {
     console.error(error)
   }
 } else {
-  // @ts-expect-error — window.electron não está no tipo global; acesso apenas fora do contextBridge (dev/test)
-  window.electron = electronAPI
   // @ts-expect-error — window.api não está no tipo global; acesso apenas fora do contextBridge (dev/test)
   window.api = api
 }

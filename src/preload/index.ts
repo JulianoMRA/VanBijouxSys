@@ -1,4 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron'
+import { CANAIS_IPC } from '../shared/ipc/channels'
 import type {
   CreateProductInput,
   UpdateProductInput,
@@ -37,81 +38,86 @@ async function invoke<T>(canal: string, ...args: unknown[]): Promise<T> {
 
 const api = {
   categories: {
-    getAll: () => invoke('categories:getAll')
+    getAll: () => invoke(CANAIS_IPC.categories.getAll)
   },
   products: {
-    getAll: () => invoke('products:getAll'),
-    create: (data: CreateProductInput) => invoke('products:create', data),
-    update: (data: UpdateProductInput) => invoke('products:update', data),
-    delete: (id: number) => invoke('products:delete', id),
-    setArchived: (id: number, archived: boolean) => invoke('products:setArchived', id, archived)
+    getAll: () => invoke(CANAIS_IPC.products.getAll),
+    create: (data: CreateProductInput) => invoke(CANAIS_IPC.products.create, data),
+    update: (data: UpdateProductInput) => invoke(CANAIS_IPC.products.update, data),
+    delete: (id: number) => invoke(CANAIS_IPC.products.delete, id),
+    setArchived: (id: number, archived: boolean) =>
+      invoke(CANAIS_IPC.products.setArchived, id, archived)
   },
   variations: {
-    create: (data: CreateVariationInput) => invoke('variations:create', data),
-    update: (data: UpdateVariationInput) => invoke('variations:update', data),
+    create: (data: CreateVariationInput) => invoke(CANAIS_IPC.variations.create, data),
+    update: (data: UpdateVariationInput) => invoke(CANAIS_IPC.variations.update, data),
     delete: (id: number, opcoes?: DeleteVariationOptions) =>
-      invoke('variations:delete', id, opcoes),
-    addStock: (id: number, quantity: number) => invoke('variations:addStock', id, quantity),
+      invoke(CANAIS_IPC.variations.delete, id, opcoes),
+    addStock: (id: number, quantity: number) =>
+      invoke(CANAIS_IPC.variations.addStock, id, quantity),
     setSalePrice: (id: number, salePrice: number) =>
-      invoke('variations:setSalePrice', id, salePrice),
-    setArchived: (id: number, archived: boolean) => invoke('variations:setArchived', id, archived)
+      invoke(CANAIS_IPC.variations.setSalePrice, id, salePrice),
+    setArchived: (id: number, archived: boolean) =>
+      invoke(CANAIS_IPC.variations.setArchived, id, archived)
   },
   fairs: {
-    getAll: () => invoke('fairs:getAll'),
-    create: (data: CreateFairInput) => invoke('fairs:create', data),
-    update: (data: UpdateFairInput) => invoke('fairs:update', data),
-    delete: (id: number) => invoke('fairs:delete', id)
+    getAll: () => invoke(CANAIS_IPC.fairs.getAll),
+    create: (data: CreateFairInput) => invoke(CANAIS_IPC.fairs.create, data),
+    update: (data: UpdateFairInput) => invoke(CANAIS_IPC.fairs.update, data),
+    delete: (id: number) => invoke(CANAIS_IPC.fairs.delete, id)
   },
   sales: {
-    getAll: () => invoke('sales:getAll'),
-    create: (data: CreateSaleInput) => invoke('sales:create', data),
-    update: (data: UpdateSaleInput) => invoke('sales:update', data),
-    delete: (id: number) => invoke('sales:delete', id),
-    markAsReceived: (data: MarkSaleReceivedInput) => invoke('sales:markAsReceived', data),
-    unmarkAsReceived: (id: number) => invoke('sales:unmarkAsReceived', id)
+    getAll: () => invoke(CANAIS_IPC.sales.getAll),
+    create: (data: CreateSaleInput) => invoke(CANAIS_IPC.sales.create, data),
+    update: (data: UpdateSaleInput) => invoke(CANAIS_IPC.sales.update, data),
+    delete: (id: number) => invoke(CANAIS_IPC.sales.delete, id),
+    markAsReceived: (data: MarkSaleReceivedInput) => invoke(CANAIS_IPC.sales.markAsReceived, data),
+    unmarkAsReceived: (id: number) => invoke(CANAIS_IPC.sales.unmarkAsReceived, id)
   },
   dashboard: {
     getStats: (params: { period: string; customFrom?: string; customTo?: string }) =>
-      invoke('dashboard:getStats', params)
+      invoke(CANAIS_IPC.dashboard.getStats, params)
   },
   insumos: {
-    getAll: () => invoke('insumos:getAll'),
-    create: (data: CreateInsumoInput) => invoke('insumos:create', data),
-    update: (data: UpdateInsumoInput) => invoke('insumos:update', data),
-    addStock: (id: number, quantity: number) => invoke('insumos:addStock', id, quantity),
-    delete: (id: number) => invoke('insumos:delete', id),
-    setArchived: (id: number, archived: boolean) => invoke('insumos:setArchived', id, archived),
+    getAll: () => invoke(CANAIS_IPC.insumos.getAll),
+    create: (data: CreateInsumoInput) => invoke(CANAIS_IPC.insumos.create, data),
+    update: (data: UpdateInsumoInput) => invoke(CANAIS_IPC.insumos.update, data),
+    addStock: (id: number, quantity: number) => invoke(CANAIS_IPC.insumos.addStock, id, quantity),
+    delete: (id: number) => invoke(CANAIS_IPC.insumos.delete, id),
+    setArchived: (id: number, archived: boolean) =>
+      invoke(CANAIS_IPC.insumos.setArchived, id, archived),
     exportCsv: (csvContent: string, defaultFileName: string) =>
-      invoke('insumos:exportCsv', csvContent, defaultFileName)
+      invoke(CANAIS_IPC.insumos.exportCsv, csvContent, defaultFileName)
   },
   expenseCategories: {
-    getAll: () => invoke('expense-categories:getAll'),
-    create: (data: CreateExpenseCategoryInput) => invoke('expense-categories:create', data),
-    update: (data: UpdateExpenseCategoryInput) => invoke('expense-categories:update', data),
-    delete: (id: number) => invoke('expense-categories:delete', id)
+    getAll: () => invoke(CANAIS_IPC.expenseCategories.getAll),
+    create: (data: CreateExpenseCategoryInput) => invoke(CANAIS_IPC.expenseCategories.create, data),
+    update: (data: UpdateExpenseCategoryInput) => invoke(CANAIS_IPC.expenseCategories.update, data),
+    delete: (id: number) => invoke(CANAIS_IPC.expenseCategories.delete, id)
   },
   cashExpenses: {
     getAll: (filters?: { startDate?: string; endDate?: string; categoryId?: number }) =>
-      invoke('cash-expenses:getAll', filters),
-    create: (data: CreateCashExpenseInput) => invoke('cash-expenses:create', data),
-    update: (data: UpdateCashExpenseInput) => invoke('cash-expenses:update', data),
-    delete: (id: number) => invoke('cash-expenses:delete', id),
+      invoke(CANAIS_IPC.cashExpenses.getAll, filters),
+    create: (data: CreateCashExpenseInput) => invoke(CANAIS_IPC.cashExpenses.create, data),
+    update: (data: UpdateCashExpenseInput) => invoke(CANAIS_IPC.cashExpenses.update, data),
+    delete: (id: number) => invoke(CANAIS_IPC.cashExpenses.delete, id),
     getStats: (filters?: { startDate?: string; endDate?: string }) =>
-      invoke('cash-expenses:getStats', filters)
+      invoke(CANAIS_IPC.cashExpenses.getStats, filters)
   },
   cashSettings: {
-    get: () => invoke('cash-settings:get'),
-    setOpeningBalance: (balance: number) => invoke('cash-settings:setOpeningBalance', balance)
+    get: () => invoke(CANAIS_IPC.cashSettings.get),
+    setOpeningBalance: (balance: number) =>
+      invoke(CANAIS_IPC.cashSettings.setOpeningBalance, balance)
   },
   backup: {
-    exportar: () => invoke('backup:exportar'),
-    restaurar: () => invoke('backup:restaurar'),
-    info: () => invoke('backup:info'),
-    abrirPasta: () => invoke('backup:abrirPasta')
+    exportar: () => invoke(CANAIS_IPC.backup.exportar),
+    restaurar: () => invoke(CANAIS_IPC.backup.restaurar),
+    info: () => invoke(CANAIS_IPC.backup.info),
+    abrirPasta: () => invoke(CANAIS_IPC.backup.abrirPasta)
   },
   app: {
-    versao: () => invoke('app:versao'),
-    verificarAtualizacoes: () => invoke('app:verificarAtualizacoes')
+    versao: () => invoke(CANAIS_IPC.app.versao),
+    verificarAtualizacoes: () => invoke(CANAIS_IPC.app.verificarAtualizacoes)
   }
 }
 

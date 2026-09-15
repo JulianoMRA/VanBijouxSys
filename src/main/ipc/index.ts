@@ -1,17 +1,29 @@
+import type { ConexaoBanco } from '../database/conexao'
+import type { RegistroDeCanais } from './canal'
 import { registerProductHandlers } from './products'
 import { registerFairHandlers } from './fairs'
 import { registerSaleHandlers } from './sales'
 import { registerDashboardHandlers } from './dashboard'
-import { registerInsumoHandlers } from './insumos'
+import { registerInsumoHandlers, type DialogoDeArquivo } from './insumos'
 import { registerCashHandlers } from './cash'
 import { registerBackupHandlers } from './backup'
 
-export function registerAllHandlers(): void {
+export interface DependenciasDosCanais {
+  ipc: RegistroDeCanais
+  banco: ConexaoBanco
+  dialogoDeArquivo: DialogoDeArquivo
+}
+
+/**
+ * Os domínios migrados para a fronteira validada recebem ipc e banco por
+ * parâmetro; os demais ainda usam o `ipcMain` e o banco globais.
+ */
+export function registerAllHandlers({ ipc, banco, dialogoDeArquivo }: DependenciasDosCanais): void {
   registerProductHandlers()
   registerFairHandlers()
   registerSaleHandlers()
   registerDashboardHandlers()
-  registerInsumoHandlers()
+  registerInsumoHandlers(ipc, banco, dialogoDeArquivo)
   registerCashHandlers()
   registerBackupHandlers()
 }

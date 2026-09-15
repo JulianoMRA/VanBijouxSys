@@ -1,8 +1,8 @@
-import { app, shell, BrowserWindow, dialog } from 'electron'
+import { app, shell, BrowserWindow, dialog, ipcMain } from 'electron'
 import { join, resolve } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import log from 'electron-log/main'
-import { closeDatabase, initDatabase } from './database'
+import { closeDatabase, getDb, getSqlite, initDatabase } from './database'
 import { backupDiario, criarBackup } from './database/backup'
 import { criarEncerramento } from './encerramento'
 import { registerAllHandlers } from './ipc'
@@ -105,7 +105,16 @@ async function iniciar(): Promise<void> {
     registro.info(`[db] backup antes de migrar: ${caminho}`)
   })
 
-  registerAllHandlers()
+  registerAllHandlers({
+    ipc: ipcMain,
+    banco: { db: getDb(), sqlite: getSqlite() },
+    dialogoDeArquivo: {
+      async escolherOndeSalvar(nomePadrao, filtros) {
+        const escolha = await dialog.showSaveDialog({ defaultPath: nomePadrao, filters: filtros })
+        return escolha.canceled || !escolha.filePath ? null : escolha.filePath
+      }
+    }
+  })
   createWindow()
 
   // Falha de backup não pode impedir a cliente de trabalhar — apenas registra.

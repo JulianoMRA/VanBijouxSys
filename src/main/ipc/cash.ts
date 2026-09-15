@@ -84,7 +84,9 @@ export function registerCashHandlers(): void {
         params.push(filters.categoryId)
       }
 
-      query += ' ORDER BY e.expense_date DESC, e.created_at DESC'
+      // Desempate pelo id, que segue a ordem de cadastro. created_at não serve: despesas
+      // criadas até a v1.12.1 guardam o texto 'CURRENT_TIMESTAMP' no lugar da data.
+      query += ' ORDER BY e.expense_date DESC, e.id DESC'
 
       return sqlite.prepare(query).all(...params)
     }

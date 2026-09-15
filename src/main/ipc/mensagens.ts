@@ -21,6 +21,13 @@ const MENSAGENS_DUPLICADO: Record<string, string> = {
 export const MENSAGEM_GENERICA = 'Não foi possível concluir a operação. Tente novamente.'
 
 /**
+ * O renderer mandou dados fora do formato que o canal aceita. É defeito do app, não
+ * da usuária: o texto não pede para ela corrigir nada, e o detalhe vai para o log.
+ */
+export const MENSAGEM_PAYLOAD_INVALIDO =
+  'Não foi possível concluir a operação: os dados enviados vieram em formato inválido.'
+
+/**
  * Traduz a falha para uma frase que a cliente entenda. Sem isso, o texto que
  * chega à tela é "SqliteError: FOREIGN KEY constraint failed".
  */

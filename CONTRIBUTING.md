@@ -81,6 +81,7 @@ Não há CI hospedada. Antes de abrir PR, na ordem:
 2. `npm run typecheck`
 3. `npm run test:coverage` (a suíte inteira, mais os pisos de cobertura)
 4. `npm run build`
+5. `npm audit --omit=dev --audit-level=high` (dependências de produção)
 
 Mudança visível no renderer também passa por conferência visual antes do PR.
 
@@ -105,6 +106,20 @@ testes de integração de recebíveis, painel, exclusão e arquivamento montam o
 próprio SQL em vez de chamar o handler, e por isso não protegem o código que roda
 no app. O jeito certo é o de `insumos`, `sales` e `variations`, pelo
 `src/tests/helpers/ambiente-ipc.ts`.
+
+### Dependências
+
+- **Nunca rode `npm audit fix --omit=dev`.** O `--omit=dev` vale também para a
+  instalação: o dry-run desse comando mostrou que ele removeria 691 pacotes de
+  desenvolvimento do `node_modules`. Corrija com `npm install <pacote>@<versão>` ou
+  `npm update <pacote>`, e confira no lockfile quais pacotes mudaram.
+- **O audit de produção não mostra o Electron.** Ele é dependência de
+  desenvolvimento, mas é o runtime do instalador. Rode também o `npm audit` completo
+  e mantenha o Electron no patch mais recente da major.
+- **Depois de mudar o Electron, rode `npm run postinstall`.** O `npm install` com
+  argumento não executa o `postinstall` da raiz, e o `better-sqlite3` precisa ser
+  recompilado para o runtime novo.
+- Advisory aceito, com o motivo, fica registrado no [SECURITY.md](SECURITY.md).
 
 ### `.only` é barrado
 

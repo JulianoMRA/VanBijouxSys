@@ -99,9 +99,38 @@ boot, com stack. Fica só na máquina e não é enviado a lugar nenhum.
 Registradas para não ficarem silenciosas:
 
 - **Canais IPC sem validação de schema** do payload recebido.
-- **`npm audit --omit=dev`**: 6 alertas (3 high, 3 moderate) em 2026-09-14, em
-  `drizzle-orm`, `lodash`, `js-yaml` e `@remix-run/router`, ainda não triados
-  quanto a caminho explorável neste app.
+
+## Dependências
+
+O pipeline roda `npm audit --omit=dev --audit-level=high`. Ele reporta a árvore de
+produção, mas **não mostra o Electron**, que é dependência de desenvolvimento e ao
+mesmo tempo o runtime que vai inteiro no instalador (Chromium, Node, `contextBridge`).
+Alerta do pacote `electron` chega à máquina da usuária: conferir com `npm audit`
+completo e manter o Electron no patch mais recente da major em uso.
+
+Em 2026-09-14 o Electron foi de 41.0.4 para 41.10.7 (19 advisories da linha 41, três
+high), e o audit de produção foi de 6 alertas para 2.
+
+### Advisories aceitos
+
+Os dois do `react-router` 6.30.6, corrigidos só na 7.18. Revisar a cada release; a
+migração para a 7 fica para depois dos testes de tela.
+
+- **GHSA-wrjc-x8rr-h8h6** (moderate), open redirect por barra invertida em `<Link>` e
+  `useNavigate`. Exige um caminho de navegação vindo de fora; as rotas do app são
+  constantes no código, e a janela recusa navegar para outro documento.
+- **GHSA-337j-9hxr-rhxg** (moderate), injeção de construtor em `deserializeErrors()`
+  na hidratação SSR. O app não tem SSR: o `HashRouter` roda só no cliente.
+
+Se uma dessas premissas mudar, o advisory volta a valer.
+
+### Só na cadeia de build
+
+O `npm audit` completo ainda lista alertas em ferramentas que rodam só no build e não
+vão para o instalador, a maioria na cadeia do `electron-builder` 26.8.1 (`tar`,
+`@xmldom/xmldom`, `app-builder-lib`) e do Vite. Atualizar o `electron-builder` mexe
+no instalador e no updater, e fica para um PR próprio, com teste de instalação e de
+auto-update.
 
 ## Fora de escopo
 

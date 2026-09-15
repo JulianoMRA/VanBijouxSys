@@ -14,17 +14,17 @@ export default defineConfig({
       include: ['src/main/**', 'src/preload/**', 'src/renderer/src/**'],
       reporter: ['text-summary', 'json-summary', 'html'],
       // Catraca: cada piso fica no múltiplo de 5 logo abaixo do medido em
-      // 14/09/2026 (linhas: main 38,8 / utils 96,8 / global 18,7). Segura
+      // 14/09/2026 (linhas: main 66,9 / utils 96,8 / global 26,7). Segura
       // regressão sem quebrar no primeiro commit e sobe quando a camada sobe.
       // Preload e telas (0%) não têm piso próprio até existirem testes de tela;
       // entram só no global, onde o número baixo fica visível.
       thresholds: {
-        'src/main/**': { lines: 35, statements: 35, functions: 35, branches: 30 },
+        'src/main/**': { lines: 65, statements: 65, functions: 55, branches: 60 },
         'src/renderer/src/utils/**': { lines: 95, statements: 95, functions: 95, branches: 90 },
-        lines: 15,
-        statements: 15,
-        functions: 15,
-        branches: 10
+        lines: 25,
+        statements: 25,
+        functions: 20,
+        branches: 15
       }
     }
   }

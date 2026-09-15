@@ -93,19 +93,23 @@ detalhado fica em `coverage/index.html`.
 
 | Camada                   | Piso (linhas) | Medido em 14/09/2026 |
 | ------------------------ | ------------- | -------------------- |
-| `src/main`               | 35%           | 38,8%                |
+| `src/main`               | 65%           | 66,9%                |
 | `src/renderer/src/utils` | 95%           | 96,8%                |
-| **global**               | **15%**       | **18,7%**            |
+| **global**               | **25%**       | **26,7%**            |
 
 Os pisos ficam no múltiplo de 5 logo abaixo do medido: seguram regressão sem
 quebrar no primeiro commit, e sobem quando a camada sobe. Preload e telas estão em
 0% e não têm piso próprio até existirem testes de tela.
 
-Dívida conhecida: os handlers de caixa, painel, feiras e backup estão em 0%. Os
-testes de integração de recebíveis, painel, exclusão e arquivamento montam o
-próprio SQL em vez de chamar o handler, e por isso não protegem o código que roda
-no app. O jeito certo é o de `insumos`, `sales` e `variations`, pelo
-`src/tests/helpers/ambiente-ipc.ts`.
+Os testes de integração chamam os handlers reais pelo
+`src/tests/helpers/ambiente-ipc.ts`, sobre o sql.js; todos os domínios passam por
+ele, menos o backup. Teste que monta o próprio SQL não protege o código que roda no
+app: com cinco mutações nos handlers, os testes antigos de recebíveis, painel,
+exclusão e arquivamento continuavam todos verdes.
+
+Dívida conhecida: os handlers de backup (abrem diálogo nativo e reiniciam o app) e o
+que só roda com o Electron de verdade (`src/main/index.ts`, `updater.ts`,
+`database/index.ts`, `database/backup.ts`) seguem sem teste automatizado.
 
 ### Dependências
 

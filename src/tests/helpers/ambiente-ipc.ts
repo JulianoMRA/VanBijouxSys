@@ -35,7 +35,10 @@ export interface AmbienteIpc {
   chamar: <T = unknown>(canal: string, ...args: unknown[]) => Promise<T>
 }
 
-/** Banco novo com as migrações reais e os handlers de estoque registrados. */
+/**
+ * Banco novo com as migrações reais e os handlers registrados. Ficam de fora só
+ * os de backup, que abrem diálogo nativo e reiniciam o app.
+ */
 export async function prepararAmbienteIpc(): Promise<AmbienteIpc> {
   const banco = await createEmptyDb()
   aplicarMigracoes(asMigrationTarget(banco) as never)
@@ -45,15 +48,27 @@ export async function prepararAmbienteIpc(): Promise<AmbienteIpc> {
   conexao.db = drizzle(sqlite as never, { schema })
 
   handlers.clear()
-  const [{ registerProductHandlers }, { registerSaleHandlers }, { registerInsumoHandlers }] =
-    await Promise.all([
-      import('../../main/ipc/products'),
-      import('../../main/ipc/sales'),
-      import('../../main/ipc/insumos')
-    ])
+  const [
+    { registerProductHandlers },
+    { registerSaleHandlers },
+    { registerInsumoHandlers },
+    { registerFairHandlers },
+    { registerDashboardHandlers },
+    { registerCashHandlers }
+  ] = await Promise.all([
+    import('../../main/ipc/products'),
+    import('../../main/ipc/sales'),
+    import('../../main/ipc/insumos'),
+    import('../../main/ipc/fairs'),
+    import('../../main/ipc/dashboard'),
+    import('../../main/ipc/cash')
+  ])
   registerProductHandlers()
   registerSaleHandlers()
   registerInsumoHandlers()
+  registerFairHandlers()
+  registerDashboardHandlers()
+  registerCashHandlers()
 
   async function chamar<T = unknown>(canal: string, ...args: unknown[]): Promise<T> {
     const handler = handlers.get(canal)

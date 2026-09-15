@@ -1,281 +1,231 @@
-import { describe, it, expect, beforeEach } from 'vitest'
-import { type Database } from 'sql.js'
-import { createTestDb, queryOne, queryAll } from '../helpers/testDb'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { prepararAmbienteIpc, type AmbienteIpc } from '../helpers/ambiente-ipc'
+import { queryOne } from '../helpers/testDb'
+import { criarVariacao, criarVenda } from '../helpers/estoque'
+import type { DashboardStats } from '../../main/ipc/dashboard'
 
-let db: Database
+vi.mock('electron', async () => (await import('../helpers/ambiente-ipc')).electronFalso)
+vi.mock('../../main/database', async () => (await import('../helpers/ambiente-ipc')).bancoFalso)
+
+let ambiente: AmbienteIpc
+let variacao: number
 
 beforeEach(async () => {
-  db = await createTestDb()
-  db.run(`INSERT INTO products (name, category_id) VALUES ('Colar Rosa', 1)`)
-  db.run(
-    `INSERT INTO product_variations (product_id, identifier, cost_price, sale_price, stock_quantity)
-     VALUES (1, 'CR-M', 5, 30, 10)`
-  )
+  ambiente = await prepararAmbienteIpc()
+  variacao = await criarVariacao(ambiente, {
+    receita: [],
+    costPrice: 5,
+    salePrice: 30,
+    stockQuantity: 10,
+    motivoDoEstoqueInicial: 'contagem'
+  })
 })
 
-function insertSale(opts: {
-  soldAt: string
-  paymentMethod?: string
-  feePercentage?: number
-  feeAmount?: number
-  netAmount?: number
-  receivedAt?: string | null
-  items: Array<{ variationId: number; qty: number; unitPrice: number; unitCost: number }>
-}): number {
-  const totalAmount = opts.items.reduce((s, i) => s + i.qty * i.unitPrice, 0)
-  const totalCost = opts.items.reduce((s, i) => s + i.qty * i.unitCost, 0)
-  const paymentMethod = opts.paymentMethod ?? 'dinheiro'
-  const feePercentage = opts.feePercentage ?? 0
-  const feeAmount = opts.feeAmount ?? 0
-  const netAmount = opts.netAmount ?? totalAmount - feeAmount
-  const receivedAt = opts.receivedAt ?? null
+const item = (
+  quantity: number,
+  unitPrice: number,
+  unitCost = 5
+): {
+  variationId: number
+  quantity: number
+  unitPrice: number
+  unitCost: number
+} => ({ variationId: variacao, quantity, unitPrice, unitCost })
 
-  db.run(
-    `INSERT INTO sales
-      (channel, total_amount, total_cost, payment_method, fee_percentage, fee_amount, net_amount, sold_at, received_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [
-      'WhatsApp',
-      totalAmount,
-      totalCost,
-      paymentMethod,
-      feePercentage,
-      feeAmount,
-      netAmount,
-      opts.soldAt,
-      receivedAt
-    ]
-  )
-  const saleId = queryOne<{ id: number }>(db, 'SELECT last_insert_rowid() AS id')!.id
-  for (const i of opts.items) {
-    db.run(
-      `INSERT INTO sale_items (sale_id, variation_id, quantity, unit_price, unit_cost)
-       VALUES (?, ?, ?, ?, ?)`,
-      [saleId, i.variationId, i.qty, i.unitPrice, i.unitCost]
-    )
-  }
-  return saleId
+function painelDeMaio(): Promise<DashboardStats> {
+  return ambiente.chamar<DashboardStats>('dashboard:getStats', {
+    period: 'custom',
+    customFrom: '2026-05-01',
+    customTo: '2026-05-31'
+  })
+}
+
+function painelCompleto(): Promise<DashboardStats> {
+  return ambiente.chamar<DashboardStats>('dashboard:getStats', { period: 'all' })
 }
 
 describe("'A receber' — competência vs caixa", () => {
-  it('venda A receber pendente NÃO entra em cashSummary.totalIncome', () => {
-    insertSale({
+  it('should_keep_a_pending_receivable_out_of_cash_income', async () => {
+    await criarVenda(ambiente, {
       soldAt: '2026-05-10',
       paymentMethod: 'areceber',
-      items: [{ variationId: 1, qty: 1, unitPrice: 30, unitCost: 5 }]
+      items: [item(1, 30)]
     })
 
-    const result = queryOne<{ total: number }>(
-      db,
-      `SELECT COALESCE(SUM(net_amount), 0) AS total
-       FROM sales
-       WHERE payment_method != 'areceber'
-         AND date(COALESCE(received_at, sold_at)) >= ? AND date(COALESCE(received_at, sold_at)) <= ?`,
-      ['2026-05-01', '2026-05-31']
-    )
-    expect(result!.total).toBe(0)
+    const painel = await painelDeMaio()
+
+    expect(painel.cashSummary.totalIncome).toBe(0)
   })
 
-  it('venda A receber pendente CONTA em overview.totalRevenue/totalProfit', () => {
-    insertSale({
+  it('should_count_a_pending_receivable_in_revenue_and_profit', async () => {
+    await criarVenda(ambiente, {
       soldAt: '2026-05-10',
       paymentMethod: 'areceber',
-      items: [{ variationId: 1, qty: 1, unitPrice: 30, unitCost: 5 }]
+      items: [item(1, 30)]
     })
 
-    const result = queryOne<{ totalRevenue: number; totalProfit: number; totalSales: number }>(
-      db,
-      `SELECT
-         COALESCE(SUM(s.total_amount), 0)              AS totalRevenue,
-         COALESCE(SUM(s.net_amount - s.total_cost), 0) AS totalProfit,
-         COUNT(s.id)                                    AS totalSales
-       FROM sales s
-       WHERE date(s.sold_at) >= ? AND date(s.sold_at) <= ?`,
-      ['2026-05-01', '2026-05-31']
-    )
-    expect(result!.totalRevenue).toBe(30)
-    expect(result!.totalProfit).toBe(25)
-    expect(result!.totalSales).toBe(1)
+    const { overview } = await painelDeMaio()
+
+    expect(overview.totalRevenue).toBe(30)
+    expect(overview.totalProfit).toBe(25)
+    expect(overview.totalSales).toBe(1)
   })
 
-  it('overview.totalReceivable soma vendas pendentes do período', () => {
-    insertSale({
+  it('should_sum_pending_receivables_of_the_period', async () => {
+    await criarVenda(ambiente, {
       soldAt: '2026-05-10',
       paymentMethod: 'areceber',
-      items: [{ variationId: 1, qty: 1, unitPrice: 30, unitCost: 5 }]
+      items: [item(1, 30)]
     })
-    insertSale({
+    await criarVenda(ambiente, {
       soldAt: '2026-05-11',
       paymentMethod: 'areceber',
-      items: [{ variationId: 1, qty: 2, unitPrice: 30, unitCost: 5 }]
+      items: [item(2, 30)]
     })
-    insertSale({
+    await criarVenda(ambiente, {
       soldAt: '2026-05-12',
       paymentMethod: 'dinheiro',
-      items: [{ variationId: 1, qty: 1, unitPrice: 30, unitCost: 5 }]
+      items: [item(1, 30)]
     })
 
-    const result = queryOne<{ total: number }>(
-      db,
-      `SELECT COALESCE(SUM(net_amount), 0) AS total
-       FROM sales
-       WHERE payment_method = 'areceber'
-         AND date(sold_at) >= ? AND date(sold_at) <= ?`,
-      ['2026-05-01', '2026-05-31']
-    )
-    expect(result!.total).toBe(90) // 30 + 60
+    const { overview } = await painelDeMaio()
+
+    expect(overview.totalReceivable).toBe(90)
   })
 
-  it('totalReceivable IGNORA vendas já recebidas (areceber convertida para outro método)', () => {
-    insertSale({
+  it('should_leave_a_receivable_out_of_the_total_once_it_is_marked_as_received', async () => {
+    const recebida = await criarVenda(ambiente, {
       soldAt: '2026-05-10',
-      paymentMethod: 'pix',
-      receivedAt: '2026-05-20',
-      items: [{ variationId: 1, qty: 1, unitPrice: 30, unitCost: 5 }]
+      paymentMethod: 'areceber',
+      items: [item(1, 30)]
     })
-    insertSale({
+    await criarVenda(ambiente, {
       soldAt: '2026-05-11',
       paymentMethod: 'areceber',
-      items: [{ variationId: 1, qty: 1, unitPrice: 30, unitCost: 5 }]
+      items: [item(1, 30)]
+    })
+    await ambiente.chamar('sales:markAsReceived', {
+      id: recebida,
+      paymentMethod: 'pix',
+      feePercentage: 0,
+      feeAmount: 0,
+      netAmount: 30,
+      receivedAt: '2026-05-20'
     })
 
-    const result = queryOne<{ total: number }>(
-      db,
-      `SELECT COALESCE(SUM(net_amount), 0) AS total
-       FROM sales
-       WHERE payment_method = 'areceber'
-         AND date(sold_at) >= ? AND date(sold_at) <= ?`,
-      ['2026-05-01', '2026-05-31']
-    )
-    expect(result!.total).toBe(30) // só a pendente
+    const { overview } = await painelDeMaio()
+
+    expect(overview.totalReceivable).toBe(30)
   })
 })
 
 describe("'A receber' — markAsReceived e unmarkAsReceived", () => {
-  it('markAsReceived: atualiza payment_method, fee, net_amount e received_at', () => {
-    const saleId = insertSale({
+  function registro(id: number): {
+    payment_method: string
+    fee_percentage: number
+    fee_amount: number
+    net_amount: number
+    received_at: string | null
+  } {
+    return queryOne(
+      ambiente.banco,
+      'SELECT payment_method, fee_percentage, fee_amount, net_amount, received_at FROM sales WHERE id = ?',
+      [id]
+    )!
+  }
+
+  it('should_store_method_fee_net_and_received_date_when_marking_as_received', async () => {
+    const venda = await criarVenda(ambiente, {
       soldAt: '2026-05-10',
       paymentMethod: 'areceber',
-      items: [{ variationId: 1, qty: 1, unitPrice: 100, unitCost: 20 }]
+      items: [item(1, 100, 20)]
     })
 
-    db.run(
-      `UPDATE sales
-         SET payment_method = ?, fee_percentage = ?, fee_amount = ?, net_amount = ?, received_at = ?
-       WHERE id = ?`,
-      ['pix', 0.99, 0.99, 99.01, '2026-05-20', saleId]
-    )
-
-    const sale = queryOne<{
-      payment_method: string
-      fee_amount: number
-      net_amount: number
-      received_at: string
-    }>(db, 'SELECT payment_method, fee_amount, net_amount, received_at FROM sales WHERE id = ?', [
-      saleId
-    ])
-    expect(sale!.payment_method).toBe('pix')
-    expect(sale!.fee_amount).toBeCloseTo(0.99, 2)
-    expect(sale!.net_amount).toBeCloseTo(99.01, 2)
-    expect(sale!.received_at).toBe('2026-05-20')
-  })
-
-  it('unmarkAsReceived: restaura para areceber, fee=0, net=total, received_at=NULL', () => {
-    const saleId = insertSale({
-      soldAt: '2026-05-10',
+    await ambiente.chamar('sales:markAsReceived', {
+      id: venda,
       paymentMethod: 'pix',
       feePercentage: 0.99,
       feeAmount: 0.99,
       netAmount: 99.01,
-      receivedAt: '2026-05-20',
-      items: [{ variationId: 1, qty: 1, unitPrice: 100, unitCost: 20 }]
+      receivedAt: '2026-05-20'
     })
 
-    db.run(
-      `UPDATE sales
-         SET payment_method = 'areceber', fee_percentage = 0, fee_amount = 0, net_amount = total_amount, received_at = NULL
-       WHERE id = ?`,
-      [saleId]
-    )
+    const salvo = registro(venda)
+    expect(salvo.payment_method).toBe('pix')
+    expect(salvo.fee_amount).toBeCloseTo(0.99, 2)
+    expect(salvo.net_amount).toBeCloseTo(99.01, 2)
+    expect(salvo.received_at).toBe('2026-05-20')
+  })
 
-    const sale = queryOne<{
-      payment_method: string
-      fee_amount: number
-      net_amount: number
-      received_at: string | null
-    }>(db, 'SELECT payment_method, fee_amount, net_amount, received_at FROM sales WHERE id = ?', [
-      saleId
-    ])
-    expect(sale!.payment_method).toBe('areceber')
-    expect(sale!.fee_amount).toBe(0)
-    expect(sale!.net_amount).toBe(100)
-    expect(sale!.received_at).toBeNull()
+  it('should_restore_receivable_with_no_fee_and_net_equal_to_total_when_unmarking', async () => {
+    const venda = await criarVenda(ambiente, {
+      soldAt: '2026-05-10',
+      paymentMethod: 'areceber',
+      items: [item(1, 100, 20)]
+    })
+    await ambiente.chamar('sales:markAsReceived', {
+      id: venda,
+      paymentMethod: 'pix',
+      feePercentage: 0.99,
+      feeAmount: 0.99,
+      netAmount: 99.01,
+      receivedAt: '2026-05-20'
+    })
+
+    await ambiente.chamar('sales:unmarkAsReceived', venda)
+
+    expect(registro(venda)).toEqual({
+      payment_method: 'areceber',
+      fee_percentage: 0,
+      fee_amount: 0,
+      net_amount: 100,
+      received_at: null
+    })
   })
 })
 
-describe("'A receber' — cashFlow agrupa por data efetiva de recebimento", () => {
-  it('venda vendida em março mas recebida em maio aparece em maio no cashFlow', () => {
-    // Venda em março, recebida em maio
-    insertSale({
+describe("'A receber' — fluxo de caixa agrupa pela data de recebimento", () => {
+  it('should_place_a_sale_from_march_received_in_may_in_may', async () => {
+    const venda = await criarVenda(ambiente, {
       soldAt: '2026-03-15',
+      paymentMethod: 'areceber',
+      items: [item(1, 50)]
+    })
+    await ambiente.chamar('sales:markAsReceived', {
+      id: venda,
       paymentMethod: 'pix',
-      receivedAt: '2026-05-10',
+      feePercentage: 0,
+      feeAmount: 0,
       netAmount: 50,
-      items: [{ variationId: 1, qty: 1, unitPrice: 50, unitCost: 5 }]
+      receivedAt: '2026-05-10'
     })
 
-    const cashFlow = queryAll<{ month: string; income: number }>(
-      db,
-      `SELECT
-         strftime('%Y-%m', COALESCE(received_at, sold_at)) AS month,
-         net_amount AS income
-       FROM sales
-       WHERE payment_method != 'areceber'
-       ORDER BY month ASC`,
-      []
-    )
-    expect(cashFlow).toHaveLength(1)
-    expect(cashFlow[0]!.month).toBe('2026-05')
-    expect(cashFlow[0]!.income).toBe(50)
+    const { cashFlow } = await painelCompleto()
+
+    expect(cashFlow).toEqual([{ month: '2026-05', income: 50, expenses: 0 }])
   })
 
-  it('venda à vista mantém mês do sold_at no cashFlow', () => {
-    insertSale({
+  it('should_keep_a_cash_sale_in_the_month_it_was_sold', async () => {
+    await criarVenda(ambiente, {
       soldAt: '2026-04-20',
       paymentMethod: 'dinheiro',
-      items: [{ variationId: 1, qty: 1, unitPrice: 40, unitCost: 5 }]
+      items: [item(1, 40)]
     })
 
-    const cashFlow = queryAll<{ month: string; income: number }>(
-      db,
-      `SELECT
-         strftime('%Y-%m', COALESCE(received_at, sold_at)) AS month,
-         net_amount AS income
-       FROM sales
-       WHERE payment_method != 'areceber'
-       ORDER BY month ASC`,
-      []
-    )
-    expect(cashFlow).toHaveLength(1)
-    expect(cashFlow[0]!.month).toBe('2026-04')
+    const { cashFlow } = await painelCompleto()
+
+    expect(cashFlow).toEqual([{ month: '2026-04', income: 40, expenses: 0 }])
   })
 
-  it('venda areceber pendente não aparece em nenhum mês do cashFlow', () => {
-    insertSale({
+  it('should_leave_a_pending_receivable_out_of_every_month', async () => {
+    await criarVenda(ambiente, {
       soldAt: '2026-05-01',
       paymentMethod: 'areceber',
-      items: [{ variationId: 1, qty: 1, unitPrice: 30, unitCost: 5 }]
+      items: [item(1, 30)]
     })
 
-    const cashFlow = queryAll<{ month: string; income: number }>(
-      db,
-      `SELECT
-         strftime('%Y-%m', COALESCE(received_at, sold_at)) AS month,
-         net_amount AS income
-       FROM sales
-       WHERE payment_method != 'areceber'`,
-      []
-    )
-    expect(cashFlow).toHaveLength(0)
+    const { cashFlow } = await painelCompleto()
+
+    expect(cashFlow).toEqual([])
   })
 })

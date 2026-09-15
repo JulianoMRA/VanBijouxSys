@@ -1,6 +1,10 @@
 import type { AmbienteIpc } from './ambiente-ipc'
 import { queryOne } from './testDb'
-import type { CreateInsumoInput, CreateVariationInput } from '../../renderer/src/types'
+import type {
+  CreateInsumoInput,
+  CreateSaleInput,
+  CreateVariationInput
+} from '../../renderer/src/types'
 
 type ItemDeReceita = { insumoId: number; quantity: number }
 
@@ -62,6 +66,26 @@ export async function registrarVenda(
     feeAmount: 0,
     netAmount: total,
     items
+  })
+  return Number(id)
+}
+
+/** Venda com data, canal e pagamento escolhidos; o líquido padrão é o total sem taxa. */
+export async function criarVenda(
+  ambiente: AmbienteIpc,
+  dados: Partial<Omit<CreateSaleInput, 'items'>> & {
+    items: Array<{ variationId: number; quantity: number; unitPrice: number; unitCost: number }>
+  }
+): Promise<number> {
+  const total = dados.items.reduce((s, i) => s + i.quantity * i.unitPrice, 0)
+  const { id } = await ambiente.chamar<{ id: number }>('sales:create', {
+    channel: 'WhatsApp',
+    soldAt: '2026-05-10',
+    paymentMethod: 'dinheiro',
+    feePercentage: 0,
+    feeAmount: 0,
+    netAmount: total - (dados.feeAmount ?? 0),
+    ...dados
   })
   return Number(id)
 }

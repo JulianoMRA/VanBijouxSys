@@ -1,276 +1,200 @@
-import { describe, it, expect, beforeEach } from 'vitest'
-import { type Database } from 'sql.js'
-import { createTestDb, queryOne, queryAll } from '../helpers/testDb'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { prepararAmbienteIpc, type AmbienteIpc } from '../helpers/ambiente-ipc'
+import { queryOne } from '../helpers/testDb'
+import { criarProduto, criarVariacao, criarVenda } from '../helpers/estoque'
+import type { DashboardStats } from '../../main/ipc/dashboard'
 
-let db: Database
+vi.mock('electron', async () => (await import('../helpers/ambiente-ipc')).electronFalso)
+vi.mock('../../main/database', async () => (await import('../helpers/ambiente-ipc')).bancoFalso)
+
+let ambiente: AmbienteIpc
+let colar: number
+let pulseira: number
+let brinco: number
+
+async function variacaoEmCategoria(
+  nome: string,
+  categoryId: number,
+  custo: number,
+  preco: number
+): Promise<number> {
+  const { id } = await ambiente.chamar<{ id: number }>('products:create', {
+    name: nome,
+    categoryId
+  })
+  return criarVariacao(ambiente, {
+    productId: Number(id),
+    receita: [],
+    identifier: nome,
+    costPrice: custo,
+    salePrice: preco,
+    stockQuantity: 10,
+    motivoDoEstoqueInicial: 'contagem'
+  })
+}
 
 beforeEach(async () => {
-  db = await createTestDb()
-  db.run(`INSERT INTO products (name, category_id) VALUES ('Colar Rosa', 1)`)
-  db.run(`INSERT INTO products (name, category_id) VALUES ('Pulseira Azul', 2)`)
-  db.run(`INSERT INTO products (name, category_id) VALUES ('Brinco Pérola', 3)`)
-  db.run(
-    `INSERT INTO product_variations (product_id, identifier, cost_price, sale_price, stock_quantity)
-     VALUES (1, 'CR-M', 5, 30, 10)`
-  )
-  db.run(
-    `INSERT INTO product_variations (product_id, identifier, cost_price, sale_price, stock_quantity)
-     VALUES (2, 'PA-G', 4, 25, 10)`
-  )
-  db.run(
-    `INSERT INTO product_variations (product_id, identifier, cost_price, sale_price, stock_quantity)
-     VALUES (3, 'BP-U', 3, 20, 10)`
-  )
+  ambiente = await prepararAmbienteIpc()
+  colar = await variacaoEmCategoria('Colar Rosa', 1, 5, 30)
+  pulseira = await variacaoEmCategoria('Pulseira Azul', 2, 4, 25)
+  brinco = await variacaoEmCategoria('Brinco Pérola', 3, 3, 20)
 })
 
-function insertSale(opts: {
-  soldAt: string
-  channel?: string
-  items: Array<{ variationId: number; qty: number; unitPrice: number; unitCost: number }>
-}): number {
-  const totalAmount = opts.items.reduce((s, i) => s + i.qty * i.unitPrice, 0)
-  const totalCost = opts.items.reduce((s, i) => s + i.qty * i.unitCost, 0)
-  db.run(
-    `INSERT INTO sales (channel, total_amount, total_cost, net_amount, sold_at)
-     VALUES (?, ?, ?, ?, ?)`,
-    [opts.channel ?? 'WhatsApp', totalAmount, totalCost, totalAmount, opts.soldAt]
-  )
-  const saleId = queryOne<{ id: number }>(db, 'SELECT last_insert_rowid() AS id')!.id
-  for (const i of opts.items) {
-    db.run(
-      `INSERT INTO sale_items (sale_id, variation_id, quantity, unit_price, unit_cost)
-       VALUES (?, ?, ?, ?, ?)`,
-      [saleId, i.variationId, i.qty, i.unitPrice, i.unitCost]
-    )
-  }
-  return saleId
+afterEach(() => {
+  vi.useRealTimers()
+})
+
+function painel(customFrom: string, customTo: string): Promise<DashboardStats> {
+  return ambiente.chamar<DashboardStats>('dashboard:getStats', {
+    period: 'custom',
+    customFrom,
+    customTo
+  })
 }
 
-/**
- * Reproduz as cláusulas reais usadas pelo handler do dashboard.
- * Quando esta clause espelhar o produção, os testes detectam regressões.
- */
-function sSoldAtClause(fromDate: string | null, toDate: string | null): string {
-  if (!fromDate) return ''
-  return ` AND date(s.sold_at) >= ?${toDate ? ' AND date(s.sold_at) <= ?' : ''}`
-}
-
-function soldAtClause(fromDate: string | null, toDate: string | null): string {
-  if (!fromDate) return ''
-  return ` AND date(sold_at) >= ?${toDate ? ' AND date(sold_at) <= ?' : ''}`
-}
-
-function dateParams(fromDate: string | null, toDate: string | null): string[] {
-  return [...(fromDate ? [fromDate] : []), ...(toDate ? [toDate] : [])]
-}
-
-describe('dashboard: normalização de datas em sold_at', () => {
-  it('inclui venda com timestamp completo (HH:MM:SS) no toDate', () => {
-    insertSale({
+describe('dashboard: data com hora em sold_at', () => {
+  it('should_include_a_sale_with_time_on_the_last_day_of_the_period', async () => {
+    await criarVenda(ambiente, {
       soldAt: '2026-05-14 23:59:59',
-      items: [{ variationId: 1, qty: 1, unitPrice: 30, unitCost: 5 }]
+      items: [{ variationId: colar, quantity: 1, unitPrice: 30, unitCost: 5 }]
     })
-    insertSale({
+    await criarVenda(ambiente, {
       soldAt: '2026-05-14',
-      items: [{ variationId: 2, qty: 1, unitPrice: 25, unitCost: 4 }]
+      items: [{ variationId: pulseira, quantity: 1, unitPrice: 25, unitCost: 4 }]
     })
 
-    const from = '2026-05-01'
-    const to = '2026-05-14'
-    const params = dateParams(from, to)
+    const { overview } = await painel('2026-05-01', '2026-05-14')
 
-    const overview = queryOne<{ totalRevenue: number; totalSales: number }>(
-      db,
-      `SELECT COALESCE(SUM(s.total_amount),0) AS totalRevenue, COUNT(s.id) AS totalSales
-       FROM sales s WHERE 1=1${sSoldAtClause(from, to)}`,
-      params
-    )
-
-    expect(overview!.totalSales).toBe(2)
-    expect(overview!.totalRevenue).toBe(55)
+    expect(overview.totalSales).toBe(2)
+    expect(overview.totalRevenue).toBe(55)
   })
 
-  it('exclui venda do dia seguinte ao toDate', () => {
-    insertSale({
+  it('should_exclude_a_sale_from_the_day_after_the_period', async () => {
+    await criarVenda(ambiente, {
       soldAt: '2026-05-14 10:00:00',
-      items: [{ variationId: 1, qty: 1, unitPrice: 30, unitCost: 5 }]
+      items: [{ variationId: colar, quantity: 1, unitPrice: 30, unitCost: 5 }]
     })
-    insertSale({
+    await criarVenda(ambiente, {
       soldAt: '2026-05-15 00:00:01',
-      items: [{ variationId: 2, qty: 1, unitPrice: 25, unitCost: 4 }]
+      items: [{ variationId: pulseira, quantity: 1, unitPrice: 25, unitCost: 4 }]
     })
 
-    const params = dateParams('2026-05-01', '2026-05-14')
-    const overview = queryOne<{ totalSales: number }>(
-      db,
-      `SELECT COUNT(s.id) AS totalSales FROM sales s WHERE 1=1${sSoldAtClause('2026-05-01', '2026-05-14')}`,
-      params
-    )
-    expect(overview!.totalSales).toBe(1)
+    const { overview } = await painel('2026-05-01', '2026-05-14')
+
+    expect(overview.totalSales).toBe(1)
   })
 
-  it('cashFlow (sold_at via soldAtClause) também inclui timestamps completos', () => {
-    insertSale({
+  it('should_count_a_sale_with_time_in_cash_income_and_cash_flow', async () => {
+    await criarVenda(ambiente, {
       soldAt: '2026-05-14 18:30:00',
-      items: [{ variationId: 1, qty: 2, unitPrice: 30, unitCost: 5 }]
+      items: [{ variationId: colar, quantity: 2, unitPrice: 30, unitCost: 5 }]
     })
 
-    const from = '2026-05-01'
-    const to = '2026-05-14'
-    const result = queryOne<{ income: number }>(
-      db,
-      `SELECT COALESCE(SUM(net_amount),0) AS income FROM sales WHERE 1=1${soldAtClause(from, to)}`,
-      dateParams(from, to)
-    )
-    expect(result!.income).toBe(60)
+    const { cashSummary, cashFlow } = await painel('2026-05-01', '2026-05-14')
+
+    expect(cashSummary.totalIncome).toBe(60)
+    expect(cashFlow).toEqual([{ month: '2026-05', income: 60, expenses: 0 }])
   })
 })
 
-describe('dashboard: salesByCategory consistente com totalRevenue', () => {
-  it('soma das categorias == totalRevenue para dados regulares', () => {
-    insertSale({
+describe('dashboard: faturamento por categoria bate com o total', () => {
+  it('should_sum_categories_to_the_total_revenue', async () => {
+    await criarVenda(ambiente, {
       soldAt: '2026-05-10',
-      items: [{ variationId: 1, qty: 1, unitPrice: 30, unitCost: 5 }]
+      items: [{ variationId: colar, quantity: 1, unitPrice: 30, unitCost: 5 }]
     })
-    insertSale({
+    await criarVenda(ambiente, {
       soldAt: '2026-05-11',
-      items: [{ variationId: 2, qty: 2, unitPrice: 25, unitCost: 4 }]
+      items: [{ variationId: pulseira, quantity: 2, unitPrice: 25, unitCost: 4 }]
     })
-    insertSale({
+    await criarVenda(ambiente, {
       soldAt: '2026-05-12',
       items: [
-        { variationId: 1, qty: 1, unitPrice: 30, unitCost: 5 },
-        { variationId: 3, qty: 3, unitPrice: 20, unitCost: 3 }
+        { variationId: colar, quantity: 1, unitPrice: 30, unitCost: 5 },
+        { variationId: brinco, quantity: 3, unitPrice: 20, unitCost: 3 }
       ]
     })
 
-    const from = '2026-05-01'
-    const to = '2026-05-31'
-    const params = dateParams(from, to)
+    const { overview, salesByCategory } = await painel('2026-05-01', '2026-05-31')
 
-    const overview = queryOne<{ totalRevenue: number }>(
-      db,
-      `SELECT COALESCE(SUM(s.total_amount),0) AS totalRevenue FROM sales s WHERE 1=1${sSoldAtClause(from, to)}`,
-      params
-    )
-
-    const byCategory = queryAll<{ category: string; revenue: number }>(
-      db,
-      `SELECT
-         COALESCE(c.name, 'Sem categoria')              AS category,
-         COALESCE(SUM(si.quantity * si.unit_price), 0)  AS revenue
-       FROM sale_items si
-       JOIN sales s ON s.id = si.sale_id
-       LEFT JOIN product_variations pv ON pv.id = si.variation_id
-       LEFT JOIN products p ON p.id = pv.product_id
-       LEFT JOIN categories c ON c.id = p.category_id
-       WHERE 1=1${sSoldAtClause(from, to)}
-       GROUP BY COALESCE(c.name, 'Sem categoria')
-       ORDER BY revenue DESC`,
-      params
-    )
-
-    const sumByCategory = byCategory.reduce((s, r) => s + r.revenue, 0)
-    expect(sumByCategory).toBe(overview!.totalRevenue)
-    expect(sumByCategory).toBe(170) // Colar 60 + Pulseira 50 + Brinco 60
-    expect(byCategory).toHaveLength(3)
+    const soma = salesByCategory.reduce((s, c) => s + c.revenue, 0)
+    expect(soma).toBe(overview.totalRevenue)
+    expect(soma).toBe(170)
+    expect(salesByCategory).toHaveLength(3)
   })
 
-  it('agrupa item órfão (variação inexistente) como "Sem categoria" sem perder faturamento', () => {
-    // Cenário: sale_item aponta para variação inexistente (FK off para simular legado/migração)
-    db.run('PRAGMA foreign_keys = OFF')
-    db.run(
+  it('should_group_an_orphan_item_as_no_category_without_losing_revenue', async () => {
+    // Estado legado que os handlers não produzem: item de venda apontando para uma
+    // variação que não existe mais. Montado direto no banco, com a FK desligada.
+    const banco = ambiente.banco
+    banco.run('PRAGMA foreign_keys = OFF')
+    banco.run(
       `INSERT INTO sales (channel, total_amount, total_cost, net_amount, sold_at)
        VALUES ('WhatsApp', 50, 10, 50, '2026-05-15')`
     )
-    const saleId = queryOne<{ id: number }>(db, 'SELECT last_insert_rowid() AS id')!.id
-    db.run(
+    const venda = queryOne<{ id: number }>(banco, 'SELECT last_insert_rowid() AS id')!.id
+    banco.run(
       `INSERT INTO sale_items (sale_id, variation_id, quantity, unit_price, unit_cost)
        VALUES (?, 9999, 1, 50, 10)`,
-      [saleId]
+      [venda]
     )
-    db.run('PRAGMA foreign_keys = ON')
+    banco.run('PRAGMA foreign_keys = ON')
 
-    const from = '2026-05-01'
-    const to = '2026-05-31'
-    const params = dateParams(from, to)
+    const { overview, salesByCategory } = await painel('2026-05-01', '2026-05-31')
 
-    const overview = queryOne<{ totalRevenue: number }>(
-      db,
-      `SELECT COALESCE(SUM(s.total_amount),0) AS totalRevenue FROM sales s WHERE 1=1${sSoldAtClause(from, to)}`,
-      params
-    )
-
-    const byCategory = queryAll<{ category: string; revenue: number }>(
-      db,
-      `SELECT
-         COALESCE(c.name, 'Sem categoria')              AS category,
-         COALESCE(SUM(si.quantity * si.unit_price), 0)  AS revenue
-       FROM sale_items si
-       JOIN sales s ON s.id = si.sale_id
-       LEFT JOIN product_variations pv ON pv.id = si.variation_id
-       LEFT JOIN products p ON p.id = pv.product_id
-       LEFT JOIN categories c ON c.id = p.category_id
-       WHERE 1=1${sSoldAtClause(from, to)}
-       GROUP BY COALESCE(c.name, 'Sem categoria')`,
-      params
-    )
-
-    const sumByCategory = byCategory.reduce((s, r) => s + r.revenue, 0)
-    expect(sumByCategory).toBe(overview!.totalRevenue)
-
-    const orfaos = byCategory.find((r) => r.category === 'Sem categoria')
-    expect(orfaos).toBeDefined()
-    expect(orfaos!.revenue).toBe(50)
+    expect(salesByCategory.reduce((s, c) => s + c.revenue, 0)).toBe(overview.totalRevenue)
+    expect(salesByCategory.find((c) => c.category === 'Sem categoria')?.revenue).toBe(50)
   })
 })
 
-describe('dashboard: previousOverview usa mesma normalização do overview', () => {
-  it('compara consistentemente períodos atual e anterior', () => {
-    insertSale({
-      soldAt: '2026-04-30 23:30:00',
-      items: [{ variationId: 1, qty: 1, unitPrice: 30, unitCost: 5 }]
+describe('dashboard: período anterior', () => {
+  it('should_compare_the_current_year_with_the_previous_one', async () => {
+    // Só Date é falsificado; as vendas ficam longe das bordas do ano, então o
+    // resultado não depende do fuso horário da máquina.
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date('2026-06-15T12:00:00Z'))
+    await criarVenda(ambiente, {
+      soldAt: '2026-03-10 23:30:00',
+      items: [{ variationId: pulseira, quantity: 1, unitPrice: 25, unitCost: 4 }]
     })
-    insertSale({
-      soldAt: '2026-05-14 20:00:00',
-      items: [{ variationId: 2, qty: 1, unitPrice: 25, unitCost: 4 }]
+    await criarVenda(ambiente, {
+      soldAt: '2025-07-20 23:30:00',
+      items: [{ variationId: colar, quantity: 1, unitPrice: 30, unitCost: 5 }]
     })
 
-    const currParams = dateParams('2026-05-01', '2026-05-14')
-    const prevParams = dateParams('2026-04-01', '2026-04-30')
-
-    const curr = queryOne<{ totalRevenue: number }>(
-      db,
-      `SELECT COALESCE(SUM(s.total_amount),0) AS totalRevenue FROM sales s WHERE 1=1${sSoldAtClause('2026-05-01', '2026-05-14')}`,
-      currParams
-    )
-    const prev = queryOne<{ totalRevenue: number }>(
-      db,
-      `SELECT COALESCE(SUM(s.total_amount),0) AS totalRevenue FROM sales s WHERE 1=1${sSoldAtClause('2026-04-01', '2026-04-30')}`,
-      prevParams
+    const { overview, previousOverview } = await ambiente.chamar<DashboardStats>(
+      'dashboard:getStats',
+      { period: 'year' }
     )
 
-    expect(curr!.totalRevenue).toBe(25)
-    expect(prev!.totalRevenue).toBe(30)
+    expect(overview.totalRevenue).toBe(25)
+    expect(previousOverview?.totalRevenue).toBe(30)
+  })
+
+  it('should_have_no_previous_period_for_a_custom_range', async () => {
+    const { previousOverview } = await painel('2026-05-01', '2026-05-31')
+
+    expect(previousOverview).toBeNull()
   })
 })
 
-// Estes testes DOCUMENTAM o bug histórico: comparação sem date() exclui timestamps completos.
-// Servem como guarda de regressão — se o código voltar a usar comparação crua, falham.
-describe('dashboard: REGRESSÃO — comparação crua exclui timestamps', () => {
-  it('comparação crua s.sold_at <= ? EXCLUI venda do mesmo dia com HH:MM:SS (bug)', () => {
-    insertSale({
-      soldAt: '2026-05-14 23:59:59',
-      items: [{ variationId: 1, qty: 1, unitPrice: 30, unitCost: 5 }]
-    })
+describe('dashboard: validação do período', () => {
+  it('should_refuse_an_end_date_without_a_start_date', async () => {
+    await expect(
+      ambiente.chamar('dashboard:getStats', { period: 'custom', customTo: '2026-05-31' })
+    ).rejects.toThrow('Informe a data inicial do período personalizado.')
+  })
+})
 
-    const result = queryOne<{ count: number }>(
-      db,
-      `SELECT COUNT(s.id) AS count FROM sales s WHERE s.sold_at >= ? AND s.sold_at <= ?`,
-      ['2026-05-01', '2026-05-14']
-    )
-    // Confirma o bug: '2026-05-14 23:59:59' > '2026-05-14' em comparação textual.
-    // Quando dashboard.ts usar date(), este teste continuará passando (apenas documenta).
-    expect(result!.count).toBe(0)
+describe('dashboard: produto sem venda', () => {
+  it('should_return_zeroes_instead_of_null_when_there_are_no_sales', async () => {
+    await criarProduto(ambiente, 'Sem vendas')
+
+    const { overview, salesByCategory, cashFlow } = await painel('2026-05-01', '2026-05-31')
+
+    expect(overview.totalRevenue).toBe(0)
+    expect(overview.totalReceivable).toBe(0)
+    expect(salesByCategory).toEqual([])
+    expect(cashFlow).toEqual([])
   })
 })

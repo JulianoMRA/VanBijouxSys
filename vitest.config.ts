@@ -11,7 +11,7 @@ export default defineConfig({
     allowOnly: !!process.env.VANBIJOUX_ALLOW_ONLY,
     coverage: {
       provider: 'v8',
-      include: ['src/main/**', 'src/preload/**', 'src/renderer/src/**'],
+      include: ['src/main/**', 'src/preload/**', 'src/renderer/src/**', 'src/shared/**'],
       reporter: ['text-summary', 'json-summary', 'html'],
       // Catraca: cada piso fica no múltiplo de 5 logo abaixo do medido em
       // 14/09/2026 (linhas: main 66,9 / utils 96,8 / global 26,7). Segura

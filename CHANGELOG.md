@@ -1,5 +1,20 @@
 # Changelog
 
+## [1.12.1] - 2026-09-14
+
+### Segurança
+
+- **Base do aplicativo atualizada**: o Electron, que é a base do app (a janela, o navegador interno e o acesso ao computador), foi da versão 41.0.4 para a 41.10.7, com as correções de segurança publicadas nesse intervalo. Nada muda no uso.
+- **Bibliotecas atualizadas**: a de acesso ao banco de dados, a de navegação entre telas, uma das usadas pelos gráficos do painel e a que lê as informações de atualização passam para versões com correções de segurança.
+
+### Interno
+
+- Cobertura de testes medida com `npm run test:coverage`, com pisos por camada.
+- `npm audit` de produção entra no pipeline; os dois alertas aceitos ficam registrados no `SECURITY.md`.
+- `drizzle-kit`, que não era usado, sai das dependências.
+
+---
+
 ## [1.12.0] - 2026-09-14
 
 ### Corrigido

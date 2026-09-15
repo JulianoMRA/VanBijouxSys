@@ -1,5 +1,19 @@
 # Changelog
 
+## [1.12.2] - 2026-09-14
+
+### Corrigido
+
+- **Data de cadastro**: produtos, variações, feiras, insumos, categorias de despesa e despesas eram salvos sem a data em que foram cadastrados. A partir desta versão, cada cadastro novo guarda essa data. Os cadastros feitos antes continuam sem ela, porque a data nunca chegou a ser registrada.
+- **Caixa**: despesas com a mesma data passam a aparecer da mais recente para a mais antiga. Antes apareciam na ordem inversa.
+
+### Interno
+
+- Os testes de recebíveis, painel, exclusões e arquivamento passam a chamar o código real do app, e caixa e feiras ganham testes próprios.
+- A suíte de testes vai de 299 para 331.
+
+---
+
 ## [1.12.1] - 2026-09-14
 
 ### Segurança

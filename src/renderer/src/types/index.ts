@@ -1,18 +1,12 @@
-export type InsumoUnit = 'cm' | 'g' | 'unidade'
+import type { InsumoUnit } from '../../../shared/ipc/insumos'
 
-export interface Insumo {
-  id: number
-  name: string
-  unit: InsumoUnit
-  costPerUnit: number
-  stockQuantity: number
-  minimumStock: number
-  createdAt: string
-  /** Nulo = ativo. Arquivado sai dos alertas, da lista e dos seletores. */
-  archivedAt: string | null
-  /** Quantas variações ativas usam este insumo — alimenta o aviso ao arquivar. */
-  usadoPorVariacoesAtivas: number
-}
+// Tipos de insumo vêm do contrato do canal, com os schemas que o main valida.
+export type {
+  CreateInsumoInput,
+  Insumo,
+  InsumoUnit,
+  UpdateInsumoInput
+} from '../../../shared/ipc/insumos'
 
 export interface VariationInsumo {
   id: number
@@ -25,16 +19,6 @@ export interface VariationInsumo {
   /** Arquivamento do insumo em si, não do vínculo com a variação. */
   archivedAt: string | null
 }
-
-export type CreateInsumoInput = {
-  name: string
-  unit: InsumoUnit
-  costPerUnit: number
-  stockQuantity: number
-  minimumStock: number
-}
-
-export type UpdateInsumoInput = CreateInsumoInput & { id: number }
 
 export interface Category {
   id: number

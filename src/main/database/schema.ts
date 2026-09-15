@@ -1,4 +1,9 @@
+import { sql } from 'drizzle-orm'
 import { sqliteTable, text, integer, real } from 'drizzle-orm/sqlite-core'
+
+// Função SQL como default vai em sql``. Com .default('CURRENT_TIMESTAMP') o Drizzle
+// manda o texto como valor no insert, e a coluna guarda a palavra em vez da data.
+const AGORA = sql`CURRENT_TIMESTAMP`
 
 export const categories = sqliteTable('categories', {
   id: integer('id').primaryKey({ autoIncrement: true }),
@@ -12,7 +17,7 @@ export const products = sqliteTable('products', {
     .notNull()
     .references(() => categories.id),
   description: text('description'),
-  createdAt: text('created_at').notNull().default('CURRENT_TIMESTAMP'),
+  createdAt: text('created_at').notNull().default(AGORA),
   /** Nulo = ativo. Ver a migração 2 para a regra de derivação nas variações. */
   archivedAt: text('archived_at')
 })
@@ -28,7 +33,7 @@ export const productVariations = sqliteTable('product_variations', {
   stockQuantity: integer('stock_quantity').notNull().default(0),
   minimumStock: integer('minimum_stock').notNull().default(1),
   laborCost: real('labor_cost').notNull().default(0),
-  createdAt: text('created_at').notNull().default('CURRENT_TIMESTAMP'),
+  createdAt: text('created_at').notNull().default(AGORA),
   archivedAt: text('archived_at')
 })
 
@@ -40,7 +45,7 @@ export const fairs = sqliteTable('fairs', {
   date: text('date').notNull(),
   endDate: text('end_date'),
   enrollmentCost: real('enrollment_cost').notNull().default(0),
-  createdAt: text('created_at').notNull().default('CURRENT_TIMESTAMP')
+  createdAt: text('created_at').notNull().default(AGORA)
 })
 
 export const fairAdditionalCosts = sqliteTable('fair_additional_costs', {
@@ -59,7 +64,7 @@ export const insumos = sqliteTable('insumos', {
   costPerUnit: real('cost_per_unit').notNull().default(0),
   stockQuantity: real('stock_quantity').notNull().default(0),
   minimumStock: real('minimum_stock').notNull().default(0),
-  createdAt: text('created_at').notNull().default('CURRENT_TIMESTAMP'),
+  createdAt: text('created_at').notNull().default(AGORA),
   archivedAt: text('archived_at')
 })
 
@@ -84,14 +89,14 @@ export const sales = sqliteTable('sales', {
   feePercentage: real('fee_percentage').notNull().default(0),
   feeAmount: real('fee_amount').notNull().default(0),
   netAmount: real('net_amount').notNull().default(0),
-  soldAt: text('sold_at').notNull().default('CURRENT_TIMESTAMP'),
+  soldAt: text('sold_at').notNull().default(AGORA),
   receivedAt: text('received_at')
 })
 
 export const expenseCategories = sqliteTable('expense_categories', {
   id: integer('id').primaryKey({ autoIncrement: true }),
   name: text('name').notNull().unique(),
-  createdAt: text('created_at').notNull().default('CURRENT_TIMESTAMP')
+  createdAt: text('created_at').notNull().default(AGORA)
 })
 
 export const cashExpenses = sqliteTable('cash_expenses', {
@@ -103,13 +108,13 @@ export const cashExpenses = sqliteTable('cash_expenses', {
   amount: real('amount').notNull(),
   expenseDate: text('expense_date').notNull(),
   notes: text('notes'),
-  createdAt: text('created_at').notNull().default('CURRENT_TIMESTAMP')
+  createdAt: text('created_at').notNull().default(AGORA)
 })
 
 export const cashSettings = sqliteTable('cash_settings', {
   id: integer('id').primaryKey({ autoIncrement: true }),
   openingBalance: real('opening_balance').notNull().default(0),
-  updatedAt: text('updated_at').notNull().default('CURRENT_TIMESTAMP')
+  updatedAt: text('updated_at').notNull().default(AGORA)
 })
 
 export const saleItems = sqliteTable('sale_items', {

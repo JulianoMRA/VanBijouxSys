@@ -11,13 +11,12 @@ import type {
   CreateSaleInput,
   UpdateSaleInput,
   MarkSaleReceivedInput,
-  CreateInsumoInput,
-  UpdateInsumoInput,
   CreateExpenseCategoryInput,
   UpdateExpenseCategoryInput,
   CreateCashExpenseInput,
   UpdateCashExpenseInput
 } from '../renderer/src/types'
+import type { CreateInsumoInput, UpdateInsumoInput } from '../shared/ipc/insumos'
 
 /**
  * O Electron embrulha a mensagem original em "Error invoking remote method

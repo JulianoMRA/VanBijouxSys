@@ -4,6 +4,8 @@ import * as schema from '../../main/database/schema'
 import { aplicarMigracoes } from '../../main/database/migrations'
 import { asMigrationTarget, createEmptyDb } from './testDb'
 import { criarSqliteFalso } from './sqlite-falso'
+import type { RegistroDeCanais } from '../../main/ipc/canal'
+import type { ConexaoBanco } from '../../main/database/conexao'
 
 type Handler = (...args: unknown[]) => unknown
 
@@ -41,7 +43,12 @@ export interface AmbienteIpc {
  * Banco novo com as migrações reais e os handlers registrados. Ficam de fora só
  * os de backup, que abrem diálogo nativo e reiniciam o app.
  */
-export async function prepararAmbienteIpc(): Promise<AmbienteIpc> {
+export interface OpcoesDoAmbiente {
+  /** Caminho que o diálogo de salvar devolve; `null` simula a usuária cancelando. */
+  caminhoParaSalvar?: string | null
+}
+
+export async function prepararAmbienteIpc(opcoes: OpcoesDoAmbiente = {}): Promise<AmbienteIpc> {
   const banco = await createEmptyDb()
   aplicarMigracoes(asMigrationTarget(banco) as never)
 
@@ -67,7 +74,12 @@ export async function prepararAmbienteIpc(): Promise<AmbienteIpc> {
   ])
   registerProductHandlers()
   registerSaleHandlers()
-  registerInsumoHandlers()
+  // Domínios da fronteira validada: ipc, banco e diálogo entram por parâmetro.
+  const ipc: RegistroDeCanais = { handle: (canal, fn) => handlers.set(canal, fn as Handler) }
+  const conexaoInjetada = conexao as unknown as ConexaoBanco
+  registerInsumoHandlers(ipc, conexaoInjetada, {
+    escolherOndeSalvar: async () => opcoes.caminhoParaSalvar ?? null
+  })
   registerFairHandlers()
   registerDashboardHandlers()
   registerCashHandlers()

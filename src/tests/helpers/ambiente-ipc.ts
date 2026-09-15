@@ -33,6 +33,8 @@ export const bancoFalso = {
 export interface AmbienteIpc {
   banco: Database
   chamar: <T = unknown>(canal: string, ...args: unknown[]) => Promise<T>
+  /** Nomes de todos os canais registrados até agora. */
+  canais: () => string[]
 }
 
 /**
@@ -76,5 +78,5 @@ export async function prepararAmbienteIpc(): Promise<AmbienteIpc> {
     return (await handler({}, ...args)) as T
   }
 
-  return { banco, chamar }
+  return { banco, chamar, canais: () => [...handlers.keys()] }
 }

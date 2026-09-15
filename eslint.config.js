@@ -9,7 +9,12 @@ export default [
     ignores: ['out/**', 'dist/**', 'node_modules/**', '*.config.*', 'coverage/**']
   },
   {
-    files: ['src/main/**/*.ts', 'src/preload/**/*.ts', 'src/renderer/src/**/*.{ts,tsx}'],
+    files: [
+      'src/main/**/*.ts',
+      'src/preload/**/*.ts',
+      'src/renderer/src/**/*.{ts,tsx}',
+      'src/shared/**/*.ts'
+    ],
     languageOptions: {
       parser: tsParser,
       parserOptions: {

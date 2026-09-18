@@ -1,6 +1,7 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import { CANAIS_IPC } from '../shared/ipc/channels'
 import type { CreateFairInput, UpdateFairInput } from '../shared/ipc/feiras'
+import type { DashboardParams } from '../shared/ipc/painel'
 import type {
   CreateCashExpenseInput,
   CreateExpenseCategoryInput,
@@ -75,8 +76,7 @@ const api = {
     unmarkAsReceived: (id: number) => invoke(CANAIS_IPC.sales.unmarkAsReceived, id)
   },
   dashboard: {
-    getStats: (params: { period: string; customFrom?: string; customTo?: string }) =>
-      invoke(CANAIS_IPC.dashboard.getStats, params)
+    getStats: (params: DashboardParams) => invoke(CANAIS_IPC.dashboard.getStats, params)
   },
   insumos: {
     getAll: () => invoke(CANAIS_IPC.insumos.getAll),

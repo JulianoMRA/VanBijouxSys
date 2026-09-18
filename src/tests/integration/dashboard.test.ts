@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { prepararAmbienteIpc, type AmbienteIpc } from '../helpers/ambiente-ipc'
 import { queryOne } from '../helpers/testDb'
 import { criarProduto, criarVariacao, criarVenda } from '../helpers/estoque'
-import type { DashboardStats } from '../../main/ipc/dashboard'
+import type { DashboardStats } from '../../shared/ipc/painel'
 
 vi.mock('electron', async () => (await import('../helpers/ambiente-ipc')).electronFalso)
 vi.mock('../../main/database', async () => (await import('../helpers/ambiente-ipc')).bancoFalso)
@@ -51,6 +51,53 @@ function painel(customFrom: string, customTo: string): Promise<DashboardStats> {
     customTo
   })
 }
+
+describe('dashboard: bordas do período', () => {
+  it('should_include_a_sale_on_the_very_first_day_of_the_period', async () => {
+    await criarVenda(ambiente, {
+      soldAt: '2026-05-01',
+      items: [{ variationId: colar, quantity: 1, unitPrice: 30, unitCost: 5 }]
+    })
+    await criarVenda(ambiente, {
+      soldAt: '2026-04-30',
+      items: [{ variationId: colar, quantity: 1, unitPrice: 30, unitCost: 5 }]
+    })
+
+    const stats = await painel('2026-05-01', '2026-05-31')
+
+    expect(stats.overview.totalSales).toBe(1)
+    expect(stats.overview.totalRevenue).toBe(30)
+  })
+
+  it('should_discount_the_payment_fee_from_revenue_and_profit', async () => {
+    await criarVenda(ambiente, {
+      soldAt: '2026-05-10',
+      paymentMethod: 'credito',
+      feePercentage: 10,
+      feeAmount: 3,
+      items: [{ variationId: colar, quantity: 1, unitPrice: 30, unitCost: 5 }]
+    })
+
+    const stats = await painel('2026-05-01', '2026-05-31')
+
+    // Bruto 30, taxa 3, custo 5: o painel mostra o bruto na receita e o lucro
+    // já sem a taxa, que é o dinheiro que entrou de verdade.
+    expect(stats.overview.totalRevenue).toBe(30)
+    expect(stats.overview.totalNetRevenue).toBe(27)
+    expect(stats.overview.totalProfit).toBe(22)
+  })
+
+  it('should_include_a_sale_on_the_very_last_day_of_the_period', async () => {
+    await criarVenda(ambiente, {
+      soldAt: '2026-05-31',
+      items: [{ variationId: colar, quantity: 1, unitPrice: 30, unitCost: 5 }]
+    })
+
+    const stats = await painel('2026-05-01', '2026-05-31')
+
+    expect(stats.overview.totalSales).toBe(1)
+  })
+})
 
 describe('dashboard: data com hora em sold_at', () => {
   it('should_include_a_sale_with_time_on_the_last_day_of_the_period', async () => {

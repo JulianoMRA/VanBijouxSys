@@ -78,10 +78,10 @@ export async function prepararAmbienteIpc(opcoes: OpcoesDoAmbiente = {}): Promis
   registerProductHandlers(ipc, conexaoInjetada)
   registerSaleHandlers(ipc, conexaoInjetada)
   registerCashHandlers(ipc, conexaoInjetada)
+  registerFairHandlers(ipc, conexaoInjetada)
   registerInsumoHandlers(ipc, conexaoInjetada, {
     escolherOndeSalvar: async () => opcoes.caminhoParaSalvar ?? null
   })
-  registerFairHandlers()
   registerDashboardHandlers()
 
   async function chamar<T = unknown>(canal: string, ...args: unknown[]): Promise<T> {

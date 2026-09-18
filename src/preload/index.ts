@@ -3,15 +3,13 @@ import { CANAIS_IPC } from '../shared/ipc/channels'
 import type {
   CreateFairInput,
   UpdateFairInput,
-  CreateSaleInput,
-  UpdateSaleInput,
-  MarkSaleReceivedInput,
   CreateExpenseCategoryInput,
   UpdateExpenseCategoryInput,
   CreateCashExpenseInput,
   UpdateCashExpenseInput
 } from '../renderer/src/types'
 import type { CreateInsumoInput, UpdateInsumoInput } from '../shared/ipc/insumos'
+import type { CreateSaleInput, MarkSaleReceivedInput, UpdateSaleInput } from '../shared/ipc/vendas'
 import type {
   CreateProductInput,
   CreateVariationInput,

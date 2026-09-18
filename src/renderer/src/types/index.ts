@@ -52,64 +52,17 @@ export type CreateFairInput = {
 
 export type UpdateFairInput = CreateFairInput & { id: number }
 
-export type SaleChannel = 'Feira' | 'WhatsApp' | 'Instagram' | 'Outro'
-
-export type PaymentMethod = 'dinheiro' | 'pix' | 'debito' | 'credito' | 'areceber'
-
-export interface SaleItem {
-  id: number
-  variationId: number
-  variationIdentifier: string
-  productName: string
-  quantity: number
-  unitPrice: number
-  unitCost: number
-}
-
-export interface Sale {
-  id: number
-  channel: SaleChannel
-  fairId: number | null
-  fairName: string | null
-  totalAmount: number
-  totalCost: number
-  paymentMethod: PaymentMethod
-  feePercentage: number
-  feeAmount: number
-  netAmount: number
-  soldAt: string
-  receivedAt: string | null
-  items: SaleItem[]
-}
-
-export interface MarkSaleReceivedInput {
-  id: number
-  paymentMethod: Exclude<PaymentMethod, 'areceber'>
-  feePercentage: number
-  feeAmount: number
-  netAmount: number
-  receivedAt: string
-}
-
-export interface CreateSaleItemInput {
-  variationId: number
-  quantity: number
-  unitPrice: number
-  unitCost: number
-}
-
-export interface CreateSaleInput {
-  channel: SaleChannel
-  fairId?: number
-  soldAt: string
-  paymentMethod: PaymentMethod
-  feePercentage: number
-  feeAmount: number
-  netAmount: number
-  items: CreateSaleItemInput[]
-}
-
-export type UpdateSaleInput = CreateSaleInput & { id: number }
+// Tipos de venda vêm do contrato dos canais de vendas.
+export type {
+  CreateSaleInput,
+  CreateSaleItemInput,
+  MarkSaleReceivedInput,
+  PaymentMethod,
+  Sale,
+  SaleChannel,
+  SaleItem,
+  UpdateSaleInput
+} from '../../../shared/ipc/vendas'
 
 export interface ExpenseCategory {
   id: number

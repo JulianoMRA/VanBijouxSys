@@ -21,36 +21,13 @@ export type {
   VariationInsumo
 } from '../../../shared/ipc/produtos'
 
-export interface FairAdditionalCost {
-  id?: number
-  fairId?: number
-  description: string
-  amount: number
-}
-
-export interface Fair {
-  id: number
-  name: string
-  location: string
-  organizer: string | null
-  date: string
-  endDate: string | null
-  enrollmentCost: number
-  additionalCosts: FairAdditionalCost[]
-  createdAt: string
-}
-
-export type CreateFairInput = {
-  name: string
-  location: string
-  organizer?: string
-  date: string
-  endDate?: string
-  enrollmentCost: number
-  additionalCosts: { description: string; amount: number }[]
-}
-
-export type UpdateFairInput = CreateFairInput & { id: number }
+// Tipos de feira vêm do contrato dos canais de feiras.
+export type {
+  CreateFairInput,
+  Fair,
+  FairAdditionalCost,
+  UpdateFairInput
+} from '../../../shared/ipc/feiras'
 
 // Tipos de venda vêm do contrato dos canais de vendas.
 export type {

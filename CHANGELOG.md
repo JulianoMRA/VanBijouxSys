@@ -1,5 +1,19 @@
 # Changelog
 
+## [1.13.0] - 2026-09-18
+
+### Corrigido
+
+- **Data da venda**: apagar a data no formulário e salvar gravava a venda sem data. Ela continuava na lista, mas sumia dos relatórios por mês e das contas da feira. Agora o app pede a data antes de salvar.
+
+### Interno
+
+- **Conferência do que chega antes de gravar**: os cadastros de insumos, produtos, variações e vendas passam a conferir o formato dos dados antes de tocar no banco. Se vier algo fora do esperado, o app recusa com uma mensagem e não grava nada pela metade. Nada muda no uso normal das telas.
+- A regra de cada cadastro saiu dos canais de comunicação interna para módulos próprios, com testes que chamam o código real.
+- A suíte de testes vai de 331 para 397.
+
+---
+
 ## [1.12.2] - 2026-09-14
 
 ### Corrigido

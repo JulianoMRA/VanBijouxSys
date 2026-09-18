@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { prepararAmbienteIpc, type AmbienteIpc } from '../helpers/ambiente-ipc'
 import { queryOne } from '../helpers/testDb'
 import { criarVariacao, criarVenda } from '../helpers/estoque'
-import type { DashboardStats } from '../../main/ipc/dashboard'
+import type { DashboardStats } from '../../shared/ipc/painel'
 import type { CreateFairInput } from '../../renderer/src/types'
 
 vi.mock('electron', async () => (await import('../helpers/ambiente-ipc')).electronFalso)

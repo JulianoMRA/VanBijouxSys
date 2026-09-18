@@ -40,8 +40,9 @@ export interface AmbienteIpc {
 }
 
 /**
- * Banco novo com as migrações reais e os handlers registrados. Ficam de fora só
- * os de backup, que abrem diálogo nativo e reiniciam o app.
+ * Banco novo com as migrações reais e todos os handlers registrados. Os de backup
+ * entram com dependências de mentira: nenhum diálogo abre, nenhum arquivo é
+ * escrito e o app não reinicia.
  */
 export interface OpcoesDoAmbiente {
   /** Caminho que o diálogo de salvar devolve; `null` simula a usuária cancelando. */
@@ -63,14 +64,16 @@ export async function prepararAmbienteIpc(opcoes: OpcoesDoAmbiente = {}): Promis
     { registerInsumoHandlers },
     { registerFairHandlers },
     { registerDashboardHandlers },
-    { registerCashHandlers }
+    { registerCashHandlers },
+    { registerBackupHandlers }
   ] = await Promise.all([
     import('../../main/ipc/products'),
     import('../../main/ipc/sales'),
     import('../../main/ipc/insumos'),
     import('../../main/ipc/fairs'),
     import('../../main/ipc/dashboard'),
-    import('../../main/ipc/cash')
+    import('../../main/ipc/cash'),
+    import('../../main/ipc/backup')
   ])
   // Domínios da fronteira validada: ipc, banco e diálogo entram por parâmetro.
   const ipc: RegistroDeCanais = { handle: (canal, fn) => handlers.set(canal, fn as Handler) }
@@ -82,6 +85,21 @@ export async function prepararAmbienteIpc(opcoes: OpcoesDoAmbiente = {}): Promis
   registerDashboardHandlers(ipc, conexaoInjetada)
   registerInsumoHandlers(ipc, conexaoInjetada, {
     escolherOndeSalvar: async () => opcoes.caminhoParaSalvar ?? null
+  })
+  registerBackupHandlers(ipc, {
+    servicos: {
+      perguntarOndeSalvar: async () => null,
+      perguntarQualRestaurar: async () => null,
+      confirmarRestauracao: async () => false,
+      pastaDeBackups: () => 'backups-de-teste',
+      criarBackup: async () => {},
+      validarBackup: () => ({ ok: true }),
+      restaurarBackup: async () => {},
+      abrirPasta: async () => {},
+      arquivosDeBackup: () => []
+    },
+    versaoDoApp: () => '0.0.0-teste',
+    verificarAtualizacoes: async () => ({ atualizacaoDisponivel: false })
   })
 
   async function chamar<T = unknown>(canal: string, ...args: unknown[]): Promise<T> {

@@ -2,13 +2,20 @@ import { app, shell, BrowserWindow, dialog, ipcMain } from 'electron'
 import { join, resolve } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import log from 'electron-log/main'
+import { existsSync, readdirSync, statSync } from 'fs'
 import { closeDatabase, getDb, getSqlite, initDatabase } from './database'
-import { backupDiario, criarBackup } from './database/backup'
+import {
+  backupDiario,
+  criarBackup,
+  getBackupDir,
+  restaurarBackup,
+  validarBackup
+} from './database/backup'
 import { criarEncerramento } from './encerramento'
 import { registerAllHandlers } from './ipc'
 import { ehNavegacaoInterna, urlExternaPermitida } from './navegacao'
 import { definirRegistro, registro } from './registro'
-import { iniciarAutoUpdate } from './updater'
+import { iniciarAutoUpdate, verificarAtualizacoesManual } from './updater'
 
 // Sem `productName` no package.json, `npm run dev` abre a mesma pasta de dados do
 // app instalado. VANBIJOUX_USER_DATA aponta para uma base isolada, para testar sem
@@ -41,6 +48,15 @@ process.on('unhandledRejection', (motivo) => {
   encerramento.rejeicaoSemTratamento(motivo)
 })
 app.on('before-quit', () => encerramento.marcarSaidaNormal())
+
+const BANCO_DE_DADOS = { name: 'Banco de dados', extensions: ['db'] }
+
+/** Diálogo nativo precisa de janela dona; sem ela, ficaria solto na área de trabalho. */
+function janelaObrigatoria(): BrowserWindow {
+  const janela = BrowserWindow.getFocusedWindow() ?? BrowserWindow.getAllWindows()[0]
+  if (!janela) throw new Error('Nenhuma janela ativa para abrir a caixa de diálogo.')
+  return janela
+}
 
 function abrirNoNavegador(rawUrl: string): void {
   const url = urlExternaPermitida(rawUrl)
@@ -113,6 +129,61 @@ async function iniciar(): Promise<void> {
         const escolha = await dialog.showSaveDialog({ defaultPath: nomePadrao, filters: filtros })
         return escolha.canceled || !escolha.filePath ? null : escolha.filePath
       }
+    },
+    backup: {
+      servicos: {
+        async perguntarOndeSalvar(nomePadrao) {
+          const escolha = await dialog.showSaveDialog(janelaObrigatoria(), {
+            title: 'Salvar backup',
+            defaultPath: nomePadrao,
+            filters: [BANCO_DE_DADOS]
+          })
+          return escolha.canceled || !escolha.filePath ? null : escolha.filePath
+        },
+        async perguntarQualRestaurar(pastaPadrao) {
+          const escolha = await dialog.showOpenDialog(janelaObrigatoria(), {
+            title: 'Escolher backup para restaurar',
+            defaultPath: pastaPadrao,
+            properties: ['openFile'],
+            filters: [BANCO_DE_DADOS]
+          })
+          return escolha.canceled || escolha.filePaths.length === 0 ? null : escolha.filePaths[0]
+        },
+        async confirmarRestauracao(nomeDoArquivo) {
+          const confirmacao = await dialog.showMessageBox(janelaObrigatoria(), {
+            type: 'warning',
+            title: 'Restaurar backup',
+            message: `Restaurar "${nomeDoArquivo}"?`,
+            detail:
+              'Todos os dados atuais serão substituídos pelos do backup. O estado atual será salvo numa cópia antes, e o aplicativo vai reiniciar.',
+            buttons: ['Cancelar', 'Restaurar'],
+            defaultId: 0,
+            cancelId: 0
+          })
+          return confirmacao.response === 1
+        },
+        pastaDeBackups: getBackupDir,
+        criarBackup: async (destino) => {
+          await criarBackup(destino)
+        },
+        validarBackup,
+        restaurarBackup,
+        abrirPasta: async (caminho) => {
+          await shell.openPath(caminho)
+        },
+        arquivosDeBackup: (pasta) => {
+          if (!existsSync(pasta)) return []
+          return readdirSync(pasta)
+            .filter((nome) => nome.startsWith('vanbijouxsys-') && nome.endsWith('.db'))
+            .map((nome) => {
+              const caminho = join(pasta, nome)
+              return { caminho, modificadoEm: new Date(statSync(caminho).mtimeMs) }
+            })
+            .sort((a, b) => b.modificadoEm.getTime() - a.modificadoEm.getTime())
+        }
+      },
+      versaoDoApp: () => app.getVersion(),
+      verificarAtualizacoes: verificarAtualizacoesManual
     }
   })
   createWindow()

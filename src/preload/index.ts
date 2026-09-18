@@ -1,11 +1,6 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import { CANAIS_IPC } from '../shared/ipc/channels'
 import type {
-  CreateProductInput,
-  UpdateProductInput,
-  CreateVariationInput,
-  UpdateVariationInput,
-  DeleteVariationOptions,
   CreateFairInput,
   UpdateFairInput,
   CreateSaleInput,
@@ -17,6 +12,13 @@ import type {
   UpdateCashExpenseInput
 } from '../renderer/src/types'
 import type { CreateInsumoInput, UpdateInsumoInput } from '../shared/ipc/insumos'
+import type {
+  CreateProductInput,
+  CreateVariationInput,
+  DeleteVariationOptions,
+  UpdateProductInput,
+  UpdateVariationInput
+} from '../shared/ipc/produtos'
 
 /**
  * O Electron embrulha a mensagem original em "Error invoking remote method

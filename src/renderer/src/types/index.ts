@@ -1,5 +1,3 @@
-import type { InsumoUnit } from '../../../shared/ipc/insumos'
-
 // Tipos de insumo vêm do contrato do canal, com os schemas que o main valida.
 export type {
   CreateInsumoInput,
@@ -8,97 +6,20 @@ export type {
   UpdateInsumoInput
 } from '../../../shared/ipc/insumos'
 
-export interface VariationInsumo {
-  id: number
-  variationId: number
-  insumoId: number
-  insumoName: string
-  unit: InsumoUnit
-  costPerUnit: number
-  quantity: number
-  /** Arquivamento do insumo em si, não do vínculo com a variação. */
-  archivedAt: string | null
-}
-
-export interface Category {
-  id: number
-  name: string
-}
-
-export interface ProductVariation {
-  id: number
-  productId: number
-  identifier: string
-  costPrice: number
-  salePrice: number
-  stockQuantity: number
-  minimumStock: number
-  laborCost: number
-  createdAt: string
-  /** Nulo = ativa. O produto arquivado também inativa a variação. */
-  archivedAt: string | null
-  insumos: VariationInsumo[]
-}
-
-export interface Product {
-  id: number
-  name: string
-  categoryId: number
-  categoryName: string
-  description: string | null
-  createdAt: string
-  /** Nulo = ativo. Arquivar o produto inativa as variações por derivação. */
-  archivedAt: string | null
-  variations: ProductVariation[]
-}
-
-export type CreateProductInput = {
-  name: string
-  categoryId: number
-  description?: string
-}
-
-export type UpdateProductInput = CreateProductInput & { id: number }
-
-/**
- * Por que o estoque de peças mudou. Só `producao` mexe nos insumos: peças a mais
- * consomem a receita, peças a menos devolvem. `contagem` corrige o número sem
- * tocar neles — peças que já estavam prontas, perdidas ou contadas errado.
- */
-export type MotivoDeAjuste = 'producao' | 'contagem'
-
-export interface AjusteDeEstoque {
-  novoEstoque: number
-  motivo: MotivoDeAjuste
-}
-
-export type CreateVariationInput = {
-  productId: number
-  identifier: string
-  costPrice: number
-  salePrice: number
-  stockQuantity: number
-  /** Só tem efeito com estoque inicial acima de zero. */
-  motivoDoEstoqueInicial: MotivoDeAjuste
-  minimumStock: number
-  laborCost: number
-  /** Obrigatória: o update substitui a receita inteira pelo que vier aqui. */
-  insumos: { insumoId: number; quantity: number }[]
-}
-
-export type UpdateVariationInput = Omit<
+// Tipos de produto e variação vêm do contrato dos canais de produtos.
+export type {
+  AjusteDeEstoque,
+  Category,
+  CreateProductInput,
   CreateVariationInput,
-  'stockQuantity' | 'motivoDoEstoqueInicial'
-> & {
-  id: number
-  /** Ausente quando o estoque não mudou no formulário. */
-  ajusteDeEstoque?: AjusteDeEstoque
-}
-
-export interface DeleteVariationOptions {
-  /** Devolve aos insumos o que a receita usa para as peças em estoque. */
-  devolverInsumos: boolean
-}
+  DeleteVariationOptions,
+  MotivoDeAjuste,
+  Product,
+  ProductVariation,
+  UpdateProductInput,
+  UpdateVariationInput,
+  VariationInsumo
+} from '../../../shared/ipc/produtos'
 
 export interface FairAdditionalCost {
   id?: number

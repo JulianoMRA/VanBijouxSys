@@ -19,7 +19,7 @@ export interface DependenciasDosCanais {
  * parâmetro; os demais ainda usam o `ipcMain` e o banco globais.
  */
 export function registerAllHandlers({ ipc, banco, dialogoDeArquivo }: DependenciasDosCanais): void {
-  registerProductHandlers()
+  registerProductHandlers(ipc, banco)
   registerFairHandlers()
   registerSaleHandlers()
   registerDashboardHandlers()

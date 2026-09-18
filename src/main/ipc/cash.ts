@@ -1,191 +1,65 @@
-import { eq } from 'drizzle-orm'
-import { getDb, getSqlite } from '../database'
-import { expenseCategories, cashExpenses, cashSettings } from '../database/schema'
-import { ErroDeNegocio, handleIpc } from './handle'
-import type {
-  CreateExpenseCategoryInput,
-  UpdateExpenseCategoryInput,
-  CreateCashExpenseInput,
-  UpdateCashExpenseInput
-} from '../../renderer/src/types'
+import type { ConexaoBanco } from '../database/conexao'
+import { repositorioDeCaixa } from '../repositorios/caixa'
+import { CANAIS_IPC } from '../../shared/ipc/channels'
+import {
+  ARGUMENTOS_CAIXA,
+  ARGUMENTOS_CATEGORIAS_DE_DESPESA,
+  ARGUMENTOS_DESPESAS
+} from '../../shared/ipc/caixa'
+import { registrarCanal, type RegistroDeCanais } from './canal'
 
-export function registerCashHandlers(): void {
-  // ── Categorias de despesa ────────────────────────────────────────────────
+const OK = { success: true }
 
-  handleIpc('expense-categories:getAll', () => {
-    const db = getDb()
-    return db.select().from(expenseCategories).orderBy(expenseCategories.name).all()
-  })
+export function registerCashHandlers(ipc: RegistroDeCanais, banco: ConexaoBanco): void {
+  const repositorio = repositorioDeCaixa(banco)
+  const { expenseCategories, cashExpenses, cashSettings } = CANAIS_IPC
 
-  handleIpc('expense-categories:create', (data: CreateExpenseCategoryInput) => {
-    const db = getDb()
-    const result = db.insert(expenseCategories).values({ name: data.name }).run()
-    return { id: result.lastInsertRowid }
-  })
-
-  handleIpc('expense-categories:update', (data: UpdateExpenseCategoryInput) => {
-    const db = getDb()
-    db.update(expenseCategories)
-      .set({ name: data.name })
-      .where(eq(expenseCategories.id, data.id))
-      .run()
-    return { success: true }
-  })
-
-  handleIpc('expense-categories:delete', (id: number) => {
-    const sqlite = getSqlite()
-    const linked = sqlite
-      .prepare('SELECT COUNT(*) as count FROM cash_expenses WHERE category_id = ?')
-      .get(id) as { count: number }
-    if (linked.count > 0) {
-      throw new ErroDeNegocio(
-        'Esta categoria possui despesas vinculadas. Remova as despesas antes de excluir.'
-      )
-    }
-
-    const db = getDb()
-    db.delete(expenseCategories).where(eq(expenseCategories.id, id)).run()
-    return { success: true }
-  })
-
-  // ── Despesas ─────────────────────────────────────────────────────────────
-
-  handleIpc(
-    'cash-expenses:getAll',
-    (filters?: { startDate?: string; endDate?: string; categoryId?: number }) => {
-      const sqlite = getSqlite()
-
-      let query = `
-      SELECT
-        e.id,
-        e.category_id as categoryId,
-        c.name as categoryName,
-        e.description,
-        e.amount,
-        e.expense_date as expenseDate,
-        e.notes,
-        e.created_at as createdAt
-      FROM cash_expenses e
-      INNER JOIN expense_categories c ON e.category_id = c.id
-      WHERE 1=1
-    `
-      const params: (string | number)[] = []
-
-      if (filters?.startDate) {
-        query += ' AND e.expense_date >= ?'
-        params.push(filters.startDate)
-      }
-      if (filters?.endDate) {
-        query += ' AND e.expense_date <= ?'
-        params.push(filters.endDate)
-      }
-      if (filters?.categoryId) {
-        query += ' AND e.category_id = ?'
-        params.push(filters.categoryId)
-      }
-
-      // Desempate pelo id, que segue a ordem de cadastro. created_at não serve: despesas
-      // criadas até a v1.12.1 guardam o texto 'CURRENT_TIMESTAMP' no lugar da data.
-      query += ' ORDER BY e.expense_date DESC, e.id DESC'
-
-      return sqlite.prepare(query).all(...params)
+  registrarCanal(ipc, expenseCategories.getAll, ARGUMENTOS_CATEGORIAS_DE_DESPESA.getAll, () =>
+    repositorio.listarCategorias()
+  )
+  registrarCanal(ipc, expenseCategories.create, ARGUMENTOS_CATEGORIAS_DE_DESPESA.create, (dados) =>
+    repositorio.criarCategoria(dados)
+  )
+  registrarCanal(
+    ipc,
+    expenseCategories.update,
+    ARGUMENTOS_CATEGORIAS_DE_DESPESA.update,
+    (dados) => {
+      repositorio.atualizarCategoria(dados)
+      return OK
     }
   )
-
-  handleIpc('cash-expenses:create', (data: CreateCashExpenseInput) => {
-    const db = getDb()
-    const result = db
-      .insert(cashExpenses)
-      .values({
-        categoryId: data.categoryId,
-        description: data.description,
-        amount: data.amount,
-        expenseDate: data.expenseDate,
-        notes: data.notes ?? null
-      })
-      .run()
-    return { id: result.lastInsertRowid }
+  registrarCanal(ipc, expenseCategories.delete, ARGUMENTOS_CATEGORIAS_DE_DESPESA.delete, (id) => {
+    repositorio.excluirCategoria(id)
+    return OK
   })
 
-  handleIpc('cash-expenses:update', (data: UpdateCashExpenseInput) => {
-    const db = getDb()
-    db.update(cashExpenses)
-      .set({
-        categoryId: data.categoryId,
-        description: data.description,
-        amount: data.amount,
-        expenseDate: data.expenseDate,
-        notes: data.notes ?? null
-      })
-      .where(eq(cashExpenses.id, data.id))
-      .run()
-    return { success: true }
+  registrarCanal(ipc, cashExpenses.getAll, ARGUMENTOS_DESPESAS.getAll, (filtro) =>
+    repositorio.listarDespesas(filtro)
+  )
+  registrarCanal(ipc, cashExpenses.create, ARGUMENTOS_DESPESAS.create, (dados) =>
+    repositorio.criarDespesa(dados)
+  )
+  registrarCanal(ipc, cashExpenses.update, ARGUMENTOS_DESPESAS.update, (dados) => {
+    repositorio.atualizarDespesa(dados)
+    return OK
   })
-
-  handleIpc('cash-expenses:delete', (id: number) => {
-    const db = getDb()
-    db.delete(cashExpenses).where(eq(cashExpenses.id, id)).run()
-    return { success: true }
+  registrarCanal(ipc, cashExpenses.delete, ARGUMENTOS_DESPESAS.delete, (id) => {
+    repositorio.excluirDespesa(id)
+    return OK
   })
+  registrarCanal(ipc, cashExpenses.getStats, ARGUMENTOS_DESPESAS.getStats, (filtro) =>
+    repositorio.estatisticas(filtro)
+  )
 
-  handleIpc('cash-expenses:getStats', (filters?: { startDate?: string; endDate?: string }) => {
-    const sqlite = getSqlite()
-
-    let expenseQuery = 'SELECT COALESCE(SUM(amount), 0) as total FROM cash_expenses WHERE 1=1'
-    const params: string[] = []
-
-    if (filters?.startDate) {
-      expenseQuery += ' AND date(expense_date) >= ?'
-      params.push(filters.startDate)
+  registrarCanal(ipc, cashSettings.get, ARGUMENTOS_CAIXA.get, () => repositorio.configuracoes())
+  registrarCanal(
+    ipc,
+    cashSettings.setOpeningBalance,
+    ARGUMENTOS_CAIXA.setOpeningBalance,
+    (saldo) => {
+      repositorio.definirSaldoDeAbertura(saldo)
+      return OK
     }
-    if (filters?.endDate) {
-      expenseQuery += ' AND date(expense_date) <= ?'
-      params.push(filters.endDate)
-    }
-
-    const expenseResult = sqlite.prepare(expenseQuery).get(...params) as { total: number }
-
-    // Vendas 'A receber' pendentes não compõem o caixa; vendas recebidas
-    // posteriormente entram na data efetiva (received_at), não na venda.
-    let incomeQuery =
-      "SELECT COALESCE(SUM(net_amount), 0) as total FROM sales WHERE payment_method != 'areceber'"
-    const incomeParams: string[] = []
-
-    if (filters?.startDate) {
-      incomeQuery += ' AND date(COALESCE(received_at, sold_at)) >= ?'
-      incomeParams.push(filters.startDate)
-    }
-    if (filters?.endDate) {
-      incomeQuery += ' AND date(COALESCE(received_at, sold_at)) <= ?'
-      incomeParams.push(filters.endDate)
-    }
-
-    const incomeResult = sqlite.prepare(incomeQuery).get(...incomeParams) as { total: number }
-
-    const settings = sqlite
-      .prepare('SELECT opening_balance FROM cash_settings WHERE id = 1')
-      .get() as { opening_balance: number } | undefined
-
-    return {
-      totalExpenses: expenseResult.total,
-      totalIncome: incomeResult.total,
-      openingBalance: settings?.opening_balance ?? 0
-    }
-  })
-
-  // ── Configurações do caixa ───────────────────────────────────────────────
-
-  handleIpc('cash-settings:get', () => {
-    const db = getDb()
-    return db.select().from(cashSettings).where(eq(cashSettings.id, 1)).get()
-  })
-
-  handleIpc('cash-settings:setOpeningBalance', (balance: number) => {
-    const sqlite = getSqlite()
-    const now = new Date().toISOString()
-    sqlite
-      .prepare('UPDATE cash_settings SET opening_balance = ?, updated_at = ? WHERE id = 1')
-      .run(balance, now)
-    return { success: true }
-  })
+  )
 }

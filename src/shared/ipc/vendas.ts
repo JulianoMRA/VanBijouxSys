@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { idSchema } from './comum'
+import { dataIsoSchema, idSchema } from './comum'
 
 /**
  * Formatos que SaleForm, MarkReceivedModal e a lista de Vendas enviam. O schema
@@ -18,14 +18,6 @@ export const formaDePagamentoSchema = z.enum([
 
 /** Ao marcar como recebida, a forma escolhida é a que entrou de fato. */
 export const formaDePagamentoRecebidaSchema = formaDePagamentoSchema.exclude(['areceber'])
-
-/**
- * `AAAA-MM-DD`, como os campos `<input type="date">` mandam, ou com a hora que o
- * próprio SQLite gravou (`AAAA-MM-DD HH:MM:SS`) nas vendas antigas, que o painel
- * ainda lê. O texto vai direto para o banco e é comparado como texto nos
- * relatórios, então formato errado estraga mês, feira e contas a receber.
- */
-export const dataIsoSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}( \d{2}:\d{2}:\d{2})?$/)
 
 export const itemDaVendaSchema = z.object({
   variationId: idSchema,

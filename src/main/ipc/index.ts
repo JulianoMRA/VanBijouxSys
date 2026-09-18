@@ -24,6 +24,6 @@ export function registerAllHandlers({ ipc, banco, dialogoDeArquivo }: Dependenci
   registerSaleHandlers(ipc, banco)
   registerDashboardHandlers()
   registerInsumoHandlers(ipc, banco, dialogoDeArquivo)
-  registerCashHandlers()
+  registerCashHandlers(ipc, banco)
   registerBackupHandlers()
 }

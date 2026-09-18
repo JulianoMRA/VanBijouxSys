@@ -44,6 +44,10 @@ export default function ExpenseForm({
       setError('Informe uma descrição.')
       return
     }
+    if (!expenseDate) {
+      setError('Informe a data da despesa.')
+      return
+    }
 
     const data: CreateCashExpenseInput = {
       categoryId: categoryId as number,

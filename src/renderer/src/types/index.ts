@@ -64,44 +64,17 @@ export type {
   UpdateSaleInput
 } from '../../../shared/ipc/vendas'
 
-export interface ExpenseCategory {
-  id: number
-  name: string
-  createdAt: string
-}
-
-export type CreateExpenseCategoryInput = {
-  name: string
-}
-
-export type UpdateExpenseCategoryInput = CreateExpenseCategoryInput & { id: number }
-
-export interface CashExpense {
-  id: number
-  categoryId: number
-  categoryName: string
-  description: string
-  amount: number
-  expenseDate: string
-  notes: string | null
-  createdAt: string
-}
-
-export type CreateCashExpenseInput = {
-  categoryId: number
-  description: string
-  amount: number
-  expenseDate: string
-  notes?: string
-}
-
-export type UpdateCashExpenseInput = CreateCashExpenseInput & { id: number }
-
-export interface CashSettings {
-  id: number
-  openingBalance: number
-  updatedAt: string
-}
+// Tipos de caixa vêm do contrato dos canais de despesas e configurações.
+export type {
+  CashExpense,
+  CashSettings,
+  CashStats,
+  CreateCashExpenseInput,
+  CreateExpenseCategoryInput,
+  ExpenseCategory,
+  UpdateCashExpenseInput,
+  UpdateExpenseCategoryInput
+} from '../../../shared/ipc/caixa'
 
 export interface CashSummary {
   openingBalance: number

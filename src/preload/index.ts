@@ -1,13 +1,14 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import { CANAIS_IPC } from '../shared/ipc/channels'
+import type { CreateFairInput, UpdateFairInput } from '../renderer/src/types'
 import type {
-  CreateFairInput,
-  UpdateFairInput,
-  CreateExpenseCategoryInput,
-  UpdateExpenseCategoryInput,
   CreateCashExpenseInput,
-  UpdateCashExpenseInput
-} from '../renderer/src/types'
+  CreateExpenseCategoryInput,
+  FiltroDeDespesas,
+  FiltroDeEstatisticas,
+  UpdateCashExpenseInput,
+  UpdateExpenseCategoryInput
+} from '../shared/ipc/caixa'
 import type { CreateInsumoInput, UpdateInsumoInput } from '../shared/ipc/insumos'
 import type { CreateSaleInput, MarkSaleReceivedInput, UpdateSaleInput } from '../shared/ipc/vendas'
 import type {
@@ -95,13 +96,11 @@ const api = {
     delete: (id: number) => invoke(CANAIS_IPC.expenseCategories.delete, id)
   },
   cashExpenses: {
-    getAll: (filters?: { startDate?: string; endDate?: string; categoryId?: number }) =>
-      invoke(CANAIS_IPC.cashExpenses.getAll, filters),
+    getAll: (filters?: FiltroDeDespesas) => invoke(CANAIS_IPC.cashExpenses.getAll, filters),
     create: (data: CreateCashExpenseInput) => invoke(CANAIS_IPC.cashExpenses.create, data),
     update: (data: UpdateCashExpenseInput) => invoke(CANAIS_IPC.cashExpenses.update, data),
     delete: (id: number) => invoke(CANAIS_IPC.cashExpenses.delete, id),
-    getStats: (filters?: { startDate?: string; endDate?: string }) =>
-      invoke(CANAIS_IPC.cashExpenses.getStats, filters)
+    getStats: (filters?: FiltroDeEstatisticas) => invoke(CANAIS_IPC.cashExpenses.getStats, filters)
   },
   cashSettings: {
     get: () => invoke(CANAIS_IPC.cashSettings.get),

@@ -23,7 +23,10 @@ import type {
   CashExpense,
   CreateCashExpenseInput,
   UpdateCashExpenseInput,
-  CashSettings
+  CashSettings,
+  BackupInfo,
+  ResultadoDaExportacao,
+  ResultadoDaRestauracao
 } from '.'
 
 declare global {
@@ -106,9 +109,9 @@ declare global {
         setOpeningBalance: (balance: number) => Promise<{ success: boolean }>
       }
       backup: {
-        exportar: () => Promise<{ salvo: boolean; caminho?: string }>
-        restaurar: () => Promise<{ restaurado: boolean }>
-        info: () => Promise<{ pasta: string; ultimoBackup: string | null }>
+        exportar: () => Promise<ResultadoDaExportacao>
+        restaurar: () => Promise<ResultadoDaRestauracao>
+        info: () => Promise<BackupInfo>
         abrirPasta: () => Promise<{ aberto: boolean }>
       }
       app: {

@@ -1,225 +1,33 @@
-import { eq } from 'drizzle-orm'
-import { getDb, getSqlite } from '../database'
-import { sales, saleItems, productVariations, products, fairs } from '../database/schema'
-import { handleIpc } from './handle'
-import type {
-  CreateSaleInput,
-  UpdateSaleInput,
-  MarkSaleReceivedInput
-} from '../../renderer/src/types'
+import type { ConexaoBanco } from '../database/conexao'
+import { repositorioDeVendas } from '../repositorios/vendas'
+import { CANAIS_IPC } from '../../shared/ipc/channels'
+import { ARGUMENTOS_VENDAS } from '../../shared/ipc/vendas'
+import { registrarCanal, type RegistroDeCanais } from './canal'
 
-export function registerSaleHandlers(): void {
-  handleIpc('sales:getAll', () => {
-    const db = getDb()
+const OK = { success: true }
 
-    const allSales = db
-      .select({
-        id: sales.id,
-        channel: sales.channel,
-        fairId: sales.fairId,
-        fairName: fairs.name,
-        totalAmount: sales.totalAmount,
-        totalCost: sales.totalCost,
-        paymentMethod: sales.paymentMethod,
-        feePercentage: sales.feePercentage,
-        feeAmount: sales.feeAmount,
-        netAmount: sales.netAmount,
-        soldAt: sales.soldAt,
-        receivedAt: sales.receivedAt
-      })
-      .from(sales)
-      .leftJoin(fairs, eq(sales.fairId, fairs.id))
-      .orderBy(sales.soldAt)
-      .all()
-      .reverse()
+export function registerSaleHandlers(ipc: RegistroDeCanais, banco: ConexaoBanco): void {
+  const repositorio = repositorioDeVendas(banco)
+  const { sales } = CANAIS_IPC
 
-    return allSales.map((sale) => {
-      const items = db
-        .select({
-          id: saleItems.id,
-          variationId: saleItems.variationId,
-          variationIdentifier: productVariations.identifier,
-          productName: products.name,
-          quantity: saleItems.quantity,
-          unitPrice: saleItems.unitPrice,
-          unitCost: saleItems.unitCost
-        })
-        .from(saleItems)
-        .innerJoin(productVariations, eq(saleItems.variationId, productVariations.id))
-        .innerJoin(products, eq(productVariations.productId, products.id))
-        .where(eq(saleItems.saleId, sale.id))
-        .all()
-
-      return { ...sale, items }
-    })
+  registrarCanal(ipc, sales.getAll, ARGUMENTOS_VENDAS.getAll, () => repositorio.listarVendas())
+  registrarCanal(ipc, sales.create, ARGUMENTOS_VENDAS.create, (dados) =>
+    repositorio.criarVenda(dados)
+  )
+  registrarCanal(ipc, sales.update, ARGUMENTOS_VENDAS.update, (dados) => {
+    repositorio.atualizarVenda(dados)
+    return OK
   })
-
-  handleIpc('sales:create', (data: CreateSaleInput) => {
-    const sqlite = getSqlite()
-
-    const totalAmount = data.items.reduce((s, i) => s + i.quantity * i.unitPrice, 0)
-    const totalCost = data.items.reduce((s, i) => s + i.quantity * i.unitCost, 0)
-
-    const createSale = sqlite.transaction(() => {
-      const saleResult = sqlite
-        .prepare(
-          `INSERT INTO sales (channel, fair_id, total_amount, total_cost, payment_method, fee_percentage, fee_amount, net_amount, sold_at)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
-        )
-        .run(
-          data.channel,
-          data.fairId ?? null,
-          totalAmount,
-          totalCost,
-          data.paymentMethod,
-          data.feePercentage,
-          data.feeAmount,
-          data.netAmount,
-          data.soldAt
-        )
-
-      const saleId = saleResult.lastInsertRowid
-
-      for (const item of data.items) {
-        sqlite
-          .prepare(
-            `INSERT INTO sale_items (sale_id, variation_id, quantity, unit_price, unit_cost)
-               VALUES (?, ?, ?, ?, ?)`
-          )
-          .run(saleId, item.variationId, item.quantity, item.unitPrice, item.unitCost)
-
-        sqlite
-          .prepare(
-            `UPDATE product_variations
-               SET stock_quantity = stock_quantity - ?
-               WHERE id = ?`
-          )
-          .run(item.quantity, item.variationId)
-      }
-
-      return { id: saleId }
-    })
-
-    return createSale()
+  registrarCanal(ipc, sales.delete, ARGUMENTOS_VENDAS.delete, (id) => {
+    repositorio.excluirVenda(id)
+    return OK
   })
-
-  handleIpc('sales:update', (data: UpdateSaleInput) => {
-    const sqlite = getSqlite()
-
-    const updateSale = sqlite.transaction(() => {
-      const oldItems = sqlite
-        .prepare(`SELECT variation_id, quantity FROM sale_items WHERE sale_id = ?`)
-        .all(data.id) as { variation_id: number; quantity: number }[]
-
-      for (const item of oldItems) {
-        sqlite
-          .prepare(`UPDATE product_variations SET stock_quantity = stock_quantity + ? WHERE id = ?`)
-          .run(item.quantity, item.variation_id)
-      }
-
-      sqlite.prepare(`DELETE FROM sale_items WHERE sale_id = ?`).run(data.id)
-
-      const totalAmount = data.items.reduce((s, i) => s + i.quantity * i.unitPrice, 0)
-      const totalCost = data.items.reduce((s, i) => s + i.quantity * i.unitCost, 0)
-
-      sqlite
-        .prepare(
-          `UPDATE sales SET channel = ?, fair_id = ?, total_amount = ?, total_cost = ?,
-             payment_method = ?, fee_percentage = ?, fee_amount = ?, net_amount = ?, sold_at = ?
-             WHERE id = ?`
-        )
-        .run(
-          data.channel,
-          data.fairId ?? null,
-          totalAmount,
-          totalCost,
-          data.paymentMethod,
-          data.feePercentage,
-          data.feeAmount,
-          data.netAmount,
-          data.soldAt,
-          data.id
-        )
-
-      for (const item of data.items) {
-        sqlite
-          .prepare(
-            `INSERT INTO sale_items (sale_id, variation_id, quantity, unit_price, unit_cost)
-               VALUES (?, ?, ?, ?, ?)`
-          )
-          .run(data.id, item.variationId, item.quantity, item.unitPrice, item.unitCost)
-
-        sqlite
-          .prepare(
-            `UPDATE product_variations
-               SET stock_quantity = stock_quantity - ?
-               WHERE id = ?`
-          )
-          .run(item.quantity, item.variationId)
-      }
-    })
-
-    updateSale()
-    return { success: true }
+  registrarCanal(ipc, sales.markAsReceived, ARGUMENTOS_VENDAS.markAsReceived, (dados) => {
+    repositorio.marcarRecebida(dados)
+    return OK
   })
-
-  handleIpc('sales:markAsReceived', (data: MarkSaleReceivedInput) => {
-    const sqlite = getSqlite()
-    sqlite
-      .prepare(
-        `UPDATE sales
-             SET payment_method = ?, fee_percentage = ?, fee_amount = ?, net_amount = ?, received_at = ?
-           WHERE id = ?`
-      )
-      .run(
-        data.paymentMethod,
-        data.feePercentage,
-        data.feeAmount,
-        data.netAmount,
-        data.receivedAt,
-        data.id
-      )
-    return { success: true }
-  })
-
-  handleIpc('sales:unmarkAsReceived', (id: number) => {
-    const sqlite = getSqlite()
-    sqlite
-      .prepare(
-        `UPDATE sales
-             SET payment_method = 'areceber',
-                 fee_percentage = 0,
-                 fee_amount = 0,
-                 net_amount = total_amount,
-                 received_at = NULL
-           WHERE id = ?`
-      )
-      .run(id)
-    return { success: true }
-  })
-
-  handleIpc('sales:delete', (id: number) => {
-    const sqlite = getSqlite()
-
-    const deleteSale = sqlite.transaction(() => {
-      const items = sqlite
-        .prepare(`SELECT variation_id, quantity FROM sale_items WHERE sale_id = ?`)
-        .all(id) as { variation_id: number; quantity: number }[]
-
-      for (const item of items) {
-        sqlite
-          .prepare(
-            `UPDATE product_variations
-               SET stock_quantity = stock_quantity + ?
-               WHERE id = ?`
-          )
-          .run(item.quantity, item.variation_id)
-      }
-
-      sqlite.prepare(`DELETE FROM sales WHERE id = ?`).run(id)
-    })
-
-    deleteSale()
-    return { success: true }
+  registrarCanal(ipc, sales.unmarkAsReceived, ARGUMENTOS_VENDAS.unmarkAsReceived, (id) => {
+    repositorio.desmarcarRecebida(id)
+    return OK
   })
 }

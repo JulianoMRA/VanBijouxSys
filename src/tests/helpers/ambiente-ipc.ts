@@ -72,11 +72,11 @@ export async function prepararAmbienteIpc(opcoes: OpcoesDoAmbiente = {}): Promis
     import('../../main/ipc/dashboard'),
     import('../../main/ipc/cash')
   ])
-  registerSaleHandlers()
   // Domínios da fronteira validada: ipc, banco e diálogo entram por parâmetro.
   const ipc: RegistroDeCanais = { handle: (canal, fn) => handlers.set(canal, fn as Handler) }
   const conexaoInjetada = conexao as unknown as ConexaoBanco
   registerProductHandlers(ipc, conexaoInjetada)
+  registerSaleHandlers(ipc, conexaoInjetada)
   registerInsumoHandlers(ipc, conexaoInjetada, {
     escolherOndeSalvar: async () => opcoes.caminhoParaSalvar ?? null
   })

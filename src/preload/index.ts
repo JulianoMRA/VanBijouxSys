@@ -1,6 +1,6 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import { CANAIS_IPC } from '../shared/ipc/channels'
-import type { CreateFairInput, UpdateFairInput } from '../renderer/src/types'
+import type { CreateFairInput, UpdateFairInput } from '../shared/ipc/feiras'
 import type {
   CreateCashExpenseInput,
   CreateExpenseCategoryInput,

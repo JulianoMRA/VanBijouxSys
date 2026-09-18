@@ -5,6 +5,7 @@ import { SQL_VARIACOES_ESGOTADAS } from '../../main/database/consultas-estoque'
 import {
   criarInsumo,
   criarVariacao,
+  criarVenda,
   estoqueDaVariacao,
   estoqueDoInsumo,
   registrarVenda
@@ -145,5 +146,45 @@ describe('sales:update', () => {
     })
 
     expect(estoqueDaVariacao(ambiente, variacao)).toBe(-2)
+  })
+})
+
+describe('sales:getAll', () => {
+  it('should_list_the_newest_sale_first_and_break_ties_by_registration_order', async () => {
+    const antiga = await criarVenda(ambiente, {
+      soldAt: '2026-09-09',
+      items: [{ variationId: variacao, quantity: 1, unitPrice: 25, unitCost: 3 }]
+    })
+    const primeiraDoDia = await criarVenda(ambiente, {
+      soldAt: '2026-09-10',
+      items: [{ variationId: variacao, quantity: 1, unitPrice: 25, unitCost: 3 }]
+    })
+    const segundaDoDia = await criarVenda(ambiente, {
+      soldAt: '2026-09-10',
+      items: [{ variationId: variacao, quantity: 1, unitPrice: 25, unitCost: 3 }]
+    })
+
+    const vendas = await ambiente.chamar<Array<{ id: number }>>('sales:getAll')
+
+    expect(vendas.map((v) => v.id)).toEqual([segundaDoDia, primeiraDoDia, antiga])
+  })
+
+  it('should_name_the_product_and_the_variation_of_each_item', async () => {
+    await criarVenda(ambiente, {
+      items: [{ variationId: variacao, quantity: 2, unitPrice: 25, unitCost: 3 }]
+    })
+
+    const [venda] = await ambiente.chamar<Array<{ items: unknown[] }>>('sales:getAll')
+
+    expect(venda.items).toEqual([
+      expect.objectContaining({
+        variationId: variacao,
+        productName: 'Pulseira',
+        variationIdentifier: 'Rosa',
+        quantity: 2,
+        unitPrice: 25,
+        unitCost: 3
+      })
+    ])
   })
 })

@@ -211,6 +211,10 @@ export default function SaleForm({ sale, onSave, onClose }: SaleFormProps): JSX.
       setError('Selecione a feira correspondente.')
       return
     }
+    if (!soldAt) {
+      setError('Informe a data da venda.')
+      return
+    }
     if (items.length === 0) {
       setError('Adicione ao menos um item à venda.')
       return

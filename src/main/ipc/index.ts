@@ -21,7 +21,7 @@ export interface DependenciasDosCanais {
 export function registerAllHandlers({ ipc, banco, dialogoDeArquivo }: DependenciasDosCanais): void {
   registerProductHandlers(ipc, banco)
   registerFairHandlers()
-  registerSaleHandlers()
+  registerSaleHandlers(ipc, banco)
   registerDashboardHandlers()
   registerInsumoHandlers(ipc, banco, dialogoDeArquivo)
   registerCashHandlers()

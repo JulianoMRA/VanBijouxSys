@@ -1,5 +1,20 @@
 # Changelog
 
+## [1.14.0] - 2026-09-18
+
+### Corrigido
+
+- **Data da despesa**: apagar a data no formulário e salvar gravava a despesa sem data. Ela continuava na lista, mas sumia do resumo do período e do fluxo de caixa. Agora o app pede a data antes de salvar.
+
+### Interno
+
+- **Conferência do que chega antes de gravar**, agora em todas as telas: caixa, feiras, painel e backup completam o que insumos, produtos e vendas já tinham. Se vier algo fora do esperado, o app recusa com uma mensagem e não grava nada pela metade. Nada muda no uso normal.
+- O período do painel passou a ser conferido: antes, um valor desconhecido era tratado como "este ano" sem aviso.
+- O backup ganhou testes automáticos do caminho de restauração — escolher o arquivo, conferir que ele é mesmo um backup e confirmar o aviso.
+- A suíte de testes vai de 397 para 446.
+
+---
+
 ## [1.13.0] - 2026-09-18
 
 ### Corrigido

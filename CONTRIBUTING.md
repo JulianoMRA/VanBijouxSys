@@ -85,21 +85,33 @@ Não há CI hospedada. Antes de abrir PR, na ordem:
 
 Mudança visível no renderer também passa por conferência visual antes do PR.
 
+### Testes de tela e de ponta a ponta
+
+`npm test` roda dois projetos do vitest: `node` (lógica, handlers IPC sobre sql.js) e
+`tela` (componentes React com jsdom, em `src/tests/tela`). Os dois entram no pipeline.
+
+`npm run test:e2e` é outra coisa: ele compila o app e abre o **Electron de verdade**
+pelo Playwright, cada fluxo numa pasta de dados nova (`VANBIJOUX_USER_DATA`). Leva
+minutos e disputa o foco da máquina, então **fica fora do pipeline**: rode antes de
+uma release, ou quando mexer em algo que atravessa main e renderer — e só com
+confirmação de quem está na máquina, porque ele abre e fecha janelas.
+
 ### Cobertura
 
 `npm run test:coverage` mede todo o código de produção (`src/main`, `src/preload` e
 `src/renderer/src`) e falha abaixo dos pisos do `vitest.config.ts`. O relatório
 detalhado fica em `coverage/index.html`.
 
-| Camada                   | Piso (linhas) | Medido em 14/09/2026 |
-| ------------------------ | ------------- | -------------------- |
-| `src/main`               | 65%           | 66,9%                |
-| `src/renderer/src/utils` | 95%           | 96,8%                |
-| **global**               | **25%**       | **26,7%**            |
+| Camada                        | Piso (linhas) | Medido em 19/09/2026 |
+| ----------------------------- | ------------- | -------------------- |
+| `src/main`                    | 70%           | 74,5%                |
+| `src/renderer/src/utils`      | 95%           | 97,3%                |
+| `src/renderer/src/components` | 35%           | 38,8%                |
+| **global**                    | **40%**       | **43,4%**            |
 
 Os pisos ficam no múltiplo de 5 logo abaixo do medido: seguram regressão sem
-quebrar no primeiro commit, e sobem quando a camada sobe. Preload e telas estão em
-0% e não têm piso próprio até existirem testes de tela.
+quebrar no primeiro commit, e sobem quando a camada sobe. O preload continua em 0% e
+sem piso próprio; ele aparece no global, onde o número baixo fica visível.
 
 Os testes de integração chamam os handlers reais pelo
 `src/tests/helpers/ambiente-ipc.ts`, sobre o sql.js; todos os domínios passam por

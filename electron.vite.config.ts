@@ -12,8 +12,10 @@ const CSP =
   "font-src 'self' data:; " +
   "connect-src 'self'; " +
   "object-src 'none'; " +
-  "base-uri 'self'; " +
-  "frame-ancestors 'none'"
+  // Sem `frame-ancestors`: numa meta tag ele é ignorado e o Chromium registra
+  // um erro de console a cada abertura. Quem embutiria a janela seria outro
+  // documento, e o app não é servido por HTTP para ninguém embutir.
+  "base-uri 'self'"
 
 /**
  * A CSP só entra no HTML de produção: em dev o HMR do Vite precisa de inline

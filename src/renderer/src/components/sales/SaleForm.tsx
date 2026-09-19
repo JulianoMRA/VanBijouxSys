@@ -294,8 +294,11 @@ export default function SaleForm({ sale, onSave, onClose }: SaleFormProps): JSX.
             </div>
           </div>
           <div>
-            <label className="label">Data da venda</label>
+            <label className="label" htmlFor="venda-data">
+              Data da venda
+            </label>
             <input
+              id="venda-data"
               className="input"
               type="date"
               value={soldAt}
@@ -431,8 +434,11 @@ export default function SaleForm({ sale, onSave, onClose }: SaleFormProps): JSX.
                 >
                   <div className="grid grid-cols-2 gap-2">
                     <div>
-                      <label className="label">Produto</label>
+                      <label className="label" htmlFor={`venda-produto-${item.key}`}>
+                        Produto
+                      </label>
                       <select
+                        id={`venda-produto-${item.key}`}
                         className="input"
                         value={item.productId}
                         onChange={(e) =>
@@ -450,8 +456,11 @@ export default function SaleForm({ sale, onSave, onClose }: SaleFormProps): JSX.
                       </select>
                     </div>
                     <div>
-                      <label className="label">Variação</label>
+                      <label className="label" htmlFor={`venda-variacao-${item.key}`}>
+                        Variação
+                      </label>
                       <select
+                        id={`venda-variacao-${item.key}`}
                         className="input"
                         value={item.variationId}
                         disabled={item.productId === ''}
@@ -476,16 +485,22 @@ export default function SaleForm({ sale, onSave, onClose }: SaleFormProps): JSX.
 
                   <div className="grid grid-cols-3 gap-2 items-end">
                     <div>
-                      <label className="label">Qtd.</label>
+                      <label className="label" htmlFor={`venda-qtd-${item.key}`}>
+                        Qtd.
+                      </label>
                       <CampoNumerico
+                        id={`venda-qtd-${item.key}`}
                         className="input"
                         value={item.quantity}
                         onChange={(texto) => updateItem(item.key, { quantity: texto })}
                       />
                     </div>
                     <div>
-                      <label className="label">Preço unit. (R$)</label>
+                      <label className="label" htmlFor={`venda-preco-${item.key}`}>
+                        Preço unit. (R$)
+                      </label>
                       <CampoNumerico
+                        id={`venda-preco-${item.key}`}
                         className="input"
                         value={item.unitPrice}
                         onChange={(texto) => updateItem(item.key, { unitPrice: texto })}

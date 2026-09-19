@@ -117,7 +117,9 @@ export default function InsumoForm({
     <Modal title={isEditing ? 'Editar Insumo' : 'Novo Insumo'} onClose={onClose} size="sm">
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <label className="label">Nome do insumo</label>
+          <label className="label" htmlFor="insumo-nome">
+            Nome do insumo
+          </label>
           <input
             className="input"
             value={name}

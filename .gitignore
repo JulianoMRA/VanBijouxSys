@@ -18,3 +18,6 @@ refactor_visual/
 skills-lock.json
 tsconfig.web.tsbuildinfo
 tsconfig.node.tsbuildinfo
+# Saída do Playwright: relatório e trace de execução falha.
+test-results/
+playwright-report/

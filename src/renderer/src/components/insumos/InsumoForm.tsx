@@ -121,6 +121,7 @@ export default function InsumoForm({
             Nome do insumo
           </label>
           <input
+            id="insumo-nome"
             className="input"
             value={name}
             onChange={(e) => setName(e.target.value)}
@@ -161,12 +162,15 @@ export default function InsumoForm({
         </div>
 
         <div>
-          <label className="label">Custo por {unitLabel}</label>
+          <label className="label" htmlFor="insumo-custo">
+            Custo por {unitLabel}
+          </label>
           <div className="relative">
             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-300 text-body pointer-events-none">
               R$
             </span>
             <CampoNumerico
+              id="insumo-custo"
               className="input pl-8"
               placeholder="0,0000"
               value={costPerUnit}
@@ -180,12 +184,26 @@ export default function InsumoForm({
 
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="label">Estoque atual ({unit === 'unidade' ? 'un.' : unit})</label>
-            <CampoNumerico className="input" value={stockQuantity} onChange={setStockQuantity} />
+            <label className="label" htmlFor="insumo-estoque">
+              Estoque atual ({unit === 'unidade' ? 'un.' : unit})
+            </label>
+            <CampoNumerico
+              id="insumo-estoque"
+              className="input"
+              value={stockQuantity}
+              onChange={setStockQuantity}
+            />
           </div>
           <div>
-            <label className="label">Estoque mínimo ({unit === 'unidade' ? 'un.' : unit})</label>
-            <CampoNumerico className="input" value={minimumStock} onChange={setMinimumStock} />
+            <label className="label" htmlFor="insumo-minimo">
+              Estoque mínimo ({unit === 'unidade' ? 'un.' : unit})
+            </label>
+            <CampoNumerico
+              id="insumo-minimo"
+              className="input"
+              value={minimumStock}
+              onChange={setMinimumStock}
+            />
           </div>
         </div>
 

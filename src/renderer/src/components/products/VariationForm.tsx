@@ -270,8 +270,11 @@ export default function VariationForm({
       >
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="label">Identificador</label>
+            <label className="label" htmlFor="variacao-identificador">
+              Identificador
+            </label>
             <input
+              id="variacao-identificador"
               className="input"
               value={identifier}
               onChange={(e) => setIdentifier(e.target.value)}
@@ -285,8 +288,11 @@ export default function VariationForm({
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="label">Preço de custo (R$)</label>
+              <label className="label" htmlFor="variacao-custo">
+                Preço de custo (R$)
+              </label>
               <CampoNumerico
+                id="variacao-custo"
                 className="input"
                 value={costPrice}
                 onChange={setCostPrice}
@@ -302,8 +308,11 @@ export default function VariationForm({
               )}
             </div>
             <div>
-              <label className="label">Preço de venda (R$)</label>
+              <label className="label" htmlFor="variacao-venda">
+                Preço de venda (R$)
+              </label>
               <CampoNumerico
+                id="variacao-venda"
                 className="input"
                 value={salePrice}
                 onChange={setSalePrice}
@@ -498,8 +507,15 @@ export default function VariationForm({
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="label">Quantidade em estoque</label>
-              <CampoNumerico className="input" value={stockQuantity} onChange={setStockQuantity} />
+              <label className="label" htmlFor="variacao-estoque">
+                Quantidade em estoque
+              </label>
+              <CampoNumerico
+                id="variacao-estoque"
+                className="input"
+                value={stockQuantity}
+                onChange={setStockQuantity}
+              />
               {hasInsumos && (
                 <p className="text-micro text-ink-300 mt-1">
                   {isEditing
@@ -509,8 +525,15 @@ export default function VariationForm({
               )}
             </div>
             <div>
-              <label className="label">Estoque mínimo</label>
-              <CampoNumerico className="input" value={minimumStock} onChange={setMinimumStock} />
+              <label className="label" htmlFor="variacao-minimo">
+                Estoque mínimo
+              </label>
+              <CampoNumerico
+                id="variacao-minimo"
+                className="input"
+                value={minimumStock}
+                onChange={setMinimumStock}
+              />
               <p className="text-micro text-ink-300 mt-1">
                 Alerta aparece quando estoque ficar abaixo deste valor.
               </p>

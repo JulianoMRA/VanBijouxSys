@@ -1,15 +1,13 @@
 {
   "extends": "./tsconfig.node.json",
-  "include": [
-    "src/tests/**/*",
-    "src/main/**/*",
-    "src/shared/**/*",
-    "src/renderer/src/types/**/*",
-    "src/renderer/src/utils/**/*"
-  ],
+  "include": ["src/tests/**/*", "src/main/**/*", "src/shared/**/*", "src/renderer/src/**/*"],
   "compilerOptions": {
     "composite": true,
-    "types": ["node"],
+    // Os testes de tela renderizam componentes React: precisam do JSX e do DOM,
+    // além do node que os testes de lógica usam.
+    "jsx": "react-jsx",
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "types": ["node", "vite/client"],
     "tsBuildInfoFile": "node_modules/.tmp/tsconfig.tests.tsbuildinfo"
   }
 }

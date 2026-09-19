@@ -38,7 +38,7 @@ export default [
   {
     // Testes: sem os plugins de React, que não se aplicam aqui. Os de tela são
     // .tsx, e os de ponta a ponta moram em e2e/.
-    files: ['src/tests/**/*.{ts,tsx}', 'e2e/**/*.ts'],
+    files: ['src/tests/**/*.{ts,tsx}', 'e2e/**/*.ts', 'scripts/**/*.mjs'],
     languageOptions: {
       parser: tsParser,
       parserOptions: {

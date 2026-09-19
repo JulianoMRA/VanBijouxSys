@@ -21,3 +21,5 @@ tsconfig.node.tsbuildinfo
 # Saída do Playwright: relatório e trace de execução falha.
 test-results/
 playwright-report/
+# Capturas do smoke visual: geradas sob demanda, nao versionadas.
+smoke-visual/

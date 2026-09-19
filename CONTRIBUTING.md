@@ -96,6 +96,17 @@ minutos e disputa o foco da máquina, então **fica fora do pipeline**: rode ant
 uma release, ou quando mexer em algo que atravessa main e renderer — e só com
 confirmação de quem está na máquina, porque ele abre e fecha janelas.
 
+### Conferência visual
+
+`npm run smoke:visual` compila o app, abre o Electron numa pasta de dados nova,
+semeia um cenário pequeno pelo próprio `window.api` e fotografa as sete telas em
+`smoke-visual/` (a pasta não é versionada). As datas do cenário são contadas a
+partir de hoje, senão o painel abre no mês atual e sai vazio. Serve para olhar
+antes de um PR que mexe no visual — e falha se aparecer erro de console.
+
+Para trabalhar o CSS com recarga automática, o harness de mock em `.claude/preview`
+continua sendo o caminho mais rápido; ele não usa banco nem o processo principal.
+
 ### Cobertura
 
 `npm run test:coverage` mede todo o código de produção (`src/main`, `src/preload` e

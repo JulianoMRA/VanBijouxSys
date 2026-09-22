@@ -45,6 +45,7 @@ async function semear(janela) {
     vendaDaFeira: dia(12),
     vendaWhatsapp: dia(6),
     vendaAReceber: dia(2),
+    pagamentoParcial: dia(1),
     despesa: dia(15)
   }
 
@@ -139,7 +140,7 @@ async function semear(janela) {
       netAmount: 17.78,
       items: [{ variationId: Number(prata.id), quantity: 1, unitPrice: 18, unitCost: 2 }]
     })
-    await api.sales.create({
+    const aReceber = await api.sales.create({
       channel: 'Instagram',
       // Venda a receber só é aceita com o nome da cliente (RN-16).
       customerName: 'Marina Duarte',
@@ -149,6 +150,14 @@ async function semear(janela) {
       feeAmount: 0,
       netAmount: 30,
       items: [{ variationId: Number(rosa.id), quantity: 1, unitPrice: 30, unitCost: 3.5 }]
+    })
+    // Pagamento parcial (RN-17): a lista mostra "pago · falta" e o caixa, a entrada.
+    await api.sales.registerPayment({
+      saleId: Number(aReceber.id),
+      amount: 10,
+      paymentMethod: 'pix',
+      feePercentage: 0,
+      receivedAt: datas.pagamentoParcial
     })
 
     const categoria = await api.expenseCategories.create({ name: 'Material' })

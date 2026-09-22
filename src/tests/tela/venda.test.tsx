@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import SaleForm from '../../renderer/src/components/sales/SaleForm'
+import { MENSAGEM_CLIENTE_OBRIGATORIA } from '../../shared/clientes'
 import type { Product } from '../../shared/ipc/produtos'
 import type { Sale } from '../../shared/ipc/vendas'
 import { instalarApiFalsa, variacaoFalsa, type ApiFalsa } from './ajuda/api-falsa'
@@ -119,6 +120,20 @@ describe('SaleForm: conferências antes de salvar', () => {
 })
 
 describe('SaleForm: cliente', () => {
+  it('should_require_the_customer_for_a_receivable_sale', async () => {
+    const usuaria = userEvent.setup()
+    render(<SaleForm onSave={vi.fn()} onClose={vi.fn()} />)
+    await screen.findByLabelText('Produto')
+
+    await usuaria.click(screen.getByRole('button', { name: 'WhatsApp' }))
+    await escolherItem(usuaria)
+    await usuaria.click(screen.getByRole('button', { name: 'A receber' }))
+    await usuaria.click(screen.getByRole('button', { name: 'Registrar venda' }))
+
+    expect(await screen.findByText(MENSAGEM_CLIENTE_OBRIGATORIA)).toBeInTheDocument()
+    expect(api.sales.create).not.toHaveBeenCalled()
+  })
+
   it('should_send_the_customer_without_extra_spaces', async () => {
     const usuaria = userEvent.setup()
     render(<SaleForm onSave={vi.fn()} onClose={vi.fn()} />)

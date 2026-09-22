@@ -9,7 +9,7 @@ import {
 } from '../../utils/numero'
 import { estaArquivado, variacaoInativa } from '../../utils/arquivamento'
 import { custoUnitarioDoItem } from '../../utils/itens-de-venda'
-import { normalizarNomeDaCliente } from '../../../../shared/clientes'
+import { MENSAGEM_CLIENTE_OBRIGATORIA, normalizarNomeDaCliente } from '../../../../shared/clientes'
 import type {
   Fair,
   Product,
@@ -222,6 +222,10 @@ export default function SaleForm({
     }
     if (!soldAt) {
       setError('Informe a data da venda.')
+      return
+    }
+    if (paymentMethod === 'areceber' && !normalizarNomeDaCliente(customerName)) {
+      setError(MENSAGEM_CLIENTE_OBRIGATORIA)
       return
     }
     if (items.length === 0) {
@@ -437,7 +441,8 @@ export default function SaleForm({
         </div>
         {paymentMethod === 'areceber' && (
           <div className="rounded-control border border-honey-200 bg-honey-100 px-4 py-3 text-micro text-honey-600">
-            Esta venda não entra no caixa até ser marcada como recebida na lista de vendas.
+            Esta venda não entra no caixa até ser marcada como recebida na lista de vendas. O nome
+            da cliente é obrigatório, para saber de quem cobrar.
           </div>
         )}
 

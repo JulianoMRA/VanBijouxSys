@@ -70,7 +70,11 @@ export async function registrarVenda(
   return Number(id)
 }
 
-/** Venda com data, canal e pagamento escolhidos; o líquido padrão é o total sem taxa. */
+/**
+ * Venda com data, canal e pagamento escolhidos; o líquido padrão é o total sem taxa.
+ * A cliente padrão existe porque venda a receber sem nome é recusada (RN-16); para
+ * uma venda sem cliente, passe `customerName: undefined`.
+ */
 export async function criarVenda(
   ambiente: AmbienteIpc,
   dados: Partial<Omit<CreateSaleInput, 'items'>> & {
@@ -80,6 +84,7 @@ export async function criarVenda(
   const total = dados.items.reduce((s, i) => s + i.quantity * i.unitPrice, 0)
   const { id } = await ambiente.chamar<{ id: number }>('sales:create', {
     channel: 'WhatsApp',
+    customerName: 'Maria',
     soldAt: '2026-05-10',
     paymentMethod: 'dinheiro',
     feePercentage: 0,

@@ -18,6 +18,7 @@ function venda(over: Partial<Sale> = {}): Sale {
     channel: 'WhatsApp',
     fairId: null,
     fairName: null,
+    customerName: null,
     totalAmount: 100,
     totalCost: 40,
     paymentMethod: 'pix',
@@ -330,6 +331,11 @@ describe('buildTransactions', () => {
   it('should_show_the_fair_name_in_the_subtitle_when_present', () => {
     const rows = buildTransactions([venda({ channel: 'Feira', fairName: 'Bosque' })], [], [])
     expect(rows[0].sub).toContain('Bosque')
+  })
+
+  it('should_show_the_customer_in_the_subtitle_when_present', () => {
+    const rows = buildTransactions([venda({ customerName: 'Maria' })], [], [])
+    expect(rows[0].sub).toBe('WhatsApp · Maria · PIX')
   })
 
   it('should_keep_gross_and_net_apart_on_an_income_row', () => {

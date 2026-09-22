@@ -167,8 +167,9 @@ function saleLabel(sale: Sale): string {
 
 function saleSub(sale: Sale): string {
   const feira = sale.fairName ? ` · ${sale.fairName}` : ''
+  const cliente = sale.customerName ? ` · ${sale.customerName}` : ''
   const recebido = sale.receivedAt ? ' · recebido' : ''
-  return `${sale.channel}${feira} · ${PAYMENT_LABELS[sale.paymentMethod]}${recebido}`
+  return `${sale.channel}${feira}${cliente} · ${PAYMENT_LABELS[sale.paymentMethod]}${recebido}`
 }
 
 export function buildTransactions(

@@ -28,6 +28,8 @@ function venda(over: Partial<Sale> = {}): Sale {
         unitCost: 3
       }
     ],
+    payments: [],
+    amountDue: 0,
     ...over
   }
 }

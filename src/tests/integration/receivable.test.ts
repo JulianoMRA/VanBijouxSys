@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { prepararAmbienteIpc, type AmbienteIpc } from '../helpers/ambiente-ipc'
-import { queryOne } from '../helpers/testDb'
 import { criarVariacao, criarVenda } from '../helpers/estoque'
+import { receber } from '../helpers/recebimentos'
 import type { DashboardStats } from '../../shared/ipc/painel'
 
 vi.mock('electron', async () => (await import('../helpers/ambiente-ipc')).electronFalso)
@@ -93,7 +93,7 @@ describe("'A receber' — competência vs caixa", () => {
     expect(overview.totalReceivable).toBe(90)
   })
 
-  it('should_leave_a_receivable_out_of_the_total_once_it_is_marked_as_received', async () => {
+  it('should_leave_a_receivable_out_of_the_total_once_it_is_fully_received', async () => {
     const recebida = await criarVenda(ambiente, {
       soldAt: '2026-05-10',
       paymentMethod: 'areceber',
@@ -104,83 +104,11 @@ describe("'A receber' — competência vs caixa", () => {
       paymentMethod: 'areceber',
       items: [item(1, 30)]
     })
-    await ambiente.chamar('sales:markAsReceived', {
-      id: recebida,
-      paymentMethod: 'pix',
-      feePercentage: 0,
-      feeAmount: 0,
-      netAmount: 30,
-      receivedAt: '2026-05-20'
-    })
+    await receber(ambiente, recebida, { amount: 30, receivedAt: '2026-05-20' })
 
     const { overview } = await painelDeMaio()
 
     expect(overview.totalReceivable).toBe(30)
-  })
-})
-
-describe("'A receber' — markAsReceived e unmarkAsReceived", () => {
-  function registro(id: number): {
-    payment_method: string
-    fee_percentage: number
-    fee_amount: number
-    net_amount: number
-    received_at: string | null
-  } {
-    return queryOne(
-      ambiente.banco,
-      'SELECT payment_method, fee_percentage, fee_amount, net_amount, received_at FROM sales WHERE id = ?',
-      [id]
-    )!
-  }
-
-  it('should_store_method_fee_net_and_received_date_when_marking_as_received', async () => {
-    const venda = await criarVenda(ambiente, {
-      soldAt: '2026-05-10',
-      paymentMethod: 'areceber',
-      items: [item(1, 100, 20)]
-    })
-
-    await ambiente.chamar('sales:markAsReceived', {
-      id: venda,
-      paymentMethod: 'pix',
-      feePercentage: 0.99,
-      feeAmount: 0.99,
-      netAmount: 99.01,
-      receivedAt: '2026-05-20'
-    })
-
-    const salvo = registro(venda)
-    expect(salvo.payment_method).toBe('pix')
-    expect(salvo.fee_amount).toBeCloseTo(0.99, 2)
-    expect(salvo.net_amount).toBeCloseTo(99.01, 2)
-    expect(salvo.received_at).toBe('2026-05-20')
-  })
-
-  it('should_restore_receivable_with_no_fee_and_net_equal_to_total_when_unmarking', async () => {
-    const venda = await criarVenda(ambiente, {
-      soldAt: '2026-05-10',
-      paymentMethod: 'areceber',
-      items: [item(1, 100, 20)]
-    })
-    await ambiente.chamar('sales:markAsReceived', {
-      id: venda,
-      paymentMethod: 'pix',
-      feePercentage: 0.99,
-      feeAmount: 0.99,
-      netAmount: 99.01,
-      receivedAt: '2026-05-20'
-    })
-
-    await ambiente.chamar('sales:unmarkAsReceived', venda)
-
-    expect(registro(venda)).toEqual({
-      payment_method: 'areceber',
-      fee_percentage: 0,
-      fee_amount: 0,
-      net_amount: 100,
-      received_at: null
-    })
   })
 })
 
@@ -191,14 +119,7 @@ describe("'A receber' — fluxo de caixa agrupa pela data de recebimento", () =>
       paymentMethod: 'areceber',
       items: [item(1, 50)]
     })
-    await ambiente.chamar('sales:markAsReceived', {
-      id: venda,
-      paymentMethod: 'pix',
-      feePercentage: 0,
-      feeAmount: 0,
-      netAmount: 50,
-      receivedAt: '2026-05-10'
-    })
+    await receber(ambiente, venda, { amount: 50, receivedAt: '2026-05-10' })
 
     const { cashFlow } = await painelCompleto()
 

@@ -35,7 +35,8 @@ export const CANAIS_IPC = {
     create: 'sales:create',
     update: 'sales:update',
     delete: 'sales:delete',
-    markAsReceived: 'sales:markAsReceived',
+    registerPayment: 'sales:registerPayment',
+    deletePayment: 'sales:deletePayment',
     unmarkAsReceived: 'sales:unmarkAsReceived'
   },
   dashboard: {

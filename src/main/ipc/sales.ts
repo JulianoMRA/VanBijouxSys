@@ -22,8 +22,11 @@ export function registerSaleHandlers(ipc: RegistroDeCanais, banco: ConexaoBanco)
     repositorio.excluirVenda(id)
     return OK
   })
-  registrarCanal(ipc, sales.markAsReceived, ARGUMENTOS_VENDAS.markAsReceived, (dados) => {
-    repositorio.marcarRecebida(dados)
+  registrarCanal(ipc, sales.registerPayment, ARGUMENTOS_VENDAS.registerPayment, (dados) =>
+    repositorio.registrarPagamento(dados)
+  )
+  registrarCanal(ipc, sales.deletePayment, ARGUMENTOS_VENDAS.deletePayment, (id) => {
+    repositorio.excluirPagamento(id)
     return OK
   })
   registrarCanal(ipc, sales.unmarkAsReceived, ARGUMENTOS_VENDAS.unmarkAsReceived, (id) => {

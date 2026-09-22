@@ -2,16 +2,18 @@ import { useState } from 'react'
 import Modal from '../ui/Modal'
 import CampoNumerico from '../ui/CampoNumerico'
 import {
+  formatarNumeroParaCampo,
   interpretarNumero,
   numeroDoArmazenamento,
   numeroParaArmazenamento
 } from '../../utils/numero'
-import { formatCurrency } from '../../utils/format'
-import type { PaymentMethod, Sale } from '../../types'
+import { formatCurrency, formatDate } from '../../utils/format'
+import { totalRecebido } from '../../utils/recebimentos'
+import { emCentavos } from '../../../../shared/dinheiro'
+import { RECUSAS_DE_PAGAMENTO } from '../../../../shared/recebimentos'
+import type { ReceivedPaymentMethod, Sale } from '../../types'
 
-type ReceivedPaymentMethod = Exclude<PaymentMethod, 'areceber'>
-
-interface MarkReceivedModalProps {
+interface ReceberPagamentoModalProps {
   sale: Sale
   onSave: () => void
   onClose: () => void
@@ -34,14 +36,20 @@ function loadLastFee(method: ReceivedPaymentMethod): string {
   return numeroDoArmazenamento(localStorage.getItem(`lastFee_${method}`))
 }
 
-export default function MarkReceivedModal({
+/**
+ * RN-17. O valor já vem com o que falta receber: quitar de uma vez é só confirmar,
+ * e um valor menor é o pagamento parcial. Quem confere e grava é o processo
+ * principal; a tela só antecipa as recusas mais comuns.
+ */
+export default function ReceberPagamentoModal({
   sale,
   onSave,
   onClose
-}: MarkReceivedModalProps): JSX.Element {
+}: ReceberPagamentoModalProps): JSX.Element {
+  const [amount, setAmount] = useState(formatarNumeroParaCampo(sale.amountDue))
   const [paymentMethod, setPaymentMethod] = useState<ReceivedPaymentMethod>('dinheiro')
-  const [feePercentage, setFeePercentage] = useState<string>('0')
-  const [receivedAt, setReceivedAt] = useState<string>(todayIso())
+  const [feePercentage, setFeePercentage] = useState('0')
+  const [receivedAt, setReceivedAt] = useState(todayIso())
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
@@ -50,15 +58,27 @@ export default function MarkReceivedModal({
     setFeePercentage(loadLastFee(method))
   }
 
+  const valorLido = interpretarNumero(amount)
+  const valor = valorLido === null ? 0 : emCentavos(valorLido)
   const feeLida = feePercentage.trim() === '' ? 0 : interpretarNumero(feePercentage)
   const feePercent = feeLida ?? 0
-  const feeAmount = (sale.totalAmount * feePercent) / 100
-  const netAmount = sale.totalAmount - feeAmount
+  const feeAmount = (valor * feePercent) / 100
+  const netAmount = valor - feeAmount
+  const faltaDepois = emCentavos(sale.amountDue - valor)
+  const recebido = totalRecebido(sale)
 
   async function handleSubmit(e: React.FormEvent): Promise<void> {
     e.preventDefault()
+    if (valorLido === null || valor <= 0) {
+      setError(RECUSAS_DE_PAGAMENTO.valorZerado)
+      return
+    }
+    if (valor > sale.amountDue) {
+      setError(RECUSAS_DE_PAGAMENTO.acimaDoQueFalta(sale.amountDue))
+      return
+    }
     if (!receivedAt) {
-      setError('Informe a data de recebimento.')
+      setError('Informe a data do recebimento.')
       return
     }
     if (feeLida === null || feeLida < 0 || feeLida > 100) {
@@ -70,40 +90,81 @@ export default function MarkReceivedModal({
     }
     setSaving(true)
     try {
-      await window.api.sales.markAsReceived({
-        id: sale.id,
+      await window.api.sales.registerPayment({
+        saleId: sale.id,
+        amount: valor,
         paymentMethod,
         feePercentage: feePercent,
-        feeAmount,
-        netAmount,
         receivedAt
       })
       onSave()
       onClose()
-    } catch {
-      setError('Erro ao marcar como recebida. Tente novamente.')
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : 'Erro ao registrar o pagamento. Tente novamente.'
+      )
     } finally {
       setSaving(false)
     }
   }
 
   return (
-    <Modal title="Marcar venda como recebida" onClose={onClose} size="md">
+    <Modal title="Receber pagamento" onClose={onClose} size="md">
       <form onSubmit={handleSubmit} className="space-y-5">
-        <div className="rounded-control bg-bone-200 px-4 py-3 text-body text-ink-600">
+        <div className="space-y-1 rounded-control bg-bone-200 px-4 py-3 text-body text-ink-600">
           <p>
             Venda de{' '}
             <span className="font-semibold tabular-nums text-ink-900">
               {formatCurrency(sale.totalAmount)}
-            </span>{' '}
-            registrada em {sale.soldAt.slice(8, 10)}/{sale.soldAt.slice(5, 7)}/
-            {sale.soldAt.slice(0, 4)}.
+            </span>
+            {sale.customerName && (
+              <>
+                {' '}
+                para <span className="font-semibold text-ink-900">{sale.customerName}</span>
+              </>
+            )}
+            , em {formatDate(sale.soldAt.slice(0, 10))}.
           </p>
+          {recebido > 0 && (
+            <p>
+              Já recebido{' '}
+              <span className="font-semibold tabular-nums text-ink-900">
+                {formatCurrency(recebido)}
+              </span>{' '}
+              · falta{' '}
+              <span className="font-semibold tabular-nums text-honey-600">
+                {formatCurrency(sale.amountDue)}
+              </span>
+            </p>
+          )}
+        </div>
+
+        <div>
+          <label className="label" htmlFor="receber-valor">
+            Valor recebido (R$)
+          </label>
+          <CampoNumerico
+            id="receber-valor"
+            className="input"
+            value={amount}
+            onChange={setAmount}
+            placeholder={formatarNumeroParaCampo(sale.amountDue)}
+          />
+          {valor > 0 && valor < sale.amountDue && (
+            <p className="mt-1 text-micro tabular-nums text-ink-500">
+              Depois deste pagamento, ainda faltam {formatCurrency(faltaDepois)}.
+            </p>
+          )}
+          {valor > 0 && valor === sale.amountDue && (
+            <p className="mt-1 text-micro text-sage-600">
+              Com este pagamento, a venda fica quitada.
+            </p>
+          )}
         </div>
 
         <div>
           <label className="label">Forma de pagamento recebida</label>
-          <div className="flex gap-2 flex-wrap">
+          <div className="flex flex-wrap gap-2">
             {PAYMENT_METHODS.map(({ value, label }) => (
               <button
                 key={value}
@@ -123,7 +184,7 @@ export default function MarkReceivedModal({
 
         {paymentMethod !== 'dinheiro' && (
           <div>
-            <label className="label">
+            <label className="label" htmlFor="receber-taxa">
               Taxa (
               {paymentMethod === 'pix'
                 ? 'sugerido: 0,99%'
@@ -134,8 +195,8 @@ export default function MarkReceivedModal({
             </label>
             <div className="relative">
               <CampoNumerico
+                id="receber-taxa"
                 className="input pr-8"
-
                 value={feePercentage}
                 onChange={setFeePercentage}
                 placeholder="0,00"
@@ -144,17 +205,20 @@ export default function MarkReceivedModal({
                 %
               </span>
             </div>
-            {feePercent > 0 && (
+            {feePercent > 0 && valor > 0 && (
               <p className="mt-1 text-micro tabular-nums text-ink-500">
-                Taxa: {formatCurrency(feeAmount)} · Líquido: {formatCurrency(netAmount)}
+                Taxa: {formatCurrency(feeAmount)} · Entra no caixa: {formatCurrency(netAmount)}
               </p>
             )}
           </div>
         )}
 
         <div>
-          <label className="label">Data do recebimento</label>
+          <label className="label" htmlFor="receber-data">
+            Data do recebimento
+          </label>
           <input
+            id="receber-data"
             type="date"
             className="input"
             value={receivedAt}

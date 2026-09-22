@@ -6,6 +6,7 @@ import {
   SQL_VARIACOES_ESGOTADAS
 } from '../database/consultas-estoque'
 import { ErroDeNegocio } from '../ipc/mensagens'
+import { emCentavos } from '../../shared/dinheiro'
 import type { DashboardParams, DashboardStats, PeriodoDoPainel } from '../../shared/ipc/painel'
 
 function computePeriodDates(period: Exclude<PeriodoDoPainel, 'custom'>): {
@@ -135,9 +136,13 @@ export function repositorioDoPainel({ sqlite }: ConexaoBanco): RepositorioDoPain
         )
         .get(...dateParams) as Omit<DashboardStats['overview'], 'totalReceivable'>
 
+      // RN-17: o que falta receber é o total menos o que já foi pago. O arredondamento
+      // em centavos tira o resíduo de ponto flutuante de uma venda que já fechou.
       const receivable = sqlite
         .prepare(
-          `SELECT COALESCE(SUM(s.net_amount), 0) AS totalReceivable
+          `SELECT COALESCE(SUM(s.total_amount - COALESCE(
+             (SELECT SUM(p.amount) FROM sale_payments p WHERE p.sale_id = s.id), 0)), 0)
+             AS totalReceivable
            FROM sales s
            WHERE s.payment_method = 'areceber'${sSoldAtClause}`
         )
@@ -145,7 +150,7 @@ export function repositorioDoPainel({ sqlite }: ConexaoBanco): RepositorioDoPain
 
       const overview: DashboardStats['overview'] = {
         ...overviewBase,
-        totalReceivable: receivable.totalReceivable
+        totalReceivable: emCentavos(receivable.totalReceivable)
       }
 
       let previousOverview: DashboardStats['previousOverview'] = null
@@ -321,8 +326,12 @@ export function repositorioDoPainel({ sqlite }: ConexaoBanco): RepositorioDoPain
       const cashIncomeClause = fromDate
         ? ` AND date(COALESCE(received_at, sold_at)) >= ?${toDate ? ' AND date(COALESCE(received_at, sold_at)) <= ?' : ''}`
         : ''
+      // RN-17: o pagamento de venda a receber entra no caixa no dia em que foi recebido.
+      const paymentDateClause = fromDate
+        ? ` AND date(received_at) >= ?${toDate ? ' AND date(received_at) <= ?' : ''}`
+        : ''
 
-      const cashFlowParams: string[] = [...dateParams, ...dateParams, ...dateParams]
+      const cashFlowParams: string[] = [...dateParams, ...dateParams, ...dateParams, ...dateParams]
 
       const cashFlow = sqlite
         .prepare(
@@ -333,6 +342,9 @@ export function repositorioDoPainel({ sqlite }: ConexaoBanco): RepositorioDoPain
            FROM (
              SELECT strftime('%Y-%m', COALESCE(received_at, sold_at)) AS month, net_amount AS income, 0 AS expenses
              FROM sales WHERE payment_method != 'areceber'${cashIncomeClause}
+             UNION ALL
+             SELECT strftime('%Y-%m', received_at) AS month, net_amount AS income, 0 AS expenses
+             FROM sale_payments WHERE 1=1${paymentDateClause}
              UNION ALL
              SELECT strftime('%Y-%m', expense_date) AS month, 0 AS income, amount AS expenses
              FROM cash_expenses WHERE 1=1${expenseDateClause}
@@ -353,11 +365,13 @@ export function repositorioDoPainel({ sqlite }: ConexaoBanco): RepositorioDoPain
 
       const cashIncomeTotal = sqlite
         .prepare(
-          `SELECT COALESCE(SUM(net_amount), 0) AS total
-           FROM sales
-           WHERE payment_method != 'areceber'${cashIncomeClause}`
+          `SELECT
+             (SELECT COALESCE(SUM(net_amount), 0) FROM sales
+              WHERE payment_method != 'areceber'${cashIncomeClause})
+             + (SELECT COALESCE(SUM(net_amount), 0) FROM sale_payments
+                WHERE 1=1${paymentDateClause}) AS total`
         )
-        .get(...dateParams) as { total: number }
+        .get(...dateParams, ...dateParams) as { total: number }
 
       const cashExpensesTotal = sqlite
         .prepare(

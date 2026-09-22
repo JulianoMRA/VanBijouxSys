@@ -12,7 +12,7 @@ import type {
   Sale,
   CreateSaleInput,
   UpdateSaleInput,
-  MarkSaleReceivedInput,
+  RegisterPaymentInput,
   DashboardStats,
   Insumo,
   CreateInsumoInput,
@@ -61,7 +61,8 @@ declare global {
         create: (data: CreateSaleInput) => Promise<{ id: number }>
         update: (data: UpdateSaleInput) => Promise<{ success: boolean }>
         delete: (id: number) => Promise<{ success: boolean }>
-        markAsReceived: (data: MarkSaleReceivedInput) => Promise<{ success: boolean }>
+        registerPayment: (data: RegisterPaymentInput) => Promise<{ id: number }>
+        deletePayment: (id: number) => Promise<{ success: boolean }>
         unmarkAsReceived: (id: number) => Promise<{ success: boolean }>
       }
       dashboard: {

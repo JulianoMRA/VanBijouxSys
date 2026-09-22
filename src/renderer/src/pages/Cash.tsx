@@ -13,6 +13,7 @@ import {
   buildFairExpenses,
   buildTransactions,
   calcCashSummary,
+  filterCashPayments,
   filterCashSales,
   filterExpenses,
   resolveDateRange
@@ -106,6 +107,7 @@ export default function Cash(): JSX.Element {
   )
 
   const filteredSales = useMemo(() => filterCashSales(sales, dateRange), [sales, dateRange])
+  const filteredPayments = useMemo(() => filterCashPayments(sales, dateRange), [sales, dateRange])
   const filteredExpenses = useMemo(() => filterExpenses(expenses, dateRange), [expenses, dateRange])
   const filteredFairExpenses = useMemo(
     () => buildFairExpenses(fairs, dateRange),
@@ -115,14 +117,16 @@ export default function Cash(): JSX.Element {
   const { totalIncome, totalExpenses, currentBalance } = calcCashSummary({
     openingBalance,
     sales: filteredSales,
+    payments: filteredPayments,
     expenses: filteredExpenses,
     fairExpenses: filteredFairExpenses
   })
+  const recebimentos = filteredSales.length + filteredPayments.length
 
   const transactions = useMemo(
     (): TransactionRow[] =>
-      buildTransactions(filteredSales, filteredExpenses, filteredFairExpenses),
-    [filteredSales, filteredExpenses, filteredFairExpenses]
+      buildTransactions(filteredSales, filteredExpenses, filteredFairExpenses, filteredPayments),
+    [filteredSales, filteredExpenses, filteredFairExpenses, filteredPayments]
   )
 
   const saldos = useMemo(
@@ -246,8 +250,9 @@ export default function Cash(): JSX.Element {
             ))}
           </div>
           <p className="ml-auto text-aux text-ink-300">
-            Entradas contam vendas <strong className="font-semibold text-ink-800">recebidas</strong>
-            ; “a receber” fica fora
+            Entradas contam o que foi{' '}
+            <strong className="font-semibold text-ink-800">recebido</strong>; o que falta receber
+            fica fora
           </p>
         </div>
 
@@ -304,8 +309,7 @@ export default function Cash(): JSX.Element {
               + {formatCurrency(totalIncome)}
             </p>
             <p className="mt-1.5 text-aux text-ink-400">
-              {filteredSales.length} venda{filteredSales.length !== 1 ? 's' : ''} recebida
-              {filteredSales.length !== 1 ? 's' : ''}
+              {recebimentos} recebimento{recebimentos !== 1 ? 's' : ''}
             </p>
           </div>
 

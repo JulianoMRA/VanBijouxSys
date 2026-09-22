@@ -1,4 +1,5 @@
-import type { CashExpense, Fair, PaymentMethod, Sale } from '../types'
+import { emCentavos } from '../../../shared/dinheiro'
+import type { CashExpense, Fair, PaymentMethod, Sale, SalePayment } from '../types'
 
 export type PeriodKey = 'mes' | '3meses' | '6meses' | 'ano' | 'tudo' | 'custom'
 
@@ -106,9 +107,24 @@ function withinRange(day: string, range: DateRange | null): boolean {
   return day >= range.startDate && day <= range.endDate
 }
 
-/** Vendas 'A receber' pendentes não compõem o caixa. */
+/** A venda "a receber" não compõe o caixa: o que entra são os pagamentos dela. */
 export function filterCashSales(sales: Sale[], range: DateRange | null): Sale[] {
   return sales.filter((s) => s.paymentMethod !== 'areceber' && withinRange(cashDateOf(s), range))
+}
+
+/** Um pagamento de venda a receber, com a venda de onde ele veio. */
+export interface PagamentoNoCaixa {
+  sale: Sale
+  payment: SalePayment
+}
+
+/** RN-17. Cada pagamento entra no caixa no dia em que foi recebido. */
+export function filterCashPayments(sales: Sale[], range: DateRange | null): PagamentoNoCaixa[] {
+  return sales.flatMap((sale) =>
+    sale.payments
+      .filter((payment) => withinRange(payment.receivedAt.slice(0, 10), range))
+      .map((payment) => ({ sale, payment }))
+  )
 }
 
 export function filterExpenses(expenses: CashExpense[], range: DateRange | null): CashExpense[] {
@@ -143,10 +159,13 @@ export function buildFairExpenses(fairs: Fair[], range: DateRange | null): FairE
 export function calcCashSummary(input: {
   openingBalance: number
   sales: Sale[]
+  payments: PagamentoNoCaixa[]
   expenses: CashExpense[]
   fairExpenses: FairExpenseRow[]
 }): { totalIncome: number; totalExpenses: number; currentBalance: number } {
-  const totalIncome = input.sales.reduce((s, sale) => s + sale.netAmount, 0)
+  const totalIncome =
+    input.sales.reduce((s, sale) => s + sale.netAmount, 0) +
+    input.payments.reduce((s, { payment }) => s + payment.netAmount, 0)
   const totalExpenses =
     input.expenses.reduce((s, e) => s + e.amount, 0) +
     input.fairExpenses.reduce((s, fe) => s + fe.amount, 0)
@@ -165,17 +184,28 @@ function saleLabel(sale: Sale): string {
   return `${sale.items.length} itens vendidos`
 }
 
-function saleSub(sale: Sale): string {
+/** "WhatsApp · Feira do Bosque · Maria": de onde veio o dinheiro. */
+function origemDaVenda(sale: Sale): string {
   const feira = sale.fairName ? ` · ${sale.fairName}` : ''
   const cliente = sale.customerName ? ` · ${sale.customerName}` : ''
+  return `${sale.channel}${feira}${cliente}`
+}
+
+function saleSub(sale: Sale): string {
   const recebido = sale.receivedAt ? ' · recebido' : ''
-  return `${sale.channel}${feira}${cliente} · ${PAYMENT_LABELS[sale.paymentMethod]}${recebido}`
+  return `${origemDaVenda(sale)} · ${PAYMENT_LABELS[sale.paymentMethod]}${recebido}`
+}
+
+function paymentSub(sale: Sale, payment: SalePayment): string {
+  const parte = payment.amount < emCentavos(sale.totalAmount) ? 'parcial' : 'recebido'
+  return `${origemDaVenda(sale)} · ${PAYMENT_LABELS[payment.paymentMethod]} · ${parte}`
 }
 
 export function buildTransactions(
   sales: Sale[],
   expenses: CashExpense[],
-  fairExpenses: FairExpenseRow[]
+  fairExpenses: FairExpenseRow[],
+  payments: PagamentoNoCaixa[]
 ): TransactionRow[] {
   const incomeRows: TransactionRow[] = sales.map((s) => ({
     kind: 'income',
@@ -187,6 +217,18 @@ export function buildTransactions(
     netAmount: s.netAmount,
     feeAmount: s.feeAmount,
     paymentMethod: s.paymentMethod
+  }))
+
+  const paymentRows: TransactionRow[] = payments.map(({ sale, payment }) => ({
+    kind: 'income',
+    id: payment.id,
+    date: payment.receivedAt.slice(0, 10),
+    label: saleLabel(sale),
+    sub: paymentSub(sale, payment),
+    amount: payment.amount,
+    netAmount: payment.netAmount,
+    feeAmount: payment.feeAmount,
+    paymentMethod: payment.paymentMethod
   }))
 
   const expenseRows: TransactionRow[] = expenses.map((e) => ({
@@ -208,7 +250,7 @@ export function buildTransactions(
     amount: fe.amount
   }))
 
-  return [...incomeRows, ...expenseRows, ...fairRows].sort((a, b) =>
+  return [...incomeRows, ...paymentRows, ...expenseRows, ...fairRows].sort((a, b) =>
     b.date !== a.date ? b.date.localeCompare(a.date) : 0
   )
 }

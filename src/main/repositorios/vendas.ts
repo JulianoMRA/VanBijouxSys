@@ -65,6 +65,7 @@ export function repositorioDeVendas({ db, sqlite }: ConexaoBanco): RepositorioDe
           channel: sales.channel,
           fairId: sales.fairId,
           fairName: fairs.name,
+          customerName: sales.customerName,
           totalAmount: sales.totalAmount,
           totalCost: sales.totalCost,
           paymentMethod: sales.paymentMethod,
@@ -113,6 +114,7 @@ export function repositorioDeVendas({ db, sqlite }: ConexaoBanco): RepositorioDe
           .values({
             channel: dados.channel,
             fairId: dados.fairId ?? null,
+            customerName: dados.customerName,
             totalAmount: totalDe(dados.items, 'unitPrice'),
             totalCost: totalDe(dados.items, 'unitCost'),
             paymentMethod: dados.paymentMethod,
@@ -145,6 +147,7 @@ export function repositorioDeVendas({ db, sqlite }: ConexaoBanco): RepositorioDe
           .set({
             channel: dados.channel,
             fairId: dados.fairId ?? null,
+            customerName: dados.customerName,
             totalAmount: totalDe(dados.items, 'unitPrice'),
             totalCost: totalDe(dados.items, 'unitCost'),
             paymentMethod: dados.paymentMethod,

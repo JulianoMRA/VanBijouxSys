@@ -25,6 +25,7 @@ const vendaAntiga = (): Sale => ({
   channel: 'WhatsApp',
   fairId: null,
   fairName: null,
+  customerName: null,
   totalAmount: 25,
   totalCost: 2,
   paymentMethod: 'pix',

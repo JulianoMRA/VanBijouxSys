@@ -1,5 +1,5 @@
 /**
- * Calcula o preço de venda sugerido a partir do custo de materiais e mão de obra.
+ * RN-09. Calcula o preço de venda sugerido a partir do custo de materiais e mão de obra.
  * Fórmula: teto((materiais × 3 + mão de obra) × 1,10 + 1,00)
  */
 export function calcSuggestedPrice(materials: number, labor: number): number {

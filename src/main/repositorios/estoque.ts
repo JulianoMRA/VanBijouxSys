@@ -6,7 +6,7 @@ import { ErroDeNegocio } from '../ipc/mensagens'
 type Db = ConexaoBanco['db']
 
 /**
- * Novo saldo de insumo depois de somar `variacao` (negativa para baixa).
+ * RN-03, RN-04. Novo saldo de insumo depois de somar `variacao` (negativa para baixa).
  *
  * O saldo pode ficar negativo de propósito: negativo quer dizer que faltou
  * registrar uma compra, ou que a receita pede mais do que se usa. Truncar em
@@ -22,7 +22,7 @@ export function saldoArredondado(variacao: number): SQL {
   return sql`ROUND(stock_quantity + ${variacao}, 4) + 0.0`
 }
 
-/** Estoque de peças digitado: inteiro e não negativo. */
+/** RN-06. Estoque de peças digitado: inteiro e não negativo. */
 export function validarEstoqueDePecas(quantidade: number): void {
   if (!Number.isInteger(quantidade) || quantidade < 0) {
     throw new ErroDeNegocio('Quantidade em estoque inválida.')
@@ -30,7 +30,7 @@ export function validarEstoqueDePecas(quantidade: number): void {
 }
 
 /**
- * Única escrita de estoque de peças fora das vendas. `pecas` negativo retira.
+ * RN-01. Única escrita de estoque de peças fora das vendas. `pecas` negativo retira.
  * Com `acompanharInsumos`, a receita segue o movimento: peça a mais consome
  * insumo, peça a menos devolve. Precisa rodar dentro de uma transação.
  */

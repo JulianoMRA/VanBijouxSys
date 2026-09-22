@@ -21,7 +21,7 @@ export interface RepositorioDeInsumos {
 
 export function repositorioDeInsumos({ db, sqlite }: ConexaoBanco): RepositorioDeInsumos {
   /**
-   * Trocar a unidade não converte nada: 20 cm de fio na receita viram 20 g. Com
+   * RN-05. Trocar a unidade não converte nada: 20 cm de fio na receita viram 20 g. Com
    * receita, a troca é recusada, porque as quantidades vivem em outra tela e
    * ninguém veria a mudança de sentido — conta até variação arquivada, que pode
    * voltar. Com saldo, a troca só vale junto com a contagem na unidade nova, que

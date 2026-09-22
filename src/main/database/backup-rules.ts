@@ -1,4 +1,5 @@
 export const PREFIXO_BACKUP = 'vanbijouxsys-'
+/** RN-15: dez dias de histórico. */
 export const MAX_BACKUPS = 10
 
 export interface ArquivoBackup {

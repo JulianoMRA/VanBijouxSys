@@ -48,7 +48,7 @@ export function servicoDeBackup(dependencias: DependenciasDeBackup): ServicoDeBa
     },
 
     /**
-     * Restaurar troca o banco inteiro, então tem três portas antes de escrever:
+     * RN-15. Restaurar troca o banco inteiro, então tem três portas antes de escrever:
      * a escolha do arquivo, a conferência de que ele é mesmo um backup do app e
      * a confirmação do aviso. Só depois das três o banco é substituído.
      */

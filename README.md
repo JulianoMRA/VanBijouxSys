@@ -6,11 +6,13 @@ Aplicativo desktop de gestão para negócios de bijuterias. Controla produtos e 
 
 O shell é **Electron 41** porque o app precisa rodar offline no Windows da usuária, com banco local e zero dependência de servidor. O empacotamento sai pelo **electron-builder** como instalador NSIS.
 
-O renderer é **React 18 + TypeScript + Tailwind CSS**. Tailwind resolve o estilo sem abrir arquivos de CSS para cada tela, o que importa num app com muitos formulários parecidos. Os gráficos do dashboard usam **Recharts**, que já traz tudo que eu precisava (barras, linhas, comparativos) sem overhead de D3. O estado global (toasts, preferências) usa **Zustand** — leve o suficiente para não justificar Redux.
+O renderer é **React 18 + TypeScript + Tailwind CSS**. Tailwind resolve o estilo sem abrir arquivos de CSS para cada tela, o que importa num app com muitos formulários parecidos. Os gráficos do dashboard usam **Recharts**, que já traz tudo que eu precisava (barras, linhas, comparativos) sem overhead de D3. Não há biblioteca de estado global: o estado vive nas telas, e o que atravessa (toasts) passa por um hook próprio.
+
+Tudo o que atravessa a fronteira entre tela e processo principal é validado com **zod** antes de tocar no banco (ver [Fronteira IPC](#fronteira-ipc)).
 
 A persistência é **SQLite via better-sqlite3**, com **Drizzle ORM** para tipar as queries. SQLite porque o banco vive no disco do usuário; better-sqlite3 porque é síncrono e roda direto no processo principal sem worker. O `postinstall` recompila o binário para o runtime do Electron.
 
-Build e dev server são **electron-vite**, que combina HMR no renderer com reload no main. Testes são **Vitest + sql.js**: sql.js dá um SQLite em memória para integração sem mexer em arquivo real.
+Build e dev server são **electron-vite**, que combina HMR no renderer com reload no main. Os testes são **Vitest** em dois projetos — lógica e handlers sobre **sql.js** (SQLite em memória) e telas em **jsdom** com Testing Library — mais **Playwright** abrindo o Electron de verdade nos fluxos de ponta a ponta.
 
 A distribuição usa **electron-updater** contra as releases do GitHub, com **electron-log** para deixar rastro do que o updater fez. Não há CI: a verificação roda em hooks locais de git (**husky** + **lint-staged** + **commitlint**), então lint, tipos e testes são checados na máquina antes do commit e do push.
 
@@ -18,37 +20,43 @@ A distribuição usa **electron-updater** contra as releases do GitHub, com **el
 
 ```
 src/
+├── shared/ipc/                 # Contrato dos canais: nomes e schemas zod
+│   ├── channels.ts             # CANAIS_IPC (sem runtime: o preload é sandboxed)
+│   ├── comum.ts                # id e data, usados por vários domínios
+│   └── <dominio>.ts            # produtos, vendas, insumos, caixa, feiras, painel, backup
 ├── main/                       # Processo principal (Electron)
 │   ├── database/
 │   │   ├── index.ts            # Inicialização e migrations
 │   │   ├── schema.ts           # Esquema Drizzle
 │   │   ├── backup.ts           # Backup, validação e restauração
 │   │   └── backup-rules.ts     # Regras puras de nomenclatura e rotação
-│   ├── ipc/                    # Handlers IPC por domínio
-│   │   ├── handle.ts           # Wrapper que padroniza erro dos handlers
+│   ├── ipc/                    # Registro dos canais por domínio
+│   │   ├── canal.ts            # registrarCanal: valida o payload e padroniza o erro
 │   │   ├── mensagens.ts        # Tradução de erro técnico para a usuária
-│   │   ├── backup.ts           # Backup, restauração e versão do app
-│   │   ├── cash.ts             # Fluxo de caixa
-│   │   ├── dashboard.ts        # KPIs e agregações
-│   │   ├── fairs.ts            # Feiras
-│   │   ├── insumos.ts          # Matéria-prima
-│   │   ├── products.ts         # Produtos e variações
-│   │   └── sales.ts            # Vendas
+│   │   └── <dominio>.ts        # products, sales, insumos, cash, fairs, dashboard, backup
+│   ├── repositorios/           # Regra de negócio e SQL, por domínio
+│   │   ├── estoque.ts          # Único lugar que move saldo de peça e de insumo
+│   │   └── produtos.ts, vendas.ts, insumos.ts, caixa.ts, feiras.ts, painel.ts
+│   ├── servicos/backup.ts      # Fluxo de backup com diálogos por parâmetro
 │   ├── updater.ts              # Auto-atualização via GitHub Releases
-│   └── index.ts
+│   └── index.ts                # Boot, janela e as dependências reais dos canais
 ├── preload/
-│   └── index.ts                # Bridge segura (contextBridge)
+│   └── index.ts                # Bridge segura (contextBridge), sem zod
 ├── renderer/src/
 │   ├── pages/                  # Cash, Dashboard, Fairs, PriceCalculator, Products, Sales, Stock
 │   ├── components/             # ui/, products/, sales/, fairs/, insumos/, cash/, layout/
 │   ├── hooks/                  # useToast
-│   ├── utils/                  # pricing.ts, format.ts
-│   └── types/
+│   ├── utils/                  # numero, pricing, format, arquivamento, ajuste-de-estoque…
+│   └── types/                  # Reexporta o contrato de src/shared/ipc
 └── tests/
-    ├── helpers/testDb.ts       # SQLite em memória via sql.js
-    ├── pricing.test.ts
-    ├── format.test.ts
-    └── integration/
+    ├── helpers/                # ambiente-ipc.ts (handlers reais sobre sql.js), testDb.ts
+    ├── integration/            # Um arquivo por domínio, chamando os canais
+    ├── tela/                   # Componentes React com jsdom e Testing Library
+    └── *.test.ts               # Funções puras (números, precificação, arquivamento…)
+
+e2e/                            # Playwright abrindo o Electron de verdade
+scripts/smoke-visual.mjs        # Capturas das sete telas com dados semeados
+docs/regras-de-negocio.md       # As regras numeradas (RN-01…RN-15)
 ```
 
 ## Rodando localmente
@@ -70,7 +78,9 @@ O `postinstall` recompila o `better-sqlite3` para o Electron automaticamente. O 
 | `npm run build`         | Compila main, preload e renderer                        |
 | `npm run preview`       | Roda o build empacotado sem gerar instalador            |
 | `npm run build:win`     | Gera instalador `.exe` (NSIS) em `dist/`                |
-| `npm test`              | Roda a suíte Vitest uma vez                             |
+| `npm test`              | Suíte Vitest: lógica, handlers e telas                  |
+| `npm run test:e2e`      | Playwright no Electron real (fora do pipeline)          |
+| `npm run smoke:visual`  | Capturas das sete telas com dados semeados              |
 | `npm run test:coverage` | Suíte com cobertura e pisos por camada                  |
 | `npm run test:watch`    | Vitest em modo watch                                    |
 | `npm run typecheck`     | Verifica tipos de main/preload, renderer e testes       |
@@ -123,19 +133,25 @@ O app se atualiza pelas releases do GitHub via electron-updater. O repositório 
 
 O passo a passo — branch de documentação, `npm version`, build e `gh release create` com os três arquivos — está em [CONTRIBUTING.md](CONTRIBUTING.md#release), junto com as ressalvas sobre instalador sem assinatura e nome do artefato.
 
-## Erros no IPC
+## Fronteira IPC
 
-Todo handler é registrado por `handleIpc` ([src/main/ipc/handle.ts](src/main/ipc/handle.ts)), que faz a falha sempre virar exceção — nunca um `{ success: false }` de retorno, que o renderer ignorava silenciosamente. A tradução de erro técnico (violação de chave estrangeira, nome duplicado) para texto que a cliente entende fica em [src/main/ipc/mensagens.ts](src/main/ipc/mensagens.ts), indexada por canal; um canal novo sem entrada cai numa mensagem genérica. No renderer, sempre trate a chamada com `try/catch` e mostre `err.message`.
+<a id="fronteira-ipc"></a>
+
+Os 47 canais são registrados por `registrarCanal` ([src/main/ipc/canal.ts](src/main/ipc/canal.ts)), que valida os argumentos com o schema zod do domínio ([src/shared/ipc/](src/shared/ipc/)) **antes** de qualquer escrita. Payload fora do formato é recusado com uma mensagem legível, e o log guarda só o caminho e o código do problema — nunca os valores, que são dados do negócio.
+
+Depois da validação, o handler delega para o repositório do domínio, que recebe a conexão por parâmetro. A falha sempre vira exceção — nunca um `{ success: false }` de retorno, que o renderer ignorava silenciosamente. A tradução de erro técnico (violação de chave estrangeira, nome duplicado) para texto que a cliente entende fica em [src/main/ipc/mensagens.ts](src/main/ipc/mensagens.ts), indexada por canal; um canal novo sem entrada cai numa mensagem genérica. No renderer, sempre trate a chamada com `try/catch` e mostre `err.message`.
+
+O preload importa apenas `CANAIS_IPC`: com `sandbox: true` ele não carrega zod, e nenhum schema entra no bundle do renderer.
 
 ## Manutenção
 
-**Adicionar um domínio novo (ex.: despesas recorrentes).** Cria o handler em `src/main/ipc/` e registra em `src/main/ipc/index.ts`; expõe a API no `src/preload/index.ts`; cria a página em `src/renderer/src/pages/` e registra a rota no `App.tsx`; se precisar de tabela, adiciona em `schema.ts` e replica em `testDb.ts`.
+**Adicionar um domínio novo (ex.: despesas recorrentes).** Na ordem: nomes dos canais em `src/shared/ipc/channels.ts`; schemas e tipos em `src/shared/ipc/<dominio>.ts`; teste de payload em `src/tests/integration/<dominio>-payload.test.ts` **antes** da implementação; regra e SQL em `src/main/repositorios/<dominio>.ts`; registro dos canais em `src/main/ipc/<dominio>.ts` e em `ipc/index.ts`, com o harness de teste (`src/tests/helpers/ambiente-ipc.ts`) registrando o mesmo domínio; API no `src/preload/index.ts`; página em `src/renderer/src/pages/` e rota no `App.tsx`. Se precisar de tabela, adiciona em `schema.ts` e replica em `testDb.ts`.
 
-**Regras de negócio.** A fórmula de precificação e a formatação de datas/valores ficam em `src/renderer/src/utils/` (`pricing.ts`, `format.ts`). Mudanças ali têm teste dedicado em `src/tests/pricing.test.ts` e `format.test.ts` — atualize junto.
+**Regras de negócio.** As quinze regras que o app precisa respeitar estão em [docs/regras-de-negocio.md](docs/regras-de-negocio.md), numeradas (RN-01…RN-15), com o código e o teste de cada uma. Os comentários no código citam o número. Mudou a regra, o documento muda junto.
 
-**Dedução de estoque.** Insumos são deduzidos na fabricação, não na venda. Toda escrita de estoque de peças fora das vendas passa por `movimentarEstoqueDaVariacao` em [src/main/ipc/products.ts](src/main/ipc/products.ts): o "+ Estoque", o estoque inicial e o ajuste pelo formulário, que sempre carrega um motivo — só `producao` move insumo, `contagem` corrige o número sem tocar neles. O saldo pode ficar negativo de propósito: negativo em peça quer dizer venda sem produção registrada, e em insumo, compra não lançada ou receita maior que o real. Truncar em zero descartava essa diferença e fazia o resultado depender da ordem dos lançamentos. O saldo de insumo é arredondado para 4 casas ([src/main/database/saldo.ts](src/main/database/saldo.ts)), e a edição de venda faz restauração + novo desconto.
+**Dedução de estoque.** Insumos são deduzidos na fabricação, não na venda (RN-01). Toda escrita de estoque de peça fora das vendas passa por `movimentarEstoqueDaVariacao` em [src/main/repositorios/estoque.ts](src/main/repositorios/estoque.ts), que é também o único lugar que mexe no saldo de insumo. O detalhe de cada caso — motivo do ajuste, saldo negativo, arredondamento — está em RN-01 a RN-04.
 
-**Testes de handler.** Os testes de integração de estoque chamam os handlers reais por [src/tests/helpers/ambiente-ipc.ts](src/tests/helpers/ambiente-ipc.ts), que substitui `electron` e o banco por sql.js com as migrações reais. Não copie o SQL do handler para dentro do teste: a cópia não protege o código que roda na máquina da usuária.
+**Camadas de teste.** `npm test` roda dois projetos: lógica e handlers (os canais reais sobre sql.js, por [src/tests/helpers/ambiente-ipc.ts](src/tests/helpers/ambiente-ipc.ts)) e telas (React com jsdom). Não copie o SQL do handler para dentro do teste: a cópia não protege o código que roda na máquina da usuária. Fora do pipeline, `npm run test:e2e` abre o Electron de verdade e `npm run smoke:visual` fotografa as sete telas — os dois estão no [CONTRIBUTING.md](CONTRIBUTING.md#testes-de-tela-e-de-ponta-a-ponta).
 
 **Ícone do instalador.** O `build:win` depende de `resources/icon.ico`. Para regenerar a partir do SVG, existe `scripts/create-icon.mjs`.
 

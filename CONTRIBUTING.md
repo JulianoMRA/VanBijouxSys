@@ -34,7 +34,9 @@ VANBIJOUX_USER_DATA=/caminho/da/base-isolada npm run dev
    `refactor/<nome>`, `docs/<nome>` ou `chore/<nome>`.
 3. **Teste antes da implementação.** Regra de negócio e handler IPC começam com
    um teste falhando; a correção vem depois, e o teste precisa ficar vermelho se
-   ela for revertida.
+   ela for revertida. Regra que já existe está em
+   [docs/regras-de-negocio.md](docs/regras-de-negocio.md): cite o número
+   (`RN-07`) no PR e no comentário do código.
 4. Commits atômicos em Conventional Commits: uma mudança lógica por commit.
 5. Rode o pipeline local (abaixo) até ficar verde.
 6. Push da branch e PR contra a `main`. O merge é por **merge commit**, para que
@@ -42,6 +44,10 @@ VANBIJOUX_USER_DATA=/caminho/da/base-isolada npm run dev
 
 PR é obrigatório mesmo sem revisor: a descrição registra o que mudou, por quê e
 como foi verificado — inclusive o que **não** foi verificado.
+
+Entre sessões de trabalho, o bastão passa pelo
+[HANDOFF_PROTOCOL.md](HANDOFF_PROTOCOL.md): o estado vivo fica em
+`.claude/HANDOFF.md`, que não é versionado.
 
 ---
 

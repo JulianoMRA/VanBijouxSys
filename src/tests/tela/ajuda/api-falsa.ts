@@ -20,7 +20,11 @@ export interface ApiFalsa {
     delete: ReturnType<typeof vi.fn>
   }
   products: { getAll: ReturnType<typeof vi.fn> }
-  sales: { create: ReturnType<typeof vi.fn>; update: ReturnType<typeof vi.fn> }
+  sales: {
+    getAll: ReturnType<typeof vi.fn>
+    create: ReturnType<typeof vi.fn>
+    update: ReturnType<typeof vi.fn>
+  }
   fairs: { getAll: ReturnType<typeof vi.fn> }
 }
 
@@ -39,6 +43,7 @@ export function instalarApiFalsa(): ApiFalsa {
     },
     products: { getAll: vi.fn(async () => []) },
     sales: {
+      getAll: vi.fn(async () => []),
       create: vi.fn(async () => ({ id: 1 })),
       update: vi.fn(async () => ({ success: true }))
     },

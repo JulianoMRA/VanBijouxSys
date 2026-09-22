@@ -118,6 +118,55 @@ describe('SaleForm: conferências antes de salvar', () => {
   })
 })
 
+describe('SaleForm: cliente', () => {
+  it('should_send_the_customer_without_extra_spaces', async () => {
+    const usuaria = userEvent.setup()
+    render(<SaleForm onSave={vi.fn()} onClose={vi.fn()} />)
+    await screen.findByLabelText('Produto')
+
+    await usuaria.click(screen.getByRole('button', { name: 'WhatsApp' }))
+    await usuaria.type(screen.getByLabelText('Cliente'), '  Maria  Souza ')
+    await escolherItem(usuaria)
+    await usuaria.click(screen.getByRole('button', { name: 'A receber' }))
+    await usuaria.click(screen.getByRole('button', { name: 'Registrar venda' }))
+
+    await waitFor(() => expect(api.sales.create).toHaveBeenCalledTimes(1))
+    expect(api.sales.create.mock.calls[0][0]).toMatchObject({
+      paymentMethod: 'areceber',
+      customerName: 'Maria Souza'
+    })
+  })
+
+  it('should_suggest_the_names_already_used', async () => {
+    render(<SaleForm sugestoesDeClientes={['Ana', 'Maria']} onSave={vi.fn()} onClose={vi.fn()} />)
+
+    const campo = await screen.findByLabelText('Cliente')
+    const lista = document.getElementById(campo.getAttribute('list') ?? '')
+
+    expect(
+      Array.from(lista?.querySelectorAll('option') ?? []).map((o) => o.getAttribute('value'))
+    ).toEqual(['Ana', 'Maria'])
+  })
+
+  it('should_keep_the_customer_when_editing_a_sale', async () => {
+    const usuaria = userEvent.setup()
+    render(
+      <SaleForm
+        sale={{ ...vendaAntiga(), customerName: 'Maria' }}
+        onSave={vi.fn()}
+        onClose={vi.fn()}
+      />
+    )
+    await screen.findByDisplayValue('25')
+
+    expect(screen.getByLabelText('Cliente')).toHaveValue('Maria')
+    await usuaria.click(screen.getByRole('button', { name: /Salvar/ }))
+
+    await waitFor(() => expect(api.sales.update).toHaveBeenCalledTimes(1))
+    expect(api.sales.update.mock.calls[0][0]).toMatchObject({ customerName: 'Maria' })
+  })
+})
+
 describe('SaleForm: aviso de estoque', () => {
   it('should_warn_when_selling_more_than_the_registered_stock', async () => {
     const usuaria = userEvent.setup()

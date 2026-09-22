@@ -7,6 +7,8 @@ import ActionMenu from '../components/ui/ActionMenu'
 import Toast from '../components/ui/Toast'
 import { useToast } from '../hooks/useToast'
 import { formatCurrency, formatDate } from '../utils/format'
+import { vendaCorrespondeABusca } from '../utils/busca-de-vendas'
+import { nomesDeClientes } from '../utils/sugestoes-de-clientes'
 import type { Sale, SaleChannel, PaymentMethod } from '../types'
 
 type Modal =
@@ -111,28 +113,21 @@ export default function Sales(): JSX.Element {
       result = result.filter((s) => s.channel === channelFilter)
     }
 
-    const termo = search.trim().toLowerCase()
-    if (termo) {
-      result = result.filter(
-        (s) =>
-          (s.fairName ?? '').toLowerCase().includes(termo) ||
-          s.items.some(
-            (i) =>
-              i.productName.toLowerCase().includes(termo) ||
-              i.variationIdentifier.toLowerCase().includes(termo)
-          )
-      )
-    }
-
-    return result
+    return result.filter((s) => vendaCorrespondeABusca(s, search))
   }, [sales, channelFilter, search])
+
+  const sugestoesDeClientes = useMemo(() => nomesDeClientes(sales), [sales])
 
   const totalRevenue = filtered.reduce((s, sale) => s + sale.totalAmount, 0)
   const totalNetRevenue = filtered.reduce((s, sale) => s + sale.netAmount, 0)
   const totalProfit = filtered.reduce((s, sale) => s + (sale.netAmount - sale.totalCost), 0)
   const avgTicket = filtered.length > 0 ? totalRevenue / filtered.length : 0
+  // O botão do filtro soma tudo o que está pendente; o card segue a busca, como os
+  // outros cards, para mostrar quanto a cliente procurada deve.
   const pendentes = sales.filter(isPending)
   const totalReceivable = pendentes.reduce((s, sale) => s + sale.netAmount, 0)
+  const pendentesFiltradas = filtered.filter(isPending)
+  const totalReceivableFiltrado = pendentesFiltradas.reduce((s, sale) => s + sale.netAmount, 0)
   const margem = totalNetRevenue > 0 ? (totalProfit / totalNetRevenue) * 100 : null
   const filtrando = channelFilter !== 'Todos' || search.trim() !== ''
 
@@ -158,7 +153,7 @@ export default function Sales(): JSX.Element {
         <div className="flex flex-wrap items-center gap-2">
           <input
             className="input w-[260px]"
-            placeholder="Buscar por produto ou feira…"
+            placeholder="Buscar por cliente, produto ou feira…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
@@ -241,12 +236,12 @@ export default function Sales(): JSX.Element {
             <div className="rounded-card border border-honey-200 bg-honey-100 px-[22px] py-[18px]">
               <p className="label text-honey-500">A receber</p>
               <p className="text-[26px] font-semibold leading-none tracking-[-0.02em] tabular-nums text-honey-600">
-                {formatCurrency(totalReceivable)}
+                {formatCurrency(totalReceivableFiltrado)}
               </p>
               <p className="mt-1.5 text-aux text-honey-600">
-                {pendentes.length === 0
+                {pendentesFiltradas.length === 0
                   ? 'nada pendente'
-                  : `${pendentes.length} venda${pendentes.length !== 1 ? 's' : ''} pendente${pendentes.length !== 1 ? 's' : ''}`}
+                  : `${pendentesFiltradas.length} venda${pendentesFiltradas.length !== 1 ? 's' : ''} pendente${pendentesFiltradas.length !== 1 ? 's' : ''}`}
               </p>
             </div>
           </div>
@@ -330,7 +325,16 @@ export default function Sales(): JSX.Element {
                         >
                           {sale.channel.toUpperCase()}
                         </span>
-                        <span className="text-body font-medium text-ink-900">
+                        {sale.customerName && (
+                          <span className="truncate text-body font-semibold text-ink-900">
+                            {sale.customerName}
+                          </span>
+                        )}
+                        <span
+                          className={`text-body ${
+                            sale.customerName ? 'text-ink-500' : 'font-medium text-ink-900'
+                          }`}
+                        >
                           {sale.items.length} {sale.items.length === 1 ? 'item' : 'itens'}
                         </span>
                         {sale.fairName && (
@@ -465,6 +469,7 @@ export default function Sales(): JSX.Element {
 
       {modal?.type === 'new' && (
         <SaleForm
+          sugestoesDeClientes={sugestoesDeClientes}
           onSave={() => {
             loadSales()
             showToast('Venda registrada!')
@@ -475,6 +480,7 @@ export default function Sales(): JSX.Element {
       {modal?.type === 'edit' && (
         <SaleForm
           sale={modal.sale}
+          sugestoesDeClientes={sugestoesDeClientes}
           onSave={() => {
             loadSales()
             showToast('Venda atualizada!')

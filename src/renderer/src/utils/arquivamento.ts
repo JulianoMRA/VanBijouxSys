@@ -10,7 +10,7 @@ export function estaArquivado(item: Arquivavel): boolean {
 }
 
 /**
- * Uma variação está inativa quando ela própria foi arquivada ou quando o
+ * RN-10. Uma variação está inativa quando ela própria foi arquivada ou quando o
  * produto dela foi. Arquivar o produto não escreve nas variações — é o mesmo
  * critério do SQL, e o motivo é poder desarquivar sem ressuscitar variação que
  * já estava arquivada sozinha.

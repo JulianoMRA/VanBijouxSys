@@ -4,7 +4,7 @@ import { z } from 'zod'
 export const idSchema = z.number().int().positive()
 
 /**
- * Data como o banco guarda: `AAAA-MM-DD`, que é o que os campos `<input type="date">`
+ * RN-14. Data como o banco guarda: `AAAA-MM-DD`, que é o que os campos `<input type="date">`
  * mandam, ou com a hora que o próprio SQLite gravou (`AAAA-MM-DD HH:MM:SS`) nos
  * registros antigos, que os relatórios ainda leem. O texto vai direto para o banco e
  * é comparado como texto, então formato errado estraga mês, feira e contas a receber.

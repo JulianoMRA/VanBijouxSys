@@ -17,7 +17,7 @@ function pecas(quantidade: number): string {
 }
 
 /**
- * Sem receita não há insumo para mover, então o motivo não muda nada e
+ * RN-02. Sem receita não há insumo para mover, então o motivo não muda nada e
  * perguntar seria só atrito. `anterior` nulo é o cadastro da variação.
  */
 export function precisaPerguntarMotivo(

@@ -131,7 +131,7 @@ export function repositorioDeProdutos({ db, sqlite }: ConexaoBanco): Repositorio
     },
 
     /**
-     * Arquivar tira o produto dos alertas, das listas e dos seletores, mas não
+     * RN-10. Arquivar tira o produto dos alertas, das listas e dos seletores, mas não
      * toca no histórico: as vendas antigas continuam apontando para ele. As
      * variações não são escritas — quem lê deriva o estado a partir do produto.
      */
@@ -215,7 +215,7 @@ export function repositorioDeProdutos({ db, sqlite }: ConexaoBanco): Repositorio
       atualizar()
     },
 
-    /** Aplicar preço pela Precificação não tem por que regravar estoque nem receita. */
+    /** RN-09. Aplicar preço pela Precificação não regrava estoque nem receita. */
     definirPrecoDeVenda(id, preco) {
       if (preco < 0) throw new ErroDeNegocio('Preço de venda inválido.')
       const resultado = db
@@ -227,7 +227,7 @@ export function repositorioDeProdutos({ db, sqlite }: ConexaoBanco): Repositorio
     },
 
     /**
-     * Devolver os insumos só faz sentido quando o cadastro foi um engano e as
+     * RN-12. Devolver os insumos só faz sentido quando o cadastro foi um engano e as
      * peças nunca existiram. Tudo na mesma transação: se a exclusão for recusada
      * por já haver venda, a devolução é desfeita junto.
      */

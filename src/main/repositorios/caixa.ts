@@ -134,7 +134,7 @@ export function repositorioDeCaixa({ db }: ConexaoBanco): RepositorioDeCaixa {
     },
 
     /**
-     * `date(...)` normaliza registros que guardam data com hora. Vendas "a receber"
+     * RN-08, RN-14. `date(...)` normaliza registros que guardam data com hora. Vendas "a receber"
      * pendentes não compõem o caixa; as recebidas depois entram na data em que o
      * dinheiro entrou (received_at), não na data da venda.
      */

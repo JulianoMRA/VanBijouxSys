@@ -1,5 +1,5 @@
 /**
- * Leitura de números digitados no formato brasileiro.
+ * RN-13. Leitura de números digitados no formato brasileiro.
  *
  * O `<input type="number">` do Chromium segue o idioma do Windows e erra em
  * silêncio: em português, "1.000" vira 1; em inglês, "0,5" vira 5. Os campos do

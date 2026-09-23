@@ -149,6 +149,12 @@ que só roda com o Electron de verdade (`src/main/index.ts`, `updater.ts`,
 - **O audit de produção não mostra o Electron.** Ele é dependência de
   desenvolvimento, mas é o runtime do instalador. Rode também o `npm audit` completo
   e mantenha o Electron no patch mais recente da major.
+- **Pacote do renderer é dependência de desenvolvimento.** O Vite embute no bundle
+  tudo o que o renderer importa; `dependencies` fica só com o que o processo
+  principal carrega em tempo de execução (hoje `better-sqlite3`, `drizzle-orm`,
+  `electron-log`, `electron-updater` e `zod`). Pacote em `dependencies` vai inteiro
+  para o `app.asar`: até a 1.15, eram 73 dos 75 MB dele. O audit de produção também
+  não mostra os do renderer, que chegam à máquina dela dentro do bundle.
 - **Depois de mudar o Electron, rode `npm run postinstall`.** O `npm install` com
   argumento não executa o `postinstall` da raiz, e o `better-sqlite3` precisa ser
   recompilado para o runtime novo.

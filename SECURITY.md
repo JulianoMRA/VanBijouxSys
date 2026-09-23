@@ -68,9 +68,14 @@ conferência humana dela.
   aberta ainda estivesse escrevendo.
 - Fuses do Electron no binário empacotado: `runAsNode`, `NODE_OPTIONS` e argumentos
   de inspect desligados; o app só carrega de dentro do `app.asar`.
-- O `app.asar` leva só `out/`, o `package.json` e as dependências de produção
-  (`files` no `build` do `package.json`). Arquivo local do repositório, como
-  `.claude/` ou um `.env`, não entra no instalador público.
+- O `app.asar` leva só `out/`, o `package.json` e as dependências do processo
+  principal (`files` no `build` do `package.json`). O que o renderer usa (React,
+  React Router, Recharts, lucide, fontes) vai inteiro no bundle do Vite e é
+  dependência de desenvolvimento; source maps e o código-fonte C do
+  `better-sqlite3` ficam de fora. Arquivo local do repositório, como `.claude/` ou
+  um `.env`, não entra no instalador público — até a 1.11.0 entrava, e as releases
+  antigas no GitHub levam o `.claude/settings.local.json` da época (só regras de
+  permissão e um caminho local, sem segredo).
 - Falha de boot ou exceção síncrona não capturada grava no log, avisa, fecha o
   banco e encerra o app com código 1 (`src/main/encerramento.ts`). Rejeição de
   promise sem tratamento só vai para o log.
@@ -107,6 +112,11 @@ produção, mas **não mostra o Electron**, que é dependência de desenvolvimen
 mesmo tempo o runtime que vai inteiro no instalador (Chromium, Node, `contextBridge`).
 Alerta do pacote `electron` chega à máquina da usuária: conferir com `npm audit`
 completo e manter o Electron no patch mais recente da major em uso.
+
+O mesmo vale para os pacotes do renderer: desde que viraram dependências de
+desenvolvimento, o audit de produção não os mostra, mas o código deles chega à
+máquina dela dentro do bundle. Os advisories aceitos do `react-router`, abaixo, só
+aparecem no `npm audit` completo.
 
 Em 2026-09-14 o Electron foi de 41.0.4 para 41.10.7 (19 advisories da linha 41, três
 high), e o audit de produção foi de 6 alertas para 2.

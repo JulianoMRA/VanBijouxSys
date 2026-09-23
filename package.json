@@ -34,19 +34,11 @@
     ]
   },
   "dependencies": {
-    "@fontsource/dm-sans": "^5.3.0",
-    "@fontsource/fraunces": "^5.3.0",
     "better-sqlite3": "^12.8.0",
     "drizzle-orm": "^0.45.2",
     "electron-log": "^5.4.4",
     "electron-updater": "^6.8.9",
-    "lucide-react": "^0.577.0",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
-    "react-router-dom": "^6.30.6",
-    "recharts": "^2.13.3",
-    "zod": "^4.6.5",
-    "zustand": "^5.0.2"
+    "zod": "^4.6.5"
   },
   "devDependencies": {
     "@commitlint/cli": "^19.8.1",
@@ -55,6 +47,8 @@
     "@electron-toolkit/tsconfig": "^2.0.0",
     "@electron-toolkit/utils": "^3.0.0",
     "@electron/rebuild": "^4.0.3",
+    "@fontsource/dm-sans": "^5.3.0",
+    "@fontsource/fraunces": "^5.3.0",
     "@playwright/test": "^1.63.0",
     "@resvg/resvg-js": "^2.6.2",
     "@testing-library/jest-dom": "^7.0.1",
@@ -79,9 +73,14 @@
     "husky": "^9.1.7",
     "jsdom": "^29.1.1",
     "lint-staged": "^15.5.2",
+    "lucide-react": "^0.577.0",
     "png-to-ico": "^3.0.1",
     "postcss": "^8.4.49",
     "prettier": "^3.9.6",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^6.30.6",
+    "recharts": "^2.13.3",
     "sql.js": "^1.14.1",
     "tailwindcss": "^3.4.16",
     "typescript": "^5.7.2",
@@ -100,7 +99,10 @@
       "output": "dist"
     },
     "files": [
-      "out/**/*"
+      "out/**/*",
+      "!**/node_modules/**/*.map",
+      "!**/node_modules/better-sqlite3/deps/**",
+      "!**/node_modules/better-sqlite3/src/**"
     ],
     "win": {
       "target": "nsis",

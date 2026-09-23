@@ -140,8 +140,8 @@ export default function SystemPanel({ onClose }: { onClose: () => void }): JSX.E
             Verificar atualizações
           </button>
           <p className="text-micro text-ink-300 px-1">
-            O aplicativo também procura atualizações sozinho ao abrir. Um backup é feito antes de
-            qualquer atualização ser aplicada.
+            O aplicativo também procura atualizações sozinho ao abrir e pergunta antes de instalar.
+            Um backup do banco é feito antes.
           </p>
         </div>
 

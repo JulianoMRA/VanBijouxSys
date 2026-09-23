@@ -4,7 +4,7 @@ Aplicativo desktop de gestão para negócios de bijuterias. Controla produtos e 
 
 ## Stack
 
-O shell é **Electron 41** porque o app precisa rodar offline no Windows da usuária, com banco local e zero dependência de servidor. O empacotamento sai pelo **electron-builder** como instalador NSIS.
+O shell é **Electron 44** porque o app precisa rodar offline no Windows da usuária, com banco local e zero dependência de servidor. O empacotamento sai pelo **electron-builder** como instalador NSIS.
 
 O renderer é **React 18 + TypeScript + Tailwind CSS**. Tailwind resolve o estilo sem abrir arquivos de CSS para cada tela, o que importa num app com muitos formulários parecidos. Os gráficos do dashboard usam **Recharts**, que já traz tudo que eu precisava (barras, linhas, comparativos) sem overhead de D3. Não há biblioteca de estado global: o estado vive nas telas, e o que atravessa (toasts) passa por um hook próprio.
 

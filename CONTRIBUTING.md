@@ -148,7 +148,12 @@ que só roda com o Electron de verdade (`src/main/index.ts`, `updater.ts`,
   `npm update <pacote>`, e confira no lockfile quais pacotes mudaram.
 - **O audit de produção não mostra o Electron.** Ele é dependência de
   desenvolvimento, mas é o runtime do instalador. Rode também o `npm audit` completo
-  e mantenha o Electron no patch mais recente da major.
+  e mantenha o Electron no patch mais recente da major. Cada major tem cerca de seis
+  meses de suporte (a 44 vai até 2027-03-02): troque antes, porque depois disso o
+  Chromium do instalador deixa de receber correção.
+- **O binário do Electron baixa no primeiro uso**, não no `npm install`: desde a 42,
+  o primeiro `npm run dev` ou `npm run test:e2e` depois de trocar de versão faz o
+  download.
 - **Pacote do renderer é dependência de desenvolvimento.** O Vite embute no bundle
   tudo o que o renderer importa; `dependencies` fica só com o que o processo
   principal carrega em tempo de execução (hoje `better-sqlite3`, `drizzle-orm`,

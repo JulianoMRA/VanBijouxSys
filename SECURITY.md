@@ -115,7 +115,9 @@ O pipeline roda `npm audit --omit=dev --audit-level=high`. Ele reporta a árvore
 produção, mas **não mostra o Electron**, que é dependência de desenvolvimento e ao
 mesmo tempo o runtime que vai inteiro no instalador (Chromium, Node, `contextBridge`).
 Alerta do pacote `electron` chega à máquina da usuária: conferir com `npm audit`
-completo e manter o Electron no patch mais recente da major em uso.
+completo, manter o Electron no patch mais recente da major em uso e trocar de major
+antes do fim do suporte dela ([calendário](https://releases.electronjs.org/schedule)):
+cada major recebe correções por cerca de seis meses.
 
 O mesmo vale para os pacotes do renderer: desde que viraram dependências de
 desenvolvimento, o audit de produção não os mostra, mas o código deles chega à
@@ -123,7 +125,10 @@ máquina dela dentro do bundle. Os advisories aceitos do `react-router`, abaixo,
 aparecem no `npm audit` completo.
 
 Em 2026-09-14 o Electron foi de 41.0.4 para 41.10.7 (19 advisories da linha 41, três
-high), e o audit de produção foi de 6 alertas para 2.
+high), e o audit de produção foi de 6 alertas para 2. A linha 41 perdeu o suporte em
+2026-08-25, e a 41.10.7 foi a última dela. Em 2026-09-23 o app foi para a 44.4.5
+(Chromium 152), com suporte até 2027-03-02; a próxima troca de major precisa sair
+antes disso.
 
 ### Advisories aceitos
 

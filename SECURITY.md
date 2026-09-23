@@ -67,7 +67,11 @@ conferência humana dela.
   backup sobrescreve o `.db` e apaga o WAL, o que corromperia o que outra instância
   aberta ainda estivesse escrevendo.
 - Fuses do Electron no binário empacotado: `runAsNode`, `NODE_OPTIONS` e argumentos
-  de inspect desligados; o app só carrega de dentro do `app.asar`.
+  de inspect desligados; o app só carrega de dentro do `app.asar`, e só se o hash do
+  cabeçalho dele bater com o gravado no executável (`enableEmbeddedAsarIntegrityValidation`).
+  A instalação é por usuário, numa pasta que qualquer programa da conta dela
+  escreve: sem a integridade, trocar o `app.asar` bastaria para rodar código com
+  acesso ao banco.
 - O `app.asar` leva só `out/`, o `package.json` e as dependências do processo
   principal (`files` no `build` do `package.json`). O que o renderer usa (React,
   React Router, Recharts, lucide, fontes) vai inteiro no bundle do Vite e é

@@ -40,7 +40,7 @@ conferência humana dela.
   código à máquina dela. A proteção real é a conta do GitHub que publica.
 - Antes de o instalador ser aplicado, o app faz backup do banco
   (`update-downloaded` em `src/main/updater.ts`), porque a versão nova pode migrar
-  o schema.
+  o schema. É uma cópia por versão, numa cota separada da dos backups diários.
 
 ### Janela, renderer e preload
 
@@ -80,7 +80,9 @@ conferência humana dela.
 - Backup pela API de backup online do SQLite, consistente com o WAL ativo; nunca
   por cópia de arquivo com o banco aberto.
 - Backup antes de migrar o schema, backup diário com 10 dias de histórico e backup
-  do estado atual antes de restaurar outro.
+  do estado atual antes de restaurar outro. Diários e extras têm cotas separadas
+  (RN-15), e o arquivo escolhido para restaurar é copiado antes que a rotação
+  possa apagá-lo.
 - Os caminhos de exportar e restaurar são escolhidos em diálogo nativo aberto pelo
   processo principal. O renderer não envia caminho nenhum.
 - Antes de restaurar, o arquivo passa por `integrity_check` e precisa ter as tabelas

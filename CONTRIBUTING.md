@@ -138,7 +138,10 @@ exclusão e arquivamento continuavam todos verdes.
 
 Dívida conhecida: os handlers de backup (abrem diálogo nativo e reiniciam o app) e o
 que só roda com o Electron de verdade (`src/main/index.ts`, `updater.ts`,
-`database/index.ts`, `database/backup.ts`) seguem sem teste automatizado.
+`database/index.ts`) seguem sem teste automatizado. O `database/backup.ts` roda em
+`src/tests/integration/backup-arquivos.test.ts` numa pasta temporária, com o
+Electron e a API de backup do SQLite trocados; o `validarBackup`, que abre o arquivo
+pelo better-sqlite3, fica de fora.
 
 ### Dependências
 

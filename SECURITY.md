@@ -102,7 +102,13 @@ boot, com stack. Fica só na máquina e não é enviado a lugar nenhum.
 
 Registradas para não ficarem silenciosas:
 
-- **Canais IPC sem validação de schema** do payload recebido.
+- **Instalador sem assinatura.** Quem publicar uma release no repositório entrega
+  código à máquina da usuária pelo auto-update (ver Atualização automática); a
+  proteção é a conta do GitHub que publica. Assinar também tiraria o alerta do
+  SmartScreen.
+
+Os canais IPC, que já constaram aqui, validam o payload com zod desde a 1.14: os 46
+passam por `registrarCanal` (`src/main/ipc/canal.ts`).
 
 ## Dependências
 

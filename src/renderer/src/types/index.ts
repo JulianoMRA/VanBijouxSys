@@ -33,11 +33,13 @@ export type {
 export type {
   CreateSaleInput,
   CreateSaleItemInput,
-  MarkSaleReceivedInput,
   PaymentMethod,
+  ReceivedPaymentMethod,
+  RegisterPaymentInput,
   Sale,
   SaleChannel,
   SaleItem,
+  SalePayment,
   UpdateSaleInput
 } from '../../../shared/ipc/vendas'
 

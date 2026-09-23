@@ -1,21 +1,24 @@
 import { useEffect, useMemo, useState } from 'react'
 import { ChevronDown, ChevronUp } from 'lucide-react'
 import SaleForm from '../components/sales/SaleForm'
-import MarkReceivedModal from '../components/sales/MarkReceivedModal'
+import ReceberPagamentoModal from '../components/sales/ReceberPagamentoModal'
 import ConfirmDialog from '../components/ui/ConfirmDialog'
 import ActionMenu from '../components/ui/ActionMenu'
 import Toast from '../components/ui/Toast'
 import { useToast } from '../hooks/useToast'
 import { formatCurrency, formatDate } from '../utils/format'
+import { PAYMENT_LABELS } from '../utils/cash-calculations'
 import { vendaCorrespondeABusca } from '../utils/busca-de-vendas'
 import { nomesDeClientes } from '../utils/sugestoes-de-clientes'
-import type { Sale, SaleChannel, PaymentMethod } from '../types'
+import { descreverPagamento, estaPendente, somaDoQueFalta } from '../utils/recebimentos'
+import type { Sale, SaleChannel, SalePayment } from '../types'
 
 type Modal =
   | { type: 'new' }
   | { type: 'edit'; sale: Sale }
   | { type: 'delete'; sale: Sale }
-  | { type: 'markReceived'; sale: Sale }
+  | { type: 'receber'; sale: Sale }
+  | { type: 'deletePayment'; payment: SalePayment }
   | { type: 'unmarkReceived'; sale: Sale }
 
 type ChannelFilter = SaleChannel | 'Todos' | 'areceber'
@@ -27,33 +30,6 @@ const CANAL_CORES: Record<SaleChannel, string> = {
   WhatsApp: 'bg-sage-100 text-sage-600',
   Instagram: 'bg-honey-100 text-honey-500',
   Outro: 'bg-bone-300 text-ink-600'
-}
-
-const PAYMENT_LABELS: Record<PaymentMethod, string> = {
-  dinheiro: 'Dinheiro',
-  pix: 'PIX',
-  debito: 'Débito',
-  credito: 'Crédito',
-  areceber: 'A receber'
-}
-
-function isPending(sale: Sale): boolean {
-  return sale.paymentMethod === 'areceber'
-}
-
-/** "Crédito (3,49%) · taxa − R$ 8,72", "PIX · sem taxa", "A receber". */
-function descricaoPagamento(sale: Sale): string {
-  if (isPending(sale)) return 'A receber · ainda não entrou no caixa'
-
-  const partes = [PAYMENT_LABELS[sale.paymentMethod]]
-  if (sale.feePercentage > 0) {
-    partes[0] += ` (${sale.feePercentage.toLocaleString('pt-BR')}%)`
-    partes.push(`taxa − ${formatCurrency(sale.feeAmount)}`)
-  } else {
-    partes.push('sem taxa')
-  }
-  if (sale.receivedAt) partes.push(`recebido em ${formatDate(sale.receivedAt)}`)
-  return partes.join(' · ')
 }
 
 const TH = 'py-1.5 text-meta font-bold uppercase tracking-[0.1em] text-ink-200'
@@ -94,6 +70,16 @@ export default function Sales(): JSX.Element {
     }
   }
 
+  async function handleDeletePayment(payment: SalePayment): Promise<void> {
+    try {
+      await window.api.sales.deletePayment(payment.id)
+      await loadSales()
+      showToast('Pagamento excluído — o valor voltou para o que falta receber.')
+    } catch {
+      setErrorMessage('Não foi possível excluir o pagamento. Tente novamente.')
+    }
+  }
+
   async function handleUnmarkReceived(sale: Sale): Promise<void> {
     try {
       await window.api.sales.unmarkAsReceived(sale.id)
@@ -108,7 +94,7 @@ export default function Sales(): JSX.Element {
     let result = sales
 
     if (channelFilter === 'areceber') {
-      result = result.filter(isPending)
+      result = result.filter(estaPendente)
     } else if (channelFilter !== 'Todos') {
       result = result.filter((s) => s.channel === channelFilter)
     }
@@ -123,11 +109,12 @@ export default function Sales(): JSX.Element {
   const totalProfit = filtered.reduce((s, sale) => s + (sale.netAmount - sale.totalCost), 0)
   const avgTicket = filtered.length > 0 ? totalRevenue / filtered.length : 0
   // O botão do filtro soma tudo o que está pendente; o card segue a busca, como os
-  // outros cards, para mostrar quanto a cliente procurada deve.
-  const pendentes = sales.filter(isPending)
-  const totalReceivable = pendentes.reduce((s, sale) => s + sale.netAmount, 0)
-  const pendentesFiltradas = filtered.filter(isPending)
-  const totalReceivableFiltrado = pendentesFiltradas.reduce((s, sale) => s + sale.netAmount, 0)
+  // outros cards, para mostrar quanto a cliente procurada deve. Os dois contam só o
+  // que falta receber (RN-17), não o total das vendas.
+  const pendentes = sales.filter(estaPendente)
+  const totalReceivable = somaDoQueFalta(pendentes)
+  const pendentesFiltradas = filtered.filter(estaPendente)
+  const totalReceivableFiltrado = somaDoQueFalta(pendentesFiltradas)
   const margem = totalNetRevenue > 0 ? (totalProfit / totalNetRevenue) * 100 : null
   const filtrando = channelFilter !== 'Todos' || search.trim() !== ''
 
@@ -273,7 +260,7 @@ export default function Sales(): JSX.Element {
             {filtered.map((sale) => {
               const isExpanded = expandedSale === sale.id
               const profit = sale.netAmount - sale.totalCost
-              const pendente = isPending(sale)
+              const pendente = estaPendente(sale)
               const [ano, mes, dia] = sale.soldAt.split('-')
 
               const acoes = [
@@ -341,7 +328,7 @@ export default function Sales(): JSX.Element {
                           <span className="truncate text-aux text-ink-300">{sale.fairName}</span>
                         )}
                       </div>
-                      <p className="mt-0.5 text-aux text-ink-400">{descricaoPagamento(sale)}</p>
+                      <p className="mt-0.5 text-aux text-ink-400">{descreverPagamento(sale)}</p>
                     </div>
 
                     <div className="w-[120px] shrink-0 text-right">
@@ -373,9 +360,9 @@ export default function Sales(): JSX.Element {
                       {pendente ? (
                         <button
                           className="whitespace-nowrap text-aux font-semibold text-sage-600 hover:text-sage-500"
-                          onClick={() => setModal({ type: 'markReceived', sale })}
+                          onClick={() => setModal({ type: 'receber', sale })}
                         >
-                          ✓ Recebida
+                          Receber
                         </button>
                       ) : (
                         <button
@@ -426,6 +413,51 @@ export default function Sales(): JSX.Element {
                         </tbody>
                       </table>
 
+                      {sale.payments.length > 0 && (
+                        <table className="mt-3 w-full text-micro">
+                          <thead>
+                            <tr>
+                              <th className={`${TH} text-left`}>Pagamento</th>
+                              <th className={`${TH} text-left`}>Forma</th>
+                              <th className={`${TH} text-right`}>Valor</th>
+                              <th className={`${TH} text-right`}>Taxa</th>
+                              <th className={TH} />
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {sale.payments.map((pagamento) => (
+                              <tr key={pagamento.id} className="border-t border-bone-300">
+                                <td className="py-2 tabular-nums text-ink-600">
+                                  {formatDate(pagamento.receivedAt)}
+                                </td>
+                                <td className="py-2 text-ink-800">
+                                  {PAYMENT_LABELS[pagamento.paymentMethod]}
+                                </td>
+                                <td className="py-2 text-right font-semibold tabular-nums text-ink-900">
+                                  {formatCurrency(pagamento.amount)}
+                                </td>
+                                <td className="py-2 text-right tabular-nums text-ink-600">
+                                  {pagamento.feeAmount > 0
+                                    ? `− ${formatCurrency(pagamento.feeAmount)}`
+                                    : '—'}
+                                </td>
+                                <td className="py-2 text-right">
+                                  <button
+                                    className="text-aux font-semibold text-clay-500 hover:text-clay-600"
+                                    aria-label={`Excluir o pagamento de ${formatCurrency(pagamento.amount)} recebido em ${formatDate(pagamento.receivedAt)}`}
+                                    onClick={() =>
+                                      setModal({ type: 'deletePayment', payment: pagamento })
+                                    }
+                                  >
+                                    Excluir
+                                  </button>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      )}
+
                       <div className="mt-3 flex flex-wrap gap-6 border-t border-bone-400 pt-2.5 text-aux text-ink-400">
                         <span>
                           Custo:{' '}
@@ -435,7 +467,10 @@ export default function Sales(): JSX.Element {
                         </span>
                         {sale.feeAmount > 0 && (
                           <span>
-                            Taxa {PAYMENT_LABELS[sale.paymentMethod].toLowerCase()}:{' '}
+                            {sale.payments.length > 0
+                              ? 'Taxas dos pagamentos'
+                              : `Taxa ${PAYMENT_LABELS[sale.paymentMethod].toLowerCase()}`}
+                            :{' '}
                             <strong className="font-semibold tabular-nums text-clay-500">
                               − {formatCurrency(sale.feeAmount)}
                             </strong>
@@ -491,20 +526,38 @@ export default function Sales(): JSX.Element {
       {modal?.type === 'delete' && (
         <ConfirmDialog
           title="Excluir venda"
-          message="Tem certeza? Os itens serão devolvidos ao estoque automaticamente."
+          message={
+            modal.sale.payments.length > 0
+              ? `Tem certeza? Os itens voltam ao estoque, e ${
+                  modal.sale.payments.length === 1
+                    ? 'o pagamento registrado sai'
+                    : `os ${modal.sale.payments.length} pagamentos registrados saem`
+                } do caixa.`
+              : 'Tem certeza? Os itens serão devolvidos ao estoque automaticamente.'
+          }
           confirmLabel="Excluir"
           danger
           onConfirm={() => handleDelete(modal.sale)}
           onClose={() => setModal(null)}
         />
       )}
-      {modal?.type === 'markReceived' && (
-        <MarkReceivedModal
+      {modal?.type === 'receber' && (
+        <ReceberPagamentoModal
           sale={modal.sale}
           onSave={() => {
             loadSales()
-            showToast('Venda marcada como recebida!')
+            showToast('Pagamento registrado!')
           }}
+          onClose={() => setModal(null)}
+        />
+      )}
+      {modal?.type === 'deletePayment' && (
+        <ConfirmDialog
+          title="Excluir pagamento"
+          message={`O pagamento de ${formatCurrency(modal.payment.amount)} recebido em ${formatDate(modal.payment.receivedAt)} sai do caixa, e o valor volta a faltar na venda.`}
+          confirmLabel="Excluir pagamento"
+          danger
+          onConfirm={() => handleDeletePayment(modal.payment)}
           onClose={() => setModal(null)}
         />
       )}

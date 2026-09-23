@@ -11,7 +11,7 @@ import type {
   UpdateExpenseCategoryInput
 } from '../shared/ipc/caixa'
 import type { CreateInsumoInput, UpdateInsumoInput } from '../shared/ipc/insumos'
-import type { CreateSaleInput, MarkSaleReceivedInput, UpdateSaleInput } from '../shared/ipc/vendas'
+import type { CreateSaleInput, RegisterPaymentInput, UpdateSaleInput } from '../shared/ipc/vendas'
 import type {
   CreateProductInput,
   CreateVariationInput,
@@ -72,7 +72,8 @@ const api = {
     create: (data: CreateSaleInput) => invoke(CANAIS_IPC.sales.create, data),
     update: (data: UpdateSaleInput) => invoke(CANAIS_IPC.sales.update, data),
     delete: (id: number) => invoke(CANAIS_IPC.sales.delete, id),
-    markAsReceived: (data: MarkSaleReceivedInput) => invoke(CANAIS_IPC.sales.markAsReceived, data),
+    registerPayment: (data: RegisterPaymentInput) => invoke(CANAIS_IPC.sales.registerPayment, data),
+    deletePayment: (id: number) => invoke(CANAIS_IPC.sales.deletePayment, id),
     unmarkAsReceived: (id: number) => invoke(CANAIS_IPC.sales.unmarkAsReceived, id)
   },
   dashboard: {

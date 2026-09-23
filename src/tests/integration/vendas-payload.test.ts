@@ -33,7 +33,7 @@ beforeEach(async () => {
 })
 
 function estado(): unknown {
-  return ['sales', 'sale_items', 'product_variations', 'insumos'].map((t) =>
+  return ['sales', 'sale_items', 'sale_payments', 'product_variations', 'insumos'].map((t) =>
     queryAll(ambiente.banco, `SELECT * FROM ${t} ORDER BY id`)
   )
 }
@@ -57,13 +57,12 @@ const novaVenda = (): Record<string, unknown> => ({
   items: [{ variationId: variacao, quantity: 2, unitPrice: 25, unitCost: 3 }]
 })
 
-/** Formato que o MarkReceivedModal envia. */
-const recebimento = (id: number): Record<string, unknown> => ({
-  id,
+/** Formato que o modal Receber envia. */
+const pagamento = (saleId: number): Record<string, unknown> => ({
+  saleId,
+  amount: 50,
   paymentMethod: 'dinheiro',
   feePercentage: 0,
-  feeAmount: 0,
-  netAmount: 50,
   receivedAt: '2026-09-12'
 })
 
@@ -121,7 +120,7 @@ describe('vendas: payloads das telas continuam aceitos', () => {
     expect(venda).toMatchObject({ fairId: feira, fairName: 'Feira de Natal', totalAmount: 75 })
   })
 
-  it('should_accept_marking_and_unmarking_a_receivable_sale', async () => {
+  it('should_accept_registering_and_deleting_a_payment', async () => {
     const { id } = await ambiente.chamar<{ id: number }>('sales:create', {
       ...novaVenda(),
       paymentMethod: 'areceber',
@@ -130,16 +129,20 @@ describe('vendas: payloads das telas continuam aceitos', () => {
       netAmount: 50
     })
 
-    await ambiente.chamar('sales:markAsReceived', recebimento(Number(id)))
-    expect((await ambiente.chamar<Sale[]>('sales:getAll'))[0]).toMatchObject({
-      paymentMethod: 'dinheiro',
-      receivedAt: '2026-09-12'
-    })
-
-    await ambiente.chamar('sales:unmarkAsReceived', Number(id))
+    const { id: pagamentoId } = await ambiente.chamar<{ id: number }>(
+      'sales:registerPayment',
+      pagamento(Number(id))
+    )
     expect((await ambiente.chamar<Sale[]>('sales:getAll'))[0]).toMatchObject({
       paymentMethod: 'areceber',
-      receivedAt: null
+      amountDue: 0,
+      payments: [{ amount: 50, paymentMethod: 'dinheiro', receivedAt: '2026-09-12' }]
+    })
+
+    await ambiente.chamar('sales:deletePayment', Number(pagamentoId))
+    expect((await ambiente.chamar<Sale[]>('sales:getAll'))[0]).toMatchObject({
+      amountDue: 50,
+      payments: []
     })
   })
 
@@ -223,22 +226,38 @@ describe('vendas: payload fora do formato é recusado sem gravar', () => {
     await recusaSemGravar('sales:update', { ...novaVenda(), id: String(venda) })
   })
 
-  it('should_refuse_receiving_a_sale_as_areceber_or_without_a_date', async () => {
+  it('should_refuse_a_payment_as_areceber_or_without_a_plain_date', async () => {
     const venda = await criarVenda(ambiente, {
       paymentMethod: 'areceber',
-      items: [{ variationId: variacao, quantity: 1, unitPrice: 25, unitCost: 3 }]
+      items: [{ variationId: variacao, quantity: 2, unitPrice: 25, unitCost: 3 }]
     })
-    await recusaSemGravar('sales:markAsReceived', {
-      ...recebimento(venda),
+    await recusaSemGravar('sales:registerPayment', {
+      ...pagamento(venda),
       paymentMethod: 'areceber'
     })
-    await recusaSemGravar('sales:markAsReceived', { ...recebimento(venda), receivedAt: '' })
-    await recusaSemGravar('sales:markAsReceived', { ...recebimento(venda), id: undefined })
+    await recusaSemGravar('sales:registerPayment', { ...pagamento(venda), receivedAt: '' })
+    await recusaSemGravar('sales:registerPayment', {
+      ...pagamento(venda),
+      receivedAt: '2026-09-12 10:00:00'
+    })
+    await recusaSemGravar('sales:registerPayment', { ...pagamento(venda), saleId: undefined })
+  })
+
+  it('should_refuse_a_payment_amount_that_is_zero_negative_or_text', async () => {
+    const venda = await criarVenda(ambiente, {
+      paymentMethod: 'areceber',
+      items: [{ variationId: variacao, quantity: 2, unitPrice: 25, unitCost: 3 }]
+    })
+    await recusaSemGravar('sales:registerPayment', { ...pagamento(venda), amount: 0 })
+    await recusaSemGravar('sales:registerPayment', { ...pagamento(venda), amount: -10 })
+    await recusaSemGravar('sales:registerPayment', { ...pagamento(venda), amount: '50,00' })
+    await recusaSemGravar('sales:registerPayment', { ...pagamento(venda), feePercentage: 120 })
   })
 
   it('should_refuse_delete_and_unmark_with_something_that_is_not_an_id', async () => {
     await recusaSemGravar('sales:delete', 'todas')
     await recusaSemGravar('sales:delete', 0)
     await recusaSemGravar('sales:unmarkAsReceived', '1')
+    await recusaSemGravar('sales:deletePayment', 'todos')
   })
 })

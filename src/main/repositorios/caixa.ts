@@ -1,7 +1,13 @@
 import { and, desc, eq, gte, lte, sql, type SQL } from 'drizzle-orm'
 import type { z } from 'zod'
 import type { ConexaoBanco } from '../database/conexao'
-import { cashExpenses, cashSettings, expenseCategories, sales } from '../database/schema'
+import {
+  cashExpenses,
+  cashSettings,
+  expenseCategories,
+  salePayments,
+  sales
+} from '../database/schema'
 import { ErroDeNegocio } from '../ipc/mensagens'
 import type {
   CashExpense,
@@ -134,9 +140,9 @@ export function repositorioDeCaixa({ db }: ConexaoBanco): RepositorioDeCaixa {
     },
 
     /**
-     * RN-08, RN-14. `date(...)` normaliza registros que guardam data com hora. Vendas "a receber"
-     * pendentes não compõem o caixa; as recebidas depois entram na data em que o
-     * dinheiro entrou (received_at), não na data da venda.
+     * RN-08, RN-14, RN-17. `date(...)` normaliza registros que guardam data com hora. A
+     * venda "a receber" não compõe o caixa: cada pagamento dela entra na data em que
+     * foi recebido. As recebidas até a 1.14 entram pelo received_at da própria venda.
      */
     estatisticas(filtro) {
       const despesas: SQL[] = []
@@ -162,6 +168,18 @@ export function repositorioDeCaixa({ db }: ConexaoBanco): RepositorioDeCaixa {
         .where(and(...entradas))
         .get()
 
+      // RN-17: pagamento de venda a receber entra pela data em que foi recebido.
+      const dataDoPagamento = sql`date(${salePayments.receivedAt})`
+      const pagamentos: SQL[] = []
+      if (filtro?.startDate) pagamentos.push(sql`${dataDoPagamento} >= ${filtro.startDate}`)
+      if (filtro?.endDate) pagamentos.push(sql`${dataDoPagamento} <= ${filtro.endDate}`)
+
+      const totalPagamentos = db
+        .select({ total: sql<number>`COALESCE(SUM(${salePayments.netAmount}), 0)` })
+        .from(salePayments)
+        .where(pagamentos.length ? and(...pagamentos) : undefined)
+        .get()
+
       const configuracoes = db
         .select({ saldo: cashSettings.openingBalance })
         .from(cashSettings)
@@ -170,7 +188,7 @@ export function repositorioDeCaixa({ db }: ConexaoBanco): RepositorioDeCaixa {
 
       return {
         totalExpenses: totalDespesas?.total ?? 0,
-        totalIncome: totalEntradas?.total ?? 0,
+        totalIncome: (totalEntradas?.total ?? 0) + (totalPagamentos?.total ?? 0),
         openingBalance: configuracoes?.saldo ?? 0
       }
     },

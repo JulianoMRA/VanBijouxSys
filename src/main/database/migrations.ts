@@ -184,6 +184,33 @@ export const MIGRACOES: Migracao[] = [
         sqlite.exec('ALTER TABLE sales ADD COLUMN customer_name TEXT')
       }
     }
+  },
+  {
+    versao: 4,
+    nome: 'pagamentos-de-venda-a-receber',
+    /**
+     * RN-17. Um registro por pagamento recebido de venda a receber, com a forma, a
+     * taxa e a data em que o dinheiro entrou. Só acrescenta: as vendas recebidas
+     * antes desta versão continuam com o recebimento gravado na própria linha
+     * (received_at). Excluir a venda leva os pagamentos junto.
+     */
+    aplicar: (sqlite) => {
+      sqlite.exec(`
+        CREATE TABLE IF NOT EXISTS sale_payments (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          sale_id INTEGER NOT NULL REFERENCES sales(id) ON DELETE CASCADE,
+          amount REAL NOT NULL,
+          payment_method TEXT NOT NULL,
+          fee_percentage REAL NOT NULL DEFAULT 0,
+          fee_amount REAL NOT NULL DEFAULT 0,
+          net_amount REAL NOT NULL,
+          received_at TEXT NOT NULL,
+          created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_sale_payments_sale_id ON sale_payments(sale_id);
+      `)
+    }
   }
 ]
 

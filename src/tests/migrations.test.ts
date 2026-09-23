@@ -165,4 +165,46 @@ describe('aplicação das migrações num banco de verdade', () => {
     expect(() => MIGRACOES.find((m) => m.versao === 3)!.aplicar(alvo(db))).not.toThrow()
     expect(colunas(db, 'sales').filter((c) => c === 'customer_name')).toHaveLength(1)
   })
+
+  it('should_create_the_payments_table_without_touching_existing_sales', async () => {
+    // Venda recebida pela versão antiga: forma, taxa, líquido e data ficam na linha
+    // dela, e continuam iguais depois da migração.
+    const db = await createEmptyDb()
+    for (const migracao of MIGRACOES.filter((m) => m.versao < 4)) migracao.aplicar(alvo(db))
+    db.run(
+      `INSERT INTO sales (channel, total_amount, total_cost, payment_method, fee_amount,
+         net_amount, sold_at, received_at)
+       VALUES ('WhatsApp', 86, 20, 'pix', 0.85, 85.15, '2026-09-20', '2026-09-22')`
+    )
+    const antes = queryAll(db, 'SELECT * FROM sales')
+
+    MIGRACOES.find((m) => m.versao === 4)!.aplicar(alvo(db))
+
+    expect(queryAll(db, 'SELECT * FROM sales')).toEqual(antes)
+    expect(queryAll(db, 'SELECT * FROM sale_payments')).toEqual([])
+  })
+
+  it('should_not_fail_when_the_payments_migration_runs_twice', async () => {
+    const db = await createEmptyDb()
+    aplicarMigracoes(alvo(db))
+
+    expect(() => MIGRACOES.find((m) => m.versao === 4)!.aplicar(alvo(db))).not.toThrow()
+  })
+
+  it('should_delete_the_payments_together_with_their_sale', async () => {
+    const db = await createEmptyDb()
+    aplicarMigracoes(alvo(db))
+    db.run(
+      `INSERT INTO sales (channel, total_amount, total_cost, payment_method, sold_at)
+       VALUES ('WhatsApp', 86, 20, 'areceber', '2026-09-20')`
+    )
+    db.run(
+      `INSERT INTO sale_payments (sale_id, amount, payment_method, net_amount, received_at)
+       VALUES (1, 50, 'pix', 50, '2026-09-22')`
+    )
+
+    db.run('DELETE FROM sales WHERE id = 1')
+
+    expect(queryAll(db, 'SELECT * FROM sale_payments')).toEqual([])
+  })
 })

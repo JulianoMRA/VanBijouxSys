@@ -45,7 +45,31 @@ const vendaAntiga = (): Sale => ({
       unitPrice: 25,
       unitCost: 2
     }
-  ]
+  ],
+  payments: [],
+  amountDue: 0
+})
+
+/** Venda a receber de R$ 86,00 da Maria, com R$ 50,00 já pagos no PIX. */
+const vendaComPagamento = (): Sale => ({
+  ...vendaAntiga(),
+  customerName: 'Maria',
+  paymentMethod: 'areceber',
+  totalAmount: 86,
+  netAmount: 86,
+  items: [{ ...vendaAntiga().items[0], unitPrice: 86 }],
+  payments: [
+    {
+      id: 1,
+      amount: 50,
+      paymentMethod: 'pix',
+      feePercentage: 0,
+      feeAmount: 0,
+      netAmount: 50,
+      receivedAt: '2026-05-12'
+    }
+  ],
+  amountDue: 36
 })
 
 beforeEach(() => {
@@ -179,6 +203,47 @@ describe('SaleForm: cliente', () => {
 
     await waitFor(() => expect(api.sales.update).toHaveBeenCalledTimes(1))
     expect(api.sales.update.mock.calls[0][0]).toMatchObject({ customerName: 'Maria' })
+  })
+})
+
+describe('SaleForm: venda com pagamento registrado', () => {
+  it('should_lock_the_payment_method_while_there_are_payments', async () => {
+    render(<SaleForm sale={vendaComPagamento()} onSave={vi.fn()} onClose={vi.fn()} />)
+    await screen.findByDisplayValue('86')
+
+    expect(screen.getByRole('button', { name: 'PIX' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'A receber' })).toBeEnabled()
+    expect(screen.getByText(/a forma continua "A receber"/)).toBeInTheDocument()
+  })
+
+  it('should_refuse_a_total_below_what_was_already_received', async () => {
+    const usuaria = userEvent.setup()
+    render(<SaleForm sale={vendaComPagamento()} onSave={vi.fn()} onClose={vi.fn()} />)
+    const preco = await screen.findByDisplayValue('86')
+
+    await usuaria.clear(preco)
+    await usuaria.type(preco, '40')
+    await usuaria.click(screen.getByRole('button', { name: /Salvar/ }))
+
+    expect(await screen.findByText(/abaixo do que já foi recebido/)).toBeInTheDocument()
+    expect(api.sales.update).not.toHaveBeenCalled()
+  })
+
+  it('should_show_the_refusal_sent_by_the_app', async () => {
+    const usuaria = userEvent.setup()
+    api.sales.update.mockRejectedValue(
+      new Error('A data da venda não pode ficar depois de um pagamento já registrado.')
+    )
+    render(<SaleForm sale={vendaComPagamento()} onSave={vi.fn()} onClose={vi.fn()} />)
+    await screen.findByDisplayValue('86')
+
+    await usuaria.click(screen.getByRole('button', { name: /Salvar/ }))
+
+    expect(
+      await screen.findByText(
+        'A data da venda não pode ficar depois de um pagamento já registrado.'
+      )
+    ).toBeInTheDocument()
   })
 })
 

@@ -95,6 +95,21 @@ export const sales = sqliteTable('sales', {
   receivedAt: text('received_at')
 })
 
+/** Pagamentos de venda a receber. Ver a migração 4. */
+export const salePayments = sqliteTable('sale_payments', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  saleId: integer('sale_id')
+    .notNull()
+    .references(() => sales.id, { onDelete: 'cascade' }),
+  amount: real('amount').notNull(),
+  paymentMethod: text('payment_method').notNull(),
+  feePercentage: real('fee_percentage').notNull().default(0),
+  feeAmount: real('fee_amount').notNull().default(0),
+  netAmount: real('net_amount').notNull(),
+  receivedAt: text('received_at').notNull(),
+  createdAt: text('created_at').notNull().default(AGORA)
+})
+
 export const expenseCategories = sqliteTable('expense_categories', {
   id: integer('id').primaryKey({ autoIncrement: true }),
   name: text('name').notNull().unique(),

@@ -1,9 +1,9 @@
 import { z } from 'zod'
 import { normalizarNomeDaCliente } from '../clientes'
-import { dataIsoSchema, idSchema } from './comum'
+import { dataIsoSchema, dataSimplesSchema, idSchema } from './comum'
 
 /**
- * Formatos que SaleForm, MarkReceivedModal e a lista de Vendas enviam. O schema
+ * Formatos que SaleForm, o modal Receber e a lista de Vendas enviam. O schema
  * garante tipo e formato; o que é regra de negócio segue no repositório.
  */
 export const canalDeVendaSchema = z.enum(['Feira', 'WhatsApp', 'Instagram', 'Outro'])
@@ -17,7 +17,7 @@ export const formaDePagamentoSchema = z.enum([
   'areceber'
 ])
 
-/** Ao marcar como recebida, a forma escolhida é a que entrou de fato. */
+/** No pagamento de uma venda a receber, a forma é a que entrou de fato. */
 export const formaDePagamentoRecebidaSchema = formaDePagamentoSchema.exclude(['areceber'])
 
 export const itemDaVendaSchema = z.object({
@@ -53,13 +53,16 @@ export const novaVendaSchema = z.object(camposDaVenda)
 
 export const vendaAtualizadaSchema = z.object({ ...camposDaVenda, id: idSchema })
 
-export const recebimentoSchema = z.object({
-  id: idSchema,
+/**
+ * Pagamento de venda a receber (RN-17), parcial ou do que falta. A taxa em reais e
+ * o líquido são calculados no repositório a partir do valor e da porcentagem.
+ */
+export const pagamentoSchema = z.object({
+  saleId: idSchema,
+  amount: z.number().positive(),
   paymentMethod: formaDePagamentoRecebidaSchema,
   feePercentage: z.number().min(0).max(100),
-  feeAmount: z.number().nonnegative(),
-  netAmount: z.number(),
-  receivedAt: dataIsoSchema
+  receivedAt: dataSimplesSchema
 })
 
 export const ARGUMENTOS_VENDAS = {
@@ -67,16 +70,31 @@ export const ARGUMENTOS_VENDAS = {
   create: [novaVendaSchema],
   update: [vendaAtualizadaSchema],
   delete: [idSchema],
-  markAsReceived: [recebimentoSchema],
+  registerPayment: [pagamentoSchema],
+  deletePayment: [idSchema],
+  /** Só desfaz recebimento gravado até a 1.14, na própria venda (received_at). */
   unmarkAsReceived: [idSchema]
 } as const
 
 export type SaleChannel = z.infer<typeof canalDeVendaSchema>
 export type PaymentMethod = z.infer<typeof formaDePagamentoSchema>
+export type ReceivedPaymentMethod = z.infer<typeof formaDePagamentoRecebidaSchema>
 export type CreateSaleItemInput = z.input<typeof itemDaVendaSchema>
 export type CreateSaleInput = z.input<typeof novaVendaSchema>
 export type UpdateSaleInput = z.input<typeof vendaAtualizadaSchema>
-export type MarkSaleReceivedInput = z.input<typeof recebimentoSchema>
+export type RegisterPaymentInput = z.input<typeof pagamentoSchema>
+
+export interface SalePayment {
+  id: number
+  /** Valor pago, antes da taxa. É ele que abate do que falta receber. */
+  amount: number
+  paymentMethod: ReceivedPaymentMethod
+  feePercentage: number
+  feeAmount: number
+  /** O que entrou no caixa: valor menos a taxa. */
+  netAmount: number
+  receivedAt: string
+}
 
 export interface SaleItem {
   id: number
@@ -102,7 +120,14 @@ export interface Sale {
   feeAmount: number
   netAmount: number
   soldAt: string
-  /** Nulo enquanto a venda a receber não foi paga. */
+  /**
+   * Data do recebimento gravado na própria venda, como a 1.14 fazia. Nulo nas vendas
+   * pagas na hora e nas a receber, cujo recebimento fica em `payments`.
+   */
   receivedAt: string | null
   items: SaleItem[]
+  /** Pagamentos da venda a receber, do mais antigo para o mais recente. */
+  payments: SalePayment[]
+  /** RN-17. Total menos o que já foi pago, em centavos exatos; zero fora do a receber. */
+  amountDue: number
 }

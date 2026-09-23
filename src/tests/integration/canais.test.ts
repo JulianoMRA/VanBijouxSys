@@ -11,6 +11,8 @@ describe('canais IPC', () => {
     const conhecidos = Object.values(CANAIS_IPC).flatMap((grupo) => Object.values(grupo))
 
     expect([...ambiente.canais()].sort()).toEqual([...conhecidos].sort())
-    expect(conhecidos).toHaveLength(47)
+    // 47 até a 1.14; o recebimento em pagamentos troca markAsReceived por
+    // registerPayment e deletePayment.
+    expect(conhecidos).toHaveLength(48)
   })
 })

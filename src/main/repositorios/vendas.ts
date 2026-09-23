@@ -1,21 +1,31 @@
-import { desc, eq, sql } from 'drizzle-orm'
+import { and, asc, desc, eq, isNotNull, sql } from 'drizzle-orm'
 import type { z } from 'zod'
 import type { ConexaoBanco } from '../database/conexao'
-import { fairs, products, productVariations, saleItems, sales } from '../database/schema'
+import {
+  fairs,
+  products,
+  productVariations,
+  saleItems,
+  salePayments,
+  sales
+} from '../database/schema'
 import { ErroDeNegocio } from '../ipc/mensagens'
 import { movimentarEstoqueDaVariacao } from './estoque'
 import { MENSAGEM_CLIENTE_OBRIGATORIA } from '../../shared/clientes'
+import { emCentavos } from '../../shared/dinheiro'
+import { RECUSAS_DE_PAGAMENTO } from '../../shared/recebimentos'
 import type {
   itemDaVendaSchema,
   novaVendaSchema,
-  recebimentoSchema,
+  pagamentoSchema,
   Sale,
+  SalePayment,
   vendaAtualizadaSchema
 } from '../../shared/ipc/vendas'
 
 type NovaVenda = z.output<typeof novaVendaSchema>
 type VendaAtualizada = z.output<typeof vendaAtualizadaSchema>
-type Recebimento = z.output<typeof recebimentoSchema>
+type Pagamento = z.output<typeof pagamentoSchema>
 type ItemDaVenda = z.output<typeof itemDaVendaSchema>
 
 export interface RepositorioDeVendas {
@@ -23,12 +33,25 @@ export interface RepositorioDeVendas {
   criarVenda(dados: NovaVenda): { id: number }
   atualizarVenda(dados: VendaAtualizada): void
   excluirVenda(id: number): void
-  marcarRecebida(dados: Recebimento): void
+  registrarPagamento(dados: Pagamento): { id: number }
+  excluirPagamento(id: number): void
   desmarcarRecebida(id: number): void
 }
 
 const totalDe = (itens: ItemDaVenda[], campo: 'unitPrice' | 'unitCost'): number =>
   itens.reduce((soma, item) => soma + item.quantity * item[campo], 0)
+
+const somaDe = (pagamentos: SalePayment[], campo: 'amount' | 'feeAmount'): number =>
+  pagamentos.reduce((soma, pagamento) => soma + pagamento[campo], 0)
+
+/** RN-17. O que falta receber: total menos o que já foi pago. Fora do a receber, nada. */
+function quantoFalta(
+  venda: { paymentMethod: string; totalAmount: number },
+  pagamentos: SalePayment[]
+): number {
+  if (venda.paymentMethod !== 'areceber') return 0
+  return emCentavos(venda.totalAmount - somaDe(pagamentos, 'amount'))
+}
 
 /** RN-16. A venda a receber é cobrada depois: sem o nome, não há de quem cobrar. */
 function exigirClienteNoAReceber(dados: NovaVenda | VendaAtualizada): void {
@@ -63,6 +86,65 @@ export function repositorioDeVendas({ db, sqlite }: ConexaoBanco): RepositorioDe
       .all()
     for (const item of itens) {
       movimentarEstoqueDaVariacao(db, item.variationId, item.quantity, false)
+    }
+  }
+
+  /** Do mais antigo para o mais recente; no mesmo dia, na ordem de lançamento. */
+  function pagamentosDa(saleId: number): SalePayment[] {
+    return db
+      .select({
+        id: salePayments.id,
+        amount: salePayments.amount,
+        paymentMethod: salePayments.paymentMethod,
+        feePercentage: salePayments.feePercentage,
+        feeAmount: salePayments.feeAmount,
+        netAmount: salePayments.netAmount,
+        receivedAt: salePayments.receivedAt
+      })
+      .from(salePayments)
+      .where(eq(salePayments.saleId, saleId))
+      .orderBy(asc(salePayments.receivedAt), asc(salePayments.id))
+      .all() as SalePayment[]
+  }
+
+  /**
+   * RN-17. Na venda a receber, a taxa é a soma das taxas dos pagamentos e o líquido
+   * é o total menos ela. Quem mexe nos pagamentos ou no total recalcula aqui, na
+   * mesma transação: faturamento e lucro do Painel continuam lendo `net_amount`.
+   */
+  function recalcularLiquidoDaVendaAReceber(saleId: number): void {
+    const venda = db
+      .select({ total: sales.totalAmount })
+      .from(sales)
+      .where(eq(sales.id, saleId))
+      .get()
+    if (!venda) return
+
+    const taxas = somaDe(pagamentosDa(saleId), 'feeAmount')
+    db.update(sales)
+      .set({ feePercentage: 0, feeAmount: taxas, netAmount: venda.total - taxas })
+      .where(eq(sales.id, saleId))
+      .run()
+  }
+
+  /**
+   * RN-17. O que já entrou no caixa não pode ficar sem venda que o explique: com
+   * pagamento registrado, a forma continua "a receber", o total não desce abaixo do
+   * que foi pago e a venda não pode passar a ser posterior a um pagamento.
+   */
+  function conferirEdicaoComPagamentos(dados: VendaAtualizada): void {
+    const pagamentos = pagamentosDa(dados.id)
+    if (pagamentos.length === 0) return
+
+    if (dados.paymentMethod !== 'areceber') {
+      throw new ErroDeNegocio(RECUSAS_DE_PAGAMENTO.formaTravada)
+    }
+    const pago = emCentavos(somaDe(pagamentos, 'amount'))
+    if (emCentavos(totalDe(dados.items, 'unitPrice')) < pago) {
+      throw new ErroDeNegocio(RECUSAS_DE_PAGAMENTO.totalAbaixoDoPago(pago))
+    }
+    if (dados.soldAt.slice(0, 10) > pagamentos[0].receivedAt) {
+      throw new ErroDeNegocio(RECUSAS_DE_PAGAMENTO.vendaDepoisDoPagamento)
     }
   }
 
@@ -107,8 +189,14 @@ export function repositorioDeVendas({ db, sqlite }: ConexaoBanco): RepositorioDe
           .innerJoin(products, eq(productVariations.productId, products.id))
           .where(eq(saleItems.saleId, venda.id))
           .all()
+        const pagamentos = pagamentosDa(venda.id)
 
-        return { ...venda, items: itens }
+        return {
+          ...venda,
+          items: itens,
+          payments: pagamentos,
+          amountDue: quantoFalta(venda, pagamentos)
+        }
       }) as Sale[]
     },
 
@@ -138,6 +226,7 @@ export function repositorioDeVendas({ db, sqlite }: ConexaoBanco): RepositorioDe
         const saleId = Number(resultado.lastInsertRowid)
 
         registrarItens(saleId, dados.items)
+        if (dados.paymentMethod === 'areceber') recalcularLiquidoDaVendaAReceber(saleId)
 
         return { id: saleId }
       })
@@ -153,6 +242,7 @@ export function repositorioDeVendas({ db, sqlite }: ConexaoBanco): RepositorioDe
       exigirClienteNoAReceber(dados)
 
       const atualizar = sqlite.transaction(() => {
+        conferirEdicaoComPagamentos(dados)
         desfazerItens(dados.id)
         db.delete(saleItems).where(eq(saleItems.saleId, dados.id)).run()
 
@@ -173,11 +263,13 @@ export function repositorioDeVendas({ db, sqlite }: ConexaoBanco): RepositorioDe
           .run()
 
         registrarItens(dados.id, dados.items)
+        if (dados.paymentMethod === 'areceber') recalcularLiquidoDaVendaAReceber(dados.id)
       })
 
       atualizar()
     },
 
+    /** Os pagamentos da venda saem junto, por cascata do próprio banco. */
     excluirVenda(id) {
       const excluir = sqlite.transaction(() => {
         desfazerItens(id)
@@ -187,20 +279,80 @@ export function repositorioDeVendas({ db, sqlite }: ConexaoBanco): RepositorioDe
       excluir()
     },
 
-    marcarRecebida(dados) {
-      db.update(sales)
-        .set({
-          paymentMethod: dados.paymentMethod,
-          feePercentage: dados.feePercentage,
-          feeAmount: dados.feeAmount,
-          netAmount: dados.netAmount,
-          receivedAt: dados.receivedAt
-        })
-        .where(eq(sales.id, dados.id))
-        .run()
+    /**
+     * RN-17. Pagamento de venda a receber, parcial ou do que falta. O valor abate do
+     * que falta receber; a taxa só diminui o que entra no caixa e o lucro.
+     */
+    registrarPagamento(dados) {
+      const registrar = sqlite.transaction(() => {
+        const venda = db
+          .select({
+            paymentMethod: sales.paymentMethod,
+            totalAmount: sales.totalAmount,
+            soldAt: sales.soldAt
+          })
+          .from(sales)
+          .where(eq(sales.id, dados.saleId))
+          .get()
+        if (!venda) throw new ErroDeNegocio(RECUSAS_DE_PAGAMENTO.vendaNaoEncontrada)
+        if (venda.paymentMethod !== 'areceber') {
+          throw new ErroDeNegocio(RECUSAS_DE_PAGAMENTO.soVendaAReceber)
+        }
+
+        const falta = quantoFalta(venda, pagamentosDa(dados.saleId))
+        if (falta <= 0) throw new ErroDeNegocio(RECUSAS_DE_PAGAMENTO.vendaQuitada)
+
+        const valor = emCentavos(dados.amount)
+        if (valor <= 0) throw new ErroDeNegocio(RECUSAS_DE_PAGAMENTO.valorZerado)
+        if (valor > falta) throw new ErroDeNegocio(RECUSAS_DE_PAGAMENTO.acimaDoQueFalta(falta))
+        if (dados.receivedAt < venda.soldAt.slice(0, 10)) {
+          throw new ErroDeNegocio(RECUSAS_DE_PAGAMENTO.antesDaVenda)
+        }
+
+        const taxa = (valor * dados.feePercentage) / 100
+        const resultado = db
+          .insert(salePayments)
+          .values({
+            saleId: dados.saleId,
+            amount: valor,
+            paymentMethod: dados.paymentMethod,
+            feePercentage: dados.feePercentage,
+            feeAmount: taxa,
+            netAmount: valor - taxa,
+            receivedAt: dados.receivedAt
+          })
+          .run()
+        recalcularLiquidoDaVendaAReceber(dados.saleId)
+
+        return { id: Number(resultado.lastInsertRowid) }
+      })
+
+      return registrar()
     },
 
-    /** Volta a venda para "a receber": sem taxa, líquido igual ao total. */
+    /** O valor volta para o que falta receber e sai do caixa. */
+    excluirPagamento(id) {
+      const excluir = sqlite.transaction(() => {
+        const pagamento = db
+          .select({ saleId: salePayments.saleId })
+          .from(salePayments)
+          .where(eq(salePayments.id, id))
+          .get()
+        if (!pagamento) return
+
+        db.delete(salePayments).where(eq(salePayments.id, id)).run()
+        recalcularLiquidoDaVendaAReceber(pagamento.saleId)
+      })
+
+      excluir()
+    },
+
+    /**
+     * Desfaz o recebimento gravado na própria venda, como a 1.14 fazia: volta para "a
+     * receber", sem taxa, com o líquido igual ao total. Venda cujo recebimento está em
+     * pagamentos não tem `received_at` e fica como está; lá, desfazer é excluir o
+     * pagamento, senão as taxas dele sumiriam do lucro.
+     */
     desmarcarRecebida(id) {
       db.update(sales)
         .set({
@@ -210,7 +362,7 @@ export function repositorioDeVendas({ db, sqlite }: ConexaoBanco): RepositorioDe
           netAmount: sql`total_amount`,
           receivedAt: null
         })
-        .where(eq(sales.id, id))
+        .where(and(eq(sales.id, id), isNotNull(sales.receivedAt)))
         .run()
     }
   }

@@ -9,7 +9,10 @@ import {
 } from '../../utils/numero'
 import { estaArquivado, variacaoInativa } from '../../utils/arquivamento'
 import { custoUnitarioDoItem } from '../../utils/itens-de-venda'
+import { totalRecebido } from '../../utils/recebimentos'
 import { MENSAGEM_CLIENTE_OBRIGATORIA, normalizarNomeDaCliente } from '../../../../shared/clientes'
+import { emCentavos } from '../../../../shared/dinheiro'
+import { RECUSAS_DE_PAGAMENTO } from '../../../../shared/recebimentos'
 import type {
   Fair,
   Product,
@@ -68,6 +71,15 @@ export default function SaleForm({
   const [channel, setChannel] = useState<SaleChannel>(sale?.channel ?? 'Feira')
   const [fairId, setFairId] = useState<number | ''>(sale?.fairId ?? '')
   const [customerName, setCustomerName] = useState(sale?.customerName ?? '')
+  // RN-17: com pagamento registrado, a forma fica em "a receber", e o total e a
+  // data da venda não podem desmentir o que já entrou no caixa.
+  const pagamentos = sale?.payments ?? []
+  const temPagamentos = pagamentos.length > 0
+  const jaRecebido = sale ? totalRecebido(sale) : 0
+  const primeiroPagamento = pagamentos.reduce<string | null>(
+    (menor, p) => (menor === null || p.receivedAt < menor ? p.receivedAt : menor),
+    null
+  )
   const [soldAt, setSoldAt] = useState(() => {
     if (sale) return sale.soldAt.slice(0, 10)
     const d = new Date()
@@ -237,6 +249,14 @@ export default function SaleForm({
       setError('Preencha todos os campos de cada item corretamente.')
       return
     }
+    if (temPagamentos && emCentavos(totalAmount) < jaRecebido) {
+      setError(RECUSAS_DE_PAGAMENTO.totalAbaixoDoPago(jaRecebido))
+      return
+    }
+    if (primeiroPagamento !== null && soldAt > primeiroPagamento) {
+      setError(RECUSAS_DE_PAGAMENTO.vendaDepoisDoPagamento)
+      return
+    }
     if (feeLida === null || feeLida < 0 || feeLida > 100) {
       setError('Informe uma taxa entre 0 e 100%.')
       return
@@ -269,11 +289,14 @@ export default function SaleForm({
       }
       onSave()
       onClose()
-    } catch {
+    } catch (err) {
+      // A recusa do app já vem escrita para ela ler (a regra que barrou a venda).
       setError(
-        sale
-          ? 'Erro ao atualizar venda. Tente novamente.'
-          : 'Erro ao registrar venda. Tente novamente.'
+        err instanceof Error && err.message
+          ? err.message
+          : sale
+            ? 'Erro ao atualizar venda. Tente novamente.'
+            : 'Erro ao registrar venda. Tente novamente.'
       )
     } finally {
       setSaving(false)
@@ -397,8 +420,9 @@ export default function SaleForm({
                 <button
                   key={value}
                   type="button"
+                  disabled={temPagamentos && value !== 'areceber'}
                   onClick={() => handlePaymentMethodChange(value)}
-                  className={`rounded-control px-3 py-1.5 text-body font-medium transition-colors ${
+                  className={`rounded-control px-3 py-1.5 text-body font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
                     paymentMethod === value
                       ? 'bg-wine-500 text-bone-50'
                       : 'bg-bone-200 text-ink-600 hover:bg-bone-300'
@@ -408,6 +432,9 @@ export default function SaleForm({
                 </button>
               ))}
             </div>
+            {temPagamentos && (
+              <p className="mt-1.5 text-micro text-ink-400">{RECUSAS_DE_PAGAMENTO.formaTravada}</p>
+            )}
           </div>
           {paymentMethod !== 'dinheiro' && paymentMethod !== 'areceber' && (
             <div>
@@ -441,8 +468,8 @@ export default function SaleForm({
         </div>
         {paymentMethod === 'areceber' && (
           <div className="rounded-control border border-honey-200 bg-honey-100 px-4 py-3 text-micro text-honey-600">
-            Esta venda não entra no caixa até ser marcada como recebida na lista de vendas. O nome
-            da cliente é obrigatório, para saber de quem cobrar.
+            Esta venda só entra no caixa quando for recebida, inteira ou em partes, pelo botão
+            Receber na lista de vendas. O nome da cliente é obrigatório, para saber de quem cobrar.
           </div>
         )}
 

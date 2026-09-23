@@ -24,6 +24,8 @@ export interface ApiFalsa {
     getAll: ReturnType<typeof vi.fn>
     create: ReturnType<typeof vi.fn>
     update: ReturnType<typeof vi.fn>
+    registerPayment: ReturnType<typeof vi.fn>
+    deletePayment: ReturnType<typeof vi.fn>
   }
   fairs: { getAll: ReturnType<typeof vi.fn> }
 }
@@ -45,7 +47,9 @@ export function instalarApiFalsa(): ApiFalsa {
     sales: {
       getAll: vi.fn(async () => []),
       create: vi.fn(async () => ({ id: 1 })),
-      update: vi.fn(async () => ({ success: true }))
+      update: vi.fn(async () => ({ success: true })),
+      registerPayment: vi.fn(async () => ({ id: 1 })),
+      deletePayment: vi.fn(async () => ({ success: true }))
     },
     fairs: { getAll: vi.fn(async () => []) }
   }

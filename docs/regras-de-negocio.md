@@ -123,16 +123,23 @@ passou a apontar para outra variação, usa o custo atual.
 ### RN-08 — Venda "a receber" entra no caixa no dia em que o dinheiro entra
 
 Venda fiada conta no faturamento desde o dia da venda, mas fica **fora** do caixa
-enquanto não é recebida. Ao marcar como recebida, ela entra pela data do
-recebimento, com a forma de pagamento e a taxa informadas ali. Desfazer o
-recebimento devolve a venda para "a receber", zera a taxa e volta o líquido para
-o total.
+enquanto não é recebida. O que entra no caixa são os pagamentos dela (RN-17),
+cada um pela data em que foi recebido, com a forma e a taxa informadas ali.
 
-- **Código**: `src/main/repositorios/caixa.ts` (`estatisticas`, com
-  `date(COALESCE(received_at, sold_at))` e o filtro `payment_method != 'areceber'`)
-  e `repositorios/vendas.ts` (`marcarRecebida`, `desmarcarRecebida`).
+As vendas recebidas até a 1.14 guardam o recebimento na própria linha
+(`received_at`) e continuam entrando no caixa por essa data. Desfazer o
+recebimento delas devolve a venda para "a receber", zera a taxa e volta o líquido
+para o total. Numa venda paga por pagamentos, desfazer é excluir o pagamento.
+
+- **Código**: `src/main/repositorios/caixa.ts` (`estatisticas`: vendas por
+  `date(COALESCE(received_at, sold_at))` com o filtro
+  `payment_method != 'areceber'`, mais os pagamentos pelo `received_at` deles),
+  `repositorios/painel.ts` (entradas e fluxo de caixa) e `repositorios/vendas.ts`
+  (`desmarcarRecebida`, que só age em venda com `received_at`).
 - **Prova**: `src/tests/integration/receivable.test.ts`,
-  `src/tests/integration/cash.test.ts` e `src/tests/cash-calculations.test.ts`.
+  `src/tests/integration/pagamentos.test.ts` (`pagamento no caixa e no painel`,
+  `vendas recebidas antes da migração 4`), `src/tests/integration/cash.test.ts` e
+  `src/tests/cash-calculations.test.ts`.
 
 ### RN-16 — Venda "a receber" precisa do nome da cliente
 
@@ -150,6 +157,34 @@ antes da migração 3 ficam sem cliente até alguém editá-las.
 - **Prova**: `src/tests/integration/cliente-da-venda.test.ts`,
   `src/tests/tela/venda.test.tsx` (`SaleForm: cliente`),
   `src/tests/clientes.test.ts` e `src/tests/sugestoes-de-clientes.test.ts`.
+
+### RN-17 — Venda "a receber" pode ser paga em partes
+
+Cada pagamento é um registro próprio, com valor, forma, taxa e data. O que falta
+receber é o total da venda menos a soma dos valores pagos, e é isso que o "A
+receber" mostra em todo lugar: na lista de Vendas, no card, no botão do filtro e
+no Painel. A taxa não mexe nesse saldo, porque a cliente deve o valor cheio, mas
+sai do lucro: na venda a receber, a taxa é a soma das taxas dos pagamentos e o
+líquido é o total menos ela, recalculados na mesma transação de quem mexe nos
+pagamentos ou no total. Assim o Painel continua lendo o líquido da venda.
+
+O app recusa pagamento acima do que falta, em venda que não é a receber ou que
+já foi quitada, e com data anterior à da venda. Com pagamento registrado, a venda
+não troca de forma, não fica com total abaixo do que já foi pago e não passa a
+ser posterior a um pagamento. As contas são em centavos, para 86 − 50 − 36 dar
+zero exato. Excluir um pagamento devolve o valor ao que falta; excluir a venda
+leva os pagamentos junto.
+
+- **Código**: `src/main/repositorios/vendas.ts` (`registrarPagamento`,
+  `excluirPagamento`, `recalcularLiquidoDaVendaAReceber`,
+  `conferirEdicaoComPagamentos`, `quantoFalta`), a migração 4,
+  `src/shared/recebimentos.ts` (as recusas, com o texto que a tela mostra),
+  `src/shared/dinheiro.ts` (`emCentavos`) e
+  `src/renderer/src/utils/recebimentos.ts`.
+- **Prova**: `src/tests/integration/pagamentos.test.ts`,
+  `src/tests/recebimentos.test.ts`, `src/tests/tela/receber.test.tsx`,
+  `src/tests/tela/vendas.test.tsx` (`Vendas: pagamento parcial`) e
+  `src/tests/tela/venda.test.tsx` (`SaleForm: venda com pagamento registrado`).
 
 ---
 

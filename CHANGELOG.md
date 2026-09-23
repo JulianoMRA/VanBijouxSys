@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.15.1] - 2026-09-23
+
+### Corrigido
+
+- **Gráficos do Painel**: num mês com pouco movimento, o eixo dos gráficos "Faturamento e lucro" e "Entradas e saídas por mês" mostrava "R$0k" em todas as marcas, e não dava para ler a escala. Agora mostra os valores em reais ("R$25", "R$50") e, a partir de mil, em milhares ("R$1,5k"). O gráfico de vendas por dia das feiras passou a usar vírgula nos centavos.
+
+### Interno
+
+- Removida uma cópia antiga do banco que só os testes usavam e que nenhum teste chamava mais.
+- A suíte de testes vai de 566 para 570.
+
+---
+
 ## [1.15.0] - 2026-09-23
 
 ### Adicionado

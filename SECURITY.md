@@ -88,6 +88,10 @@ conferência humana dela.
 - Valor que vai para o SQL passa sempre por parâmetro, pelo Drizzle ou por `prepare`
   com `?`. O que se concatena são trechos fixos do código: nomes de tabela nas
   migrações e filtros de data do painel, montados com placeholders.
+- Banco migrado por uma versão mais nova do app é recusado no boot, antes de
+  qualquer escrita (`BancoMaisNovoQueOApp` em `src/main/database/migrations.ts`).
+  Em setembro de 2026 um instalador antigo (1.7.1) rodou por cima da versão atual
+  na máquina da cliente e abriu um banco que já não era dele.
 
 ### Log
 

@@ -8,7 +8,8 @@ import {
   nomeDeBackup,
   selecionarParaRemover,
   temBackupDoDia,
-  type ArquivoBackup
+  type ArquivoBackup,
+  type MotivoDoBackup
 } from './backup-rules'
 
 export function getBackupDir(): string {
@@ -36,21 +37,30 @@ function rotacionar(): void {
 }
 
 /**
- * Copia o banco usando a API de backup do SQLite, que é consistente mesmo com
- * o WAL ativo e o app escrevendo — copiar o arquivo na mão não seria.
+ * Grava uma cópia na pasta de backups pela API de backup do SQLite, que é
+ * consistente mesmo com o WAL ativo e o app escrevendo — copiar o arquivo na mão
+ * não seria. Sem motivo é a cópia do dia; com motivo, a de antes de atualizar,
+ * migrar ou restaurar, que tem cota própria na rotação (RN-15).
  */
-export async function criarBackup(destino?: string): Promise<string> {
-  const caminho = destino ?? join(getBackupDir(), nomeDeBackup(new Date()))
+export async function criarBackup(motivo?: MotivoDoBackup): Promise<string> {
+  const caminho = join(getBackupDir(), nomeDeBackup(new Date(), motivo))
   mkdirSync(dirname(caminho), { recursive: true })
   await getSqlite().backup(caminho)
-  if (!destino) rotacionar()
+  rotacionar()
   return caminho
 }
 
-/** Um backup por dia é o suficiente para o volume de uso e mantém 10 dias de histórico. */
-export async function backupDiario(): Promise<void> {
-  if (temBackupDoDia(nomesDeBackup(), new Date())) return
-  await criarBackup()
+/** Cópia no caminho que a usuária escolheu, fora da pasta de backups e da rotação. */
+export async function exportarBackup(destino: string): Promise<string> {
+  mkdirSync(dirname(destino), { recursive: true })
+  await getSqlite().backup(destino)
+  return destino
+}
+
+/** RN-15: um backup por dia de uso; devolve o caminho, ou null se o do dia já existia. */
+export async function backupDiario(): Promise<string | null> {
+  if (temBackupDoDia(nomesDeBackup(), new Date())) return null
+  return criarBackup()
 }
 
 export function validarBackup(caminho: string): { ok: true } | { ok: false; erro: string } {

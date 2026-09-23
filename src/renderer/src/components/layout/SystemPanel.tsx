@@ -90,7 +90,8 @@ export default function SystemPanel({ onClose }: { onClose: () => void }): JSX.E
               : 'Nenhum backup automático ainda — o primeiro é criado na próxima abertura do app.'}
           </p>
           <p className="text-micro text-ink-300 mt-1">
-            O aplicativo guarda uma cópia por dia e mantém as 10 mais recentes.
+            O aplicativo guarda uma cópia por dia, com os 10 dias mais recentes, e outra antes de
+            cada atualização ou restauração.
           </p>
         </div>
 

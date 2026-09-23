@@ -14,10 +14,11 @@ function janelaAtual(): BrowserWindow | undefined {
 
 /**
  * O instalador é aplicado ao fechar o app, sobre um banco já migrado pela versão
- * nova. Se a migração der errado não há como voltar, então a cópia sai antes.
+ * nova. Se a migração der errado não há como voltar, então a cópia sai antes, na
+ * cota das extras, que não empurra os backups diários para fora.
  */
 autoUpdater.on('update-downloaded', (info) => {
-  criarBackup()
+  criarBackup({ tipo: 'atualizacao', versao: info.version })
     .then((caminho) => log.info(`[updater] backup antes da versão ${info.version}: ${caminho}`))
     .catch((err) => log.error('[updater] backup pré-atualização falhou:', err))
 })

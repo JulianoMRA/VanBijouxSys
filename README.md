@@ -105,7 +105,7 @@ O `npm install` instala os hooks pelo script `prepare`. O fluxo de branches, PRs
 
 O arquivo SQLite fica em `%APPDATA%/van-bijoux-sys/vanbijouxsys.db` no Windows. As migrations rodam no boot do app — não há comando manual para aplicar.
 
-Tabelas: `categories`, `products`, `product_variations`, `insumos`, `variation_insumos`, `fairs`, `fair_additional_costs`, `sales`, `sale_items`, `sale_payments`, `expense_categories`, `cash_expenses`, `cash_settings`. O schema canônico está em [src/main/database/schema.ts](src/main/database/schema.ts) e precisa ser espelhado em [src/tests/helpers/testDb.ts](src/tests/helpers/testDb.ts) quando mudar, senão os testes de integração ficam defasados.
+Tabelas: `categories`, `products`, `product_variations`, `insumos`, `variation_insumos`, `fairs`, `fair_additional_costs`, `sales`, `sale_items`, `sale_payments`, `expense_categories`, `cash_expenses`, `cash_settings`. O schema canônico está em [src/main/database/schema.ts](src/main/database/schema.ts). Os testes de integração criam o banco aplicando as migrações reais ([src/tests/helpers/ambiente-ipc.ts](src/tests/helpers/ambiente-ipc.ts)), então não há cópia do schema para manter em dia.
 
 A tabela `sales` aceita `payment_method = 'areceber'` (fiado), com o nome da cliente em `customer_name`, obrigatório nesse caso (RN-16). Cada pagamento dela, parcial ou do que falta, é uma linha em `sale_payments`, gravada pelo handler `sales:registerPayment`; o que falta receber é o total menos a soma dos pagamentos (RN-17). Vendas pendentes contam em faturamento e lucro do Dashboard desde o dia da venda, mas no Caixa entra só cada pagamento, pela data dele (RN-08). As vendas recebidas até a 1.14 guardam o recebimento na própria linha, em `received_at`, e continuam entrando no Caixa por essa data.
 
@@ -145,7 +145,7 @@ O preload importa apenas `CANAIS_IPC`: com `sandbox: true` ele não carrega zod,
 
 ## Manutenção
 
-**Adicionar um domínio novo (ex.: despesas recorrentes).** Na ordem: nomes dos canais em `src/shared/ipc/channels.ts`; schemas e tipos em `src/shared/ipc/<dominio>.ts`; teste de payload em `src/tests/integration/<dominio>-payload.test.ts` **antes** da implementação; regra e SQL em `src/main/repositorios/<dominio>.ts`; registro dos canais em `src/main/ipc/<dominio>.ts` e em `ipc/index.ts`, com o harness de teste (`src/tests/helpers/ambiente-ipc.ts`) registrando o mesmo domínio; API no `src/preload/index.ts`; página em `src/renderer/src/pages/` e rota no `App.tsx`. Se precisar de tabela, adiciona em `schema.ts` e replica em `testDb.ts`.
+**Adicionar um domínio novo (ex.: despesas recorrentes).** Na ordem: nomes dos canais em `src/shared/ipc/channels.ts`; schemas e tipos em `src/shared/ipc/<dominio>.ts`; teste de payload em `src/tests/integration/<dominio>-payload.test.ts` **antes** da implementação; regra e SQL em `src/main/repositorios/<dominio>.ts`; registro dos canais em `src/main/ipc/<dominio>.ts` e em `ipc/index.ts`, com o harness de teste (`src/tests/helpers/ambiente-ipc.ts`) registrando o mesmo domínio; API no `src/preload/index.ts`; página em `src/renderer/src/pages/` e rota no `App.tsx`. Se precisar de tabela, ela entra numa migração nova em `migrations.ts` e no `schema.ts`; os testes a recebem pelas migrações.
 
 **Regras de negócio.** As quinze regras que o app precisa respeitar estão em [docs/regras-de-negocio.md](docs/regras-de-negocio.md), numeradas (RN-01…RN-15), com o código e o teste de cada uma. Os comentários no código citam o número. Mudou a regra, o documento muda junto.
 

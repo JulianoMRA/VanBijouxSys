@@ -43,12 +43,14 @@ vi.mock('../../main/database/index', async () => {
   }
 })
 
+import { app } from 'electron'
 import {
   backupAntesDaAtualizacao,
   backupDiario,
   criarBackup,
   exportarBackup,
-  getBackupDir
+  getBackupDir,
+  restaurarBackup
 } from '../../main/database/backup'
 import { ehBackupDiario, nomeDeBackup } from '../../main/database/backup-rules'
 
@@ -86,6 +88,65 @@ beforeEach(() => {
 
 afterEach(() => {
   rmSync(ambiente.pasta, { recursive: true, force: true })
+})
+
+describe('restaurarBackup', () => {
+  it('should_restore_the_oldest_backup_of_a_full_folder_without_deleting_it_first', async () => {
+    // Com a pasta cheia, o backup de segurança rodava a rotação antes da cópia e
+    // apagava justamente o mais antigo — o escolhido —, com o banco já fechado.
+    const [maisAntigo] = dezDiasDeBackup()
+
+    await restaurarBackup(maisAntigo)
+
+    expect(readFileSync(banco(), 'utf8')).toBe('dia-1')
+    expect(app.relaunch).toHaveBeenCalledTimes(1)
+    expect(app.exit).toHaveBeenCalledWith(0)
+  })
+
+  it('should_keep_the_current_state_in_a_backup_before_replacing_it', async () => {
+    const [, segundo] = dezDiasDeBackup()
+
+    await restaurarBackup(segundo)
+
+    const seguranca = naPasta().find((n) => n.endsWith('-antes-de-restaurar.db'))
+    expect(seguranca).toBeDefined()
+    expect(readFileSync(join(getBackupDir(), seguranca!), 'utf8')).toBe('banco atual')
+  })
+
+  it('should_restore_an_event_backup_even_when_its_quota_is_full', async () => {
+    // A cópia de antes de restaurar entra na mesma cota das de evento: sem copiar a
+    // origem antes, a rotação apagaria a de evento mais antiga, que é a escolhida.
+    const eventos = Array.from({ length: 10 }, (_, i) =>
+      backupAntigo(
+        nomeDeBackup(new Date(2026, 8, i + 1, 9, 0, 0), { tipo: 'migracao' }),
+        `evento-${i + 1}`,
+        new Date(2026, 8, i + 1, 9, 0, 0)
+      )
+    )
+
+    await restaurarBackup(eventos[0])
+
+    expect(readFileSync(banco(), 'utf8')).toBe('evento-1')
+  })
+
+  it('should_not_leave_the_temporary_copy_behind', async () => {
+    const [maisAntigo] = dezDiasDeBackup()
+
+    await restaurarBackup(maisAntigo)
+
+    expect(readdirSync(ambiente.pasta).filter((n) => n.includes('restaurando'))).toEqual([])
+  })
+
+  it('should_not_replace_the_database_when_the_safety_backup_fails', async () => {
+    // Sem o backup do estado atual, restaurar seria um caminho sem volta.
+    const [maisAntigo] = dezDiasDeBackup()
+    rmSync(banco())
+
+    await expect(restaurarBackup(maisAntigo)).rejects.toThrow()
+    expect(existsSync(banco())).toBe(false)
+    expect(app.relaunch).not.toHaveBeenCalled()
+    expect(readdirSync(ambiente.pasta).filter((n) => n.includes('restaurando'))).toEqual([])
+  })
 })
 
 describe('histórico de backups (RN-15)', () => {

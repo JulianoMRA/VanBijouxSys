@@ -110,13 +110,26 @@ export function validarBackup(caminho: string): { ok: true } | { ok: false; erro
  * Substitui o banco em uso. Antes de sobrescrever, guarda o estado atual num
  * backup próprio — restaurar o arquivo errado não pode ser um caminho sem volta.
  * O app reinicia porque a conexão e todos os prepared statements morrem aqui.
+ *
+ * A origem é copiada antes de tudo: ela costuma estar na própria pasta de backups,
+ * e o backup de segurança roda a rotação. Sem a cópia, restaurar o backup mais
+ * antigo de uma pasta cheia apagava o arquivo escolhido com o banco já fechado.
  */
 export async function restaurarBackup(origem: string): Promise<void> {
-  await criarBackup()
+  const destino = getDbPath()
+  const copiaDaOrigem = `${destino}.restaurando`
+  copyFileSync(origem, copiaDaOrigem)
+
+  try {
+    await criarBackup({ tipo: 'restauracao' })
+  } catch (erro) {
+    rmSync(copiaDaOrigem, { force: true })
+    throw erro
+  }
   closeDatabase()
 
-  const destino = getDbPath()
-  copyFileSync(origem, destino)
+  copyFileSync(copiaDaOrigem, destino)
+  rmSync(copiaDaOrigem, { force: true })
   for (const sufixo of ['-wal', '-shm']) {
     rmSync(`${destino}${sufixo}`, { force: true })
   }

@@ -10,7 +10,7 @@ O renderer é **React 18 + TypeScript + Tailwind CSS**. Tailwind resolve o estil
 
 Tudo o que atravessa a fronteira entre tela e processo principal é validado com **zod** antes de tocar no banco (ver [Fronteira IPC](#fronteira-ipc)).
 
-A persistência é **SQLite via better-sqlite3**, com **Drizzle ORM** para tipar as queries. SQLite porque o banco vive no disco do usuário; better-sqlite3 porque é síncrono e roda direto no processo principal sem worker. O `postinstall` recompila o binário para o runtime do Electron.
+A persistência é **SQLite via better-sqlite3**, com **Drizzle ORM** para tipar as queries. SQLite porque o banco vive no disco do usuário; better-sqlite3 porque é síncrono e roda direto no processo principal sem worker. Desde a 13 ele usa N-API: o binário pré-compilado que vem no pacote serve para qualquer versão do Node e do Electron, sem recompilar.
 
 Build e dev server são **electron-vite**, que combina HMR no renderer com reload no main. Os testes são **Vitest** em dois projetos — lógica e handlers sobre **sql.js** (SQLite em memória) e telas em **jsdom** com Testing Library — mais **Playwright** abrindo o Electron de verdade nos fluxos de ponta a ponta.
 
@@ -61,33 +61,32 @@ docs/regras-de-negocio.md       # As regras numeradas (RN-01…RN-17)
 
 ## Rodando localmente
 
-Requer Node.js 22.12 ou mais novo, o mínimo do `@electron/rebuild` que roda no `postinstall`. A versão usada no desenvolvimento está no [.nvmrc](.nvmrc).
+Requer Node.js 22.12 ou mais novo. A versão usada no desenvolvimento está no [.nvmrc](.nvmrc).
 
 ```bash
 npm install
 npm run dev
 ```
 
-O `postinstall` recompila o `better-sqlite3` para o Electron automaticamente. O dev server sobe o app com HMR no renderer.
+Nada é compilado na instalação: o `better-sqlite3` traz o binário N-API pronto. O dev server sobe o app com HMR no renderer.
 
 ## Scripts
 
-| Comando                 | O que faz                                               |
-| ----------------------- | ------------------------------------------------------- |
-| `npm run dev`           | App em modo dev com HMR                                 |
-| `npm run build`         | Compila main, preload e renderer                        |
-| `npm run preview`       | Roda o build empacotado sem gerar instalador            |
-| `npm run build:win`     | Gera instalador `.exe` (NSIS) em `dist/`                |
-| `npm test`              | Suíte Vitest: lógica, handlers e telas                  |
-| `npm run test:e2e`      | Playwright no Electron real (fora do pipeline)          |
-| `npm run smoke:visual`  | Capturas das sete telas com dados semeados              |
-| `npm run test:coverage` | Suíte com cobertura e pisos por camada                  |
-| `npm run test:watch`    | Vitest em modo watch                                    |
-| `npm run typecheck`     | Verifica tipos de main/preload, renderer e testes       |
-| `npm run lint`          | ESLint em `src/`                                        |
-| `npm run lint:fix`      | ESLint corrigindo o que der                             |
-| `npm run format`        | Prettier no projeto inteiro                             |
-| `npm run postinstall`   | Recompila `better-sqlite3` para o Electron (automático) |
+| Comando                 | O que faz                                         |
+| ----------------------- | ------------------------------------------------- |
+| `npm run dev`           | App em modo dev com HMR                           |
+| `npm run build`         | Compila main, preload e renderer                  |
+| `npm run preview`       | Roda o build empacotado sem gerar instalador      |
+| `npm run build:win`     | Gera instalador `.exe` (NSIS) em `dist/`          |
+| `npm test`              | Suíte Vitest: lógica, handlers e telas            |
+| `npm run test:e2e`      | Playwright no Electron real (fora do pipeline)    |
+| `npm run smoke:visual`  | Capturas das sete telas com dados semeados        |
+| `npm run test:coverage` | Suíte com cobertura e pisos por camada            |
+| `npm run test:watch`    | Vitest em modo watch                              |
+| `npm run typecheck`     | Verifica tipos de main/preload, renderer e testes |
+| `npm run lint`          | ESLint em `src/`                                  |
+| `npm run lint:fix`      | ESLint corrigindo o que der                       |
+| `npm run format`        | Prettier no projeto inteiro                       |
 
 ## Verificação
 

@@ -10,10 +10,10 @@ conferir antes.
 ## Setup
 
 Node na versão do [.nvmrc](.nvmrc) (`nvm use`). O mínimo aceito, declarado em
-`engines`, é 22.12, exigido pelo `@electron/rebuild` do `postinstall`.
+`engines`, é 22.12.
 
 ```bash
-npm install        # instala deps, recompila o better-sqlite3 e ativa o Husky
+npm install        # instala deps e ativa o Husky
 npm run dev        # Electron + Vite com HMR no renderer
 ```
 
@@ -155,9 +155,12 @@ que só roda com o Electron de verdade (`src/main/index.ts`, `updater.ts`,
   `electron-log`, `electron-updater` e `zod`). Pacote em `dependencies` vai inteiro
   para o `app.asar`: até a 1.15, eram 73 dos 75 MB dele. O audit de produção também
   não mostra os do renderer, que chegam à máquina dela dentro do bundle.
-- **Depois de mudar o Electron, rode `npm run postinstall`.** O `npm install` com
-  argumento não executa o `postinstall` da raiz, e o `better-sqlite3` precisa ser
-  recompilado para o runtime novo.
+- **O `better-sqlite3` não é recompilado.** Desde a 13 ele usa N-API e traz o binário
+  pronto no pacote, que serve para qualquer Electron; por isso não há `postinstall` e
+  o electron-builder roda com `npmRebuild: false`. Até a 12, cada Electron novo
+  pedia um binário próprio, e sem compilador C++ na máquina não havia como seguir.
+  Dependência nativa nova que precise de compilação quebra o empacotamento nessa
+  máquina: prefira pacotes com N-API.
 - Advisory aceito, com o motivo, fica registrado no [SECURITY.md](SECURITY.md).
 
 ### `.only` é barrado

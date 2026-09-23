@@ -9,6 +9,7 @@ import {
 } from '../../utils/numero'
 import { estaArquivado, variacaoInativa } from '../../utils/arquivamento'
 import { custoUnitarioDoItem } from '../../utils/itens-de-venda'
+import { MENSAGEM_CLIENTE_OBRIGATORIA, normalizarNomeDaCliente } from '../../../../shared/clientes'
 import type {
   Fair,
   Product,
@@ -21,6 +22,8 @@ import type {
 
 interface SaleFormProps {
   sale?: Sale
+  /** Nomes já usados em outras vendas, oferecidos enquanto ela digita. */
+  sugestoesDeClientes?: string[]
   onSave: () => void
   onClose: () => void
 }
@@ -56,9 +59,15 @@ function loadLastFee(method: PaymentMethod): string {
   return numeroDoArmazenamento(localStorage.getItem(FEE_STORAGE_KEY(method)))
 }
 
-export default function SaleForm({ sale, onSave, onClose }: SaleFormProps): JSX.Element {
+export default function SaleForm({
+  sale,
+  sugestoesDeClientes = [],
+  onSave,
+  onClose
+}: SaleFormProps): JSX.Element {
   const [channel, setChannel] = useState<SaleChannel>(sale?.channel ?? 'Feira')
   const [fairId, setFairId] = useState<number | ''>(sale?.fairId ?? '')
+  const [customerName, setCustomerName] = useState(sale?.customerName ?? '')
   const [soldAt, setSoldAt] = useState(() => {
     if (sale) return sale.soldAt.slice(0, 10)
     const d = new Date()
@@ -215,6 +224,10 @@ export default function SaleForm({ sale, onSave, onClose }: SaleFormProps): JSX.
       setError('Informe a data da venda.')
       return
     }
+    if (paymentMethod === 'areceber' && !normalizarNomeDaCliente(customerName)) {
+      setError(MENSAGEM_CLIENTE_OBRIGATORIA)
+      return
+    }
     if (items.length === 0) {
       setError('Adicione ao menos um item à venda.')
       return
@@ -240,6 +253,7 @@ export default function SaleForm({ sale, onSave, onClose }: SaleFormProps): JSX.
     try {
       const payload = {
         channel,
+        customerName: normalizarNomeDaCliente(customerName),
         fairId: channel === 'Feira' && fairId !== '' ? fairId : undefined,
         soldAt,
         paymentMethod,
@@ -349,6 +363,31 @@ export default function SaleForm({ sale, onSave, onClose }: SaleFormProps): JSX.
           </div>
         )}
 
+        {/* Cliente */}
+        <div>
+          <label className="label" htmlFor="venda-cliente">
+            Cliente
+          </label>
+          <input
+            id="venda-cliente"
+            className="input"
+            type="text"
+            list="venda-clientes-sugeridas"
+            maxLength={100}
+            autoComplete="off"
+            placeholder={
+              paymentMethod === 'areceber' ? 'Nome de quem vai pagar' : 'Nome de quem comprou'
+            }
+            value={customerName}
+            onChange={(e) => setCustomerName(e.target.value)}
+          />
+          <datalist id="venda-clientes-sugeridas">
+            {sugestoesDeClientes.map((nome) => (
+              <option key={nome} value={nome} />
+            ))}
+          </datalist>
+        </div>
+
         {/* Método de pagamento e taxa */}
         <div className="grid grid-cols-2 gap-4">
           <div>
@@ -402,7 +441,8 @@ export default function SaleForm({ sale, onSave, onClose }: SaleFormProps): JSX.
         </div>
         {paymentMethod === 'areceber' && (
           <div className="rounded-control border border-honey-200 bg-honey-100 px-4 py-3 text-micro text-honey-600">
-            Esta venda não entra no caixa até ser marcada como recebida na lista de vendas.
+            Esta venda não entra no caixa até ser marcada como recebida na lista de vendas. O nome
+            da cliente é obrigatório, para saber de quem cobrar.
           </div>
         )}
 

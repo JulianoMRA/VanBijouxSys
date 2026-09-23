@@ -47,6 +47,7 @@ async function recusaSemGravar(canal: string, ...args: unknown[]): Promise<void>
 /** Formato que o SaleForm envia numa venda pelo WhatsApp. */
 const novaVenda = (): Record<string, unknown> => ({
   channel: 'WhatsApp',
+  customerName: 'Maria',
   fairId: undefined,
   soldAt: '2026-09-10',
   paymentMethod: 'pix',
@@ -74,6 +75,7 @@ describe('vendas: payloads das telas continuam aceitos', () => {
     expect(venda).toMatchObject({
       id: Number(id),
       channel: 'WhatsApp',
+      customerName: 'Maria',
       fairId: null,
       paymentMethod: 'pix',
       totalAmount: 50,
@@ -162,6 +164,11 @@ describe('vendas: payload fora do formato é recusado sem gravar', () => {
     await recusaSemGravar('sales:create', { ...novaVenda(), soldAt: '' })
     await recusaSemGravar('sales:create', { ...novaVenda(), soldAt: '10/09/2026' })
     await recusaSemGravar('sales:create', { ...novaVenda(), soldAt: '2026-09-10T12:00:00Z' })
+  })
+
+  it('should_refuse_a_customer_name_that_is_not_text_or_too_long', async () => {
+    await recusaSemGravar('sales:create', { ...novaVenda(), customerName: 42 })
+    await recusaSemGravar('sales:create', { ...novaVenda(), customerName: 'M'.repeat(101) })
   })
 
   it('should_refuse_a_fair_sent_as_text', async () => {

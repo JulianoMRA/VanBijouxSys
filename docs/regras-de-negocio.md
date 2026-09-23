@@ -134,6 +134,23 @@ o total.
 - **Prova**: `src/tests/integration/receivable.test.ts`,
   `src/tests/integration/cash.test.ts` e `src/tests/cash-calculations.test.ts`.
 
+### RN-16 — Venda "a receber" precisa do nome da cliente
+
+A venda a receber é cobrada depois, e sem o nome não há de quem cobrar. Por isso
+ela só é salva com a cliente preenchida, ao registrar e ao editar; nas outras
+formas de pagamento o nome é opcional. O nome é gravado sem espaço sobrando, e a
+tela sugere os que já foram usados: "Maria" e "maria" contam como a mesma
+cliente, para a cobrança dela não se espalhar em dois nomes. As vendas lançadas
+antes da migração 3 ficam sem cliente até alguém editá-las.
+
+- **Código**: `src/main/repositorios/vendas.ts` (`exigirClienteNoAReceber`),
+  `src/shared/clientes.ts` (`normalizarNomeDaCliente` e a mensagem, a mesma na
+  tela e no processo principal) e `src/renderer/src/utils/sugestoes-de-clientes.ts`
+  (`nomesDeClientes`).
+- **Prova**: `src/tests/integration/cliente-da-venda.test.ts`,
+  `src/tests/tela/venda.test.tsx` (`SaleForm: cliente`),
+  `src/tests/clientes.test.ts` e `src/tests/sugestoes-de-clientes.test.ts`.
+
 ---
 
 ## Preço

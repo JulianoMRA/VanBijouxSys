@@ -83,6 +83,8 @@ export const sales = sqliteTable('sales', {
   id: integer('id').primaryKey({ autoIncrement: true }),
   channel: text('channel').notNull(),
   fairId: integer('fair_id').references(() => fairs.id),
+  /** Nulo = venda sem cliente identificada. Ver a migração 3. */
+  customerName: text('customer_name'),
   totalAmount: real('total_amount').notNull(),
   totalCost: real('total_cost').notNull(),
   paymentMethod: text('payment_method').notNull().default('dinheiro'),

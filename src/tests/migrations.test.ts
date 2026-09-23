@@ -139,4 +139,30 @@ describe('aplicação das migrações num banco de verdade', () => {
     expect(() => arquivamento.aplicar(alvo(db))).not.toThrow()
     expect(colunas(db, 'products').filter((c) => c === 'archived_at')).toHaveLength(1)
   })
+
+  it('should_add_the_customer_to_sales_without_touching_existing_sales', async () => {
+    // As vendas lançadas antes da versão 3 continuam iguais e ficam sem cliente.
+    const db = await createEmptyDb()
+    for (const migracao of MIGRACOES.filter((m) => m.versao < 3)) migracao.aplicar(alvo(db))
+    db.run(
+      `INSERT INTO sales (channel, total_amount, total_cost, payment_method, net_amount, sold_at)
+       VALUES ('WhatsApp', 86, 20, 'areceber', 86, '2026-09-20')`
+    )
+    const antes = queryOne(db, 'SELECT * FROM sales WHERE id = 1')
+
+    MIGRACOES.find((m) => m.versao === 3)!.aplicar(alvo(db))
+
+    expect(queryOne(db, 'SELECT * FROM sales WHERE id = 1')).toEqual({
+      ...antes,
+      customer_name: null
+    })
+  })
+
+  it('should_not_fail_when_the_customer_migration_runs_twice', async () => {
+    const db = await createEmptyDb()
+    aplicarMigracoes(alvo(db))
+
+    expect(() => MIGRACOES.find((m) => m.versao === 3)!.aplicar(alvo(db))).not.toThrow()
+    expect(colunas(db, 'sales').filter((c) => c === 'customer_name')).toHaveLength(1)
+  })
 })

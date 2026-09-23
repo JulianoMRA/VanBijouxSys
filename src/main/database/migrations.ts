@@ -174,6 +174,16 @@ export const MIGRACOES: Migracao[] = [
         }
       }
     }
+  },
+  {
+    versao: 3,
+    nome: 'cliente-na-venda',
+    /** Nulo é venda sem cliente identificada, como todas as lançadas antes desta versão. */
+    aplicar: (sqlite) => {
+      if (!temColuna(sqlite, 'sales', 'customer_name')) {
+        sqlite.exec('ALTER TABLE sales ADD COLUMN customer_name TEXT')
+      }
+    }
   }
 ]
 

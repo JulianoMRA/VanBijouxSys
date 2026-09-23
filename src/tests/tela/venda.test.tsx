@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import SaleForm from '../../renderer/src/components/sales/SaleForm'
+import { MENSAGEM_CLIENTE_OBRIGATORIA } from '../../shared/clientes'
 import type { Product } from '../../shared/ipc/produtos'
 import type { Sale } from '../../shared/ipc/vendas'
 import { instalarApiFalsa, variacaoFalsa, type ApiFalsa } from './ajuda/api-falsa'
@@ -25,6 +26,7 @@ const vendaAntiga = (): Sale => ({
   channel: 'WhatsApp',
   fairId: null,
   fairName: null,
+  customerName: null,
   totalAmount: 25,
   totalCost: 2,
   paymentMethod: 'pix',
@@ -114,6 +116,69 @@ describe('SaleForm: conferências antes de salvar', () => {
 
     expect(await screen.findByText('Selecione a feira correspondente.')).toBeInTheDocument()
     expect(api.sales.create).not.toHaveBeenCalled()
+  })
+})
+
+describe('SaleForm: cliente', () => {
+  it('should_require_the_customer_for_a_receivable_sale', async () => {
+    const usuaria = userEvent.setup()
+    render(<SaleForm onSave={vi.fn()} onClose={vi.fn()} />)
+    await screen.findByLabelText('Produto')
+
+    await usuaria.click(screen.getByRole('button', { name: 'WhatsApp' }))
+    await escolherItem(usuaria)
+    await usuaria.click(screen.getByRole('button', { name: 'A receber' }))
+    await usuaria.click(screen.getByRole('button', { name: 'Registrar venda' }))
+
+    expect(await screen.findByText(MENSAGEM_CLIENTE_OBRIGATORIA)).toBeInTheDocument()
+    expect(api.sales.create).not.toHaveBeenCalled()
+  })
+
+  it('should_send_the_customer_without_extra_spaces', async () => {
+    const usuaria = userEvent.setup()
+    render(<SaleForm onSave={vi.fn()} onClose={vi.fn()} />)
+    await screen.findByLabelText('Produto')
+
+    await usuaria.click(screen.getByRole('button', { name: 'WhatsApp' }))
+    await usuaria.type(screen.getByLabelText('Cliente'), '  Maria  Souza ')
+    await escolherItem(usuaria)
+    await usuaria.click(screen.getByRole('button', { name: 'A receber' }))
+    await usuaria.click(screen.getByRole('button', { name: 'Registrar venda' }))
+
+    await waitFor(() => expect(api.sales.create).toHaveBeenCalledTimes(1))
+    expect(api.sales.create.mock.calls[0][0]).toMatchObject({
+      paymentMethod: 'areceber',
+      customerName: 'Maria Souza'
+    })
+  })
+
+  it('should_suggest_the_names_already_used', async () => {
+    render(<SaleForm sugestoesDeClientes={['Ana', 'Maria']} onSave={vi.fn()} onClose={vi.fn()} />)
+
+    const campo = await screen.findByLabelText('Cliente')
+    const lista = document.getElementById(campo.getAttribute('list') ?? '')
+
+    expect(
+      Array.from(lista?.querySelectorAll('option') ?? []).map((o) => o.getAttribute('value'))
+    ).toEqual(['Ana', 'Maria'])
+  })
+
+  it('should_keep_the_customer_when_editing_a_sale', async () => {
+    const usuaria = userEvent.setup()
+    render(
+      <SaleForm
+        sale={{ ...vendaAntiga(), customerName: 'Maria' }}
+        onSave={vi.fn()}
+        onClose={vi.fn()}
+      />
+    )
+    await screen.findByDisplayValue('25')
+
+    expect(screen.getByLabelText('Cliente')).toHaveValue('Maria')
+    await usuaria.click(screen.getByRole('button', { name: /Salvar/ }))
+
+    await waitFor(() => expect(api.sales.update).toHaveBeenCalledTimes(1))
+    expect(api.sales.update.mock.calls[0][0]).toMatchObject({ customerName: 'Maria' })
   })
 })
 

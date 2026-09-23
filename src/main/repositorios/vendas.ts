@@ -2,7 +2,9 @@ import { desc, eq, sql } from 'drizzle-orm'
 import type { z } from 'zod'
 import type { ConexaoBanco } from '../database/conexao'
 import { fairs, products, productVariations, saleItems, sales } from '../database/schema'
+import { ErroDeNegocio } from '../ipc/mensagens'
 import { movimentarEstoqueDaVariacao } from './estoque'
+import { MENSAGEM_CLIENTE_OBRIGATORIA } from '../../shared/clientes'
 import type {
   itemDaVendaSchema,
   novaVendaSchema,
@@ -27,6 +29,13 @@ export interface RepositorioDeVendas {
 
 const totalDe = (itens: ItemDaVenda[], campo: 'unitPrice' | 'unitCost'): number =>
   itens.reduce((soma, item) => soma + item.quantity * item[campo], 0)
+
+/** RN-16. A venda a receber é cobrada depois: sem o nome, não há de quem cobrar. */
+function exigirClienteNoAReceber(dados: NovaVenda | VendaAtualizada): void {
+  if (dados.paymentMethod === 'areceber' && !dados.customerName) {
+    throw new ErroDeNegocio(MENSAGEM_CLIENTE_OBRIGATORIA)
+  }
+}
 
 export function repositorioDeVendas({ db, sqlite }: ConexaoBanco): RepositorioDeVendas {
   /** Baixa o estoque das peças vendidas. Insumo não entra: já saiu na produção. */
@@ -65,6 +74,7 @@ export function repositorioDeVendas({ db, sqlite }: ConexaoBanco): RepositorioDe
           channel: sales.channel,
           fairId: sales.fairId,
           fairName: fairs.name,
+          customerName: sales.customerName,
           totalAmount: sales.totalAmount,
           totalCost: sales.totalCost,
           paymentMethod: sales.paymentMethod,
@@ -107,12 +117,15 @@ export function repositorioDeVendas({ db, sqlite }: ConexaoBanco): RepositorioDe
      * baixada sem venda registrada.
      */
     criarVenda(dados) {
+      exigirClienteNoAReceber(dados)
+
       const criar = sqlite.transaction(() => {
         const resultado = db
           .insert(sales)
           .values({
             channel: dados.channel,
             fairId: dados.fairId ?? null,
+            customerName: dados.customerName,
             totalAmount: totalDe(dados.items, 'unitPrice'),
             totalCost: totalDe(dados.items, 'unitCost'),
             paymentMethod: dados.paymentMethod,
@@ -137,6 +150,8 @@ export function repositorioDeVendas({ db, sqlite }: ConexaoBanco): RepositorioDe
      * o saldo bater mesmo quando a quantidade ou a variação mudam.
      */
     atualizarVenda(dados) {
+      exigirClienteNoAReceber(dados)
+
       const atualizar = sqlite.transaction(() => {
         desfazerItens(dados.id)
         db.delete(saleItems).where(eq(saleItems.saleId, dados.id)).run()
@@ -145,6 +160,7 @@ export function repositorioDeVendas({ db, sqlite }: ConexaoBanco): RepositorioDe
           .set({
             channel: dados.channel,
             fairId: dados.fairId ?? null,
+            customerName: dados.customerName,
             totalAmount: totalDe(dados.items, 'unitPrice'),
             totalCost: totalDe(dados.items, 'unitCost'),
             paymentMethod: dados.paymentMethod,

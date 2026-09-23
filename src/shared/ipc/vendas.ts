@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { normalizarNomeDaCliente } from '../clientes'
 import { dataIsoSchema, idSchema } from './comum'
 
 /**
@@ -27,8 +28,16 @@ export const itemDaVendaSchema = z.object({
   unitCost: z.number().nonnegative()
 })
 
+/**
+ * Nome livre de quem comprou. Chega como foi digitado e sai normalizado; em
+ * branco vira `null`. A obrigatoriedade na venda a receber (RN-16) é regra de
+ * negócio e fica no repositório.
+ */
+export const nomeDaClienteSchema = z.string().max(100).nullish().transform(normalizarNomeDaCliente)
+
 const camposDaVenda = {
   channel: canalDeVendaSchema,
+  customerName: nomeDaClienteSchema,
   /** Só vem preenchido quando o canal é Feira. */
   fairId: idSchema.optional(),
   soldAt: dataIsoSchema,
@@ -84,6 +93,8 @@ export interface Sale {
   channel: SaleChannel
   fairId: number | null
   fairName: string | null
+  /** Nulo nas vendas sem cliente, inclusive todas as anteriores à migração 3. */
+  customerName: string | null
   totalAmount: number
   totalCost: number
   paymentMethod: PaymentMethod

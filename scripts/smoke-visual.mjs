@@ -131,6 +131,7 @@ async function semear(janela) {
     })
     await api.sales.create({
       channel: 'WhatsApp',
+      customerName: 'Cláudia Ramos',
       soldAt: datas.vendaWhatsapp,
       paymentMethod: 'pix',
       feePercentage: 1.2,
@@ -140,6 +141,8 @@ async function semear(janela) {
     })
     await api.sales.create({
       channel: 'Instagram',
+      // Venda a receber só é aceita com o nome da cliente (RN-16).
+      customerName: 'Marina Duarte',
       soldAt: datas.vendaAReceber,
       paymentMethod: 'areceber',
       feePercentage: 0,

@@ -1,3 +1,4 @@
+import { diaLocal } from '../../../shared/datas'
 import { emCentavos } from '../../../shared/dinheiro'
 import type { CashExpense, Fair, PaymentMethod, Sale, SalePayment } from '../types'
 
@@ -58,15 +59,10 @@ function pad(n: number): string {
   return String(n).padStart(2, '0')
 }
 
-/** Data local em ISO — `toISOString()` converteria para UTC e trocaria o dia à noite. */
-function toIsoDay(date: Date): string {
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`
-}
-
 /** `today` é parâmetro para o cálculo ser determinístico em teste. */
 export function getPeriodDates(period: PeriodKey, today = new Date()): DateRange | null {
   if (period === 'tudo') return null
-  const endDate = toIsoDay(today)
+  const endDate = diaLocal(today)
 
   if (period === 'mes') {
     return { startDate: `${today.getFullYear()}-${pad(today.getMonth() + 1)}-01`, endDate }
@@ -74,7 +70,7 @@ export function getPeriodDates(period: PeriodKey, today = new Date()): DateRange
   if (period === '3meses' || period === '6meses') {
     const inicio = new Date(today)
     inicio.setMonth(inicio.getMonth() - (period === '3meses' ? 3 : 6))
-    return { startDate: toIsoDay(inicio), endDate }
+    return { startDate: diaLocal(inicio), endDate }
   }
   if (period === 'ano') {
     return { startDate: `${today.getFullYear()}-01-01`, endDate }

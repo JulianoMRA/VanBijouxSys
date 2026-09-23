@@ -6,14 +6,16 @@ import ActionMenu from '../components/ui/ActionMenu'
 import Toast from '../components/ui/Toast'
 import { useToast } from '../hooks/useToast'
 import { formatCurrency, formatDate, formatDateRange } from '../utils/format'
+import { diaLocal } from '../../../shared/datas'
 import type { Fair, Sale } from '../types'
 
 type Modal = { type: 'new' } | { type: 'edit'; fair: Fair } | { type: 'delete'; fair: Fair }
 
 const MESES = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
 
+/** O dia da cliente: em UTC, a feira de hoje passava a "realizada" depois das 21h. */
 function hojeISO(): string {
-  return new Date().toISOString().slice(0, 10)
+  return diaLocal(new Date())
 }
 
 function isFuture(fair: Fair): boolean {

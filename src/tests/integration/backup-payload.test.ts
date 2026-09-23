@@ -4,6 +4,9 @@ import { MENSAGEM_PAYLOAD_INVALIDO } from '../../main/ipc/mensagens'
 import type { RegistroDeCanais } from '../../main/ipc/canal'
 import type { DependenciasDeBackup } from '../../main/servicos/backup'
 import type { BackupInfo, ResultadoDaExportacao } from '../../shared/ipc/backup'
+import { noFusoDaCliente } from '../helpers/fuso'
+
+noFusoDaCliente()
 
 type Handler = (evento: unknown, ...args: unknown[]) => unknown
 
@@ -70,6 +73,19 @@ describe('backup: fluxos da tela de Backup e dados', () => {
     expect(resultado.salvo).toBe(true)
     expect(registro.salvos).toHaveLength(1)
     expect(registro.salvos[0]).toMatch(/van-bijoux-backup-\d{4}-\d{2}-\d{2}\.db$/)
+  })
+
+  it('should_suggest_the_local_date_in_the_file_name_late_at_night', async () => {
+    // 23h30 de 30/09 no horário da cliente: em UTC já seria 01/10.
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date(2026, 8, 30, 23, 30))
+    try {
+      await chamar<ResultadoDaExportacao>('backup:exportar')
+    } finally {
+      vi.useRealTimers()
+    }
+
+    expect(registro.salvos[0]).toMatch(/van-bijoux-backup-2026-09-30\.db$/)
   })
 
   it('should_write_nothing_when_the_save_dialog_is_cancelled', async () => {

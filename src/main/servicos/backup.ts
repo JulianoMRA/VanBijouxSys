@@ -1,5 +1,6 @@
 import { basename } from 'path'
 import { ErroDeNegocio } from '../ipc/mensagens'
+import { diaLocal } from '../../shared/datas'
 import type {
   BackupInfo,
   ResultadoDaExportacao,
@@ -34,8 +35,8 @@ export interface ServicoDeBackup {
   abrirPasta(): Promise<{ aberto: true }>
 }
 
-const nomeSugerido = (hoje: Date): string =>
-  `van-bijoux-backup-${hoje.toISOString().slice(0, 10)}.db`
+/** O dia da cliente: em UTC, a cópia salva depois das 21h levaria a data de amanhã. */
+const nomeSugerido = (hoje: Date): string => `van-bijoux-backup-${diaLocal(hoje)}.db`
 
 export function servicoDeBackup(dependencias: DependenciasDeBackup): ServicoDeBackup {
   return {

@@ -41,6 +41,13 @@ conferência humana dela.
 - Antes de o instalador ser aplicado, o app faz backup do banco
   (`update-downloaded` em `src/main/updater.ts`), porque a versão nova pode migrar
   o schema. É uma cópia por versão, numa cota separada da dos backups diários.
+- A instalação só começa quando a usuária confirma, com o app aberto, e roda com a
+  janela do instalador visível; ao terminar, o app reabre sozinho
+  (`src/main/servicos/atualizacao.ts`). Até a 1.15 o instalador rodava em silêncio
+  ao fechar o app, e em setembro de 2026 três instalações morreram no meio porque o
+  notebook suspendeu logo depois — numa delas o app ficou desinstalado. Antes de
+  chamar o instalador o app grava `atualizacao-em-andamento.json`, e o boot
+  seguinte registra no log se a instalação terminou.
 
 ### Janela, renderer e preload
 

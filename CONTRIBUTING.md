@@ -137,8 +137,10 @@ app: com cinco mutações nos handlers, os testes antigos de recebíveis, painel
 exclusão e arquivamento continuavam todos verdes.
 
 Dívida conhecida: os handlers de backup (abrem diálogo nativo e reiniciam o app) e o
-que só roda com o Electron de verdade (`src/main/index.ts`, `updater.ts`,
-`database/index.ts`) seguem sem teste automatizado. O `database/backup.ts` roda em
+que só roda com o Electron de verdade (`src/main/index.ts`, `database/index.ts` e a
+cola do `updater.ts` com o electron-updater) seguem sem teste automatizado. O fluxo
+de atualização mora em `src/main/servicos/atualizacao.ts`, com teste; a instalação de
+verdade só se confere com uma release publicada. O `database/backup.ts` roda em
 `src/tests/integration/backup-arquivos.test.ts` numa pasta temporária, com o
 Electron e a API de backup do SQLite trocados; o `validarBackup`, que abre o arquivo
 pelo better-sqlite3, fica de fora.

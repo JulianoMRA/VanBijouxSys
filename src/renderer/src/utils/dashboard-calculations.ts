@@ -14,6 +14,22 @@ export function formatDay(dateStr: string): string {
   return `${parseInt(day)} ${MESES[parseInt(month) - 1]}`
 }
 
+/**
+ * Marca curta do eixo em reais: "R$250", "R$2,5", "R$1,5k", "R$12k". Abaixo de mil
+ * mostra o valor como é; a partir de mil, em milhares com até uma casa. Dividir
+ * tudo por mil apagava os meses pequenos: com R$ 98 de faturamento, todas as
+ * marcas viravam "R$0k".
+ */
+export function formatarEixoEmReais(valor: number): string {
+  const sinal = valor < 0 ? '-' : ''
+  const absoluto = Math.abs(valor)
+  if (absoluto < 1000) {
+    return `${sinal}R$${absoluto.toLocaleString('pt-BR', { maximumFractionDigits: 2 })}`
+  }
+  const milhares = (absoluto / 1000).toLocaleString('pt-BR', { maximumFractionDigits: 1 })
+  return `${sinal}R$${milhares}k`
+}
+
 /** Sem período anterior com movimento não há variação a mostrar — daí o null. */
 export function calcDelta(current: number, previous: number): number | null {
   if (previous === 0) return null

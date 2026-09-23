@@ -11,7 +11,13 @@ import {
 } from 'recharts'
 import { ChevronDown, ChevronUp } from 'lucide-react'
 import { formatCurrency } from '../utils/format'
-import { buildInsights, calcDelta, formatDay, formatMonth } from '../utils/dashboard-calculations'
+import {
+  buildInsights,
+  calcDelta,
+  formatarEixoEmReais,
+  formatDay,
+  formatMonth
+} from '../utils/dashboard-calculations'
 import type { DashboardStats } from '../types'
 
 type Period = 'month' | 'quarter' | 'halfyear' | 'year' | 'all' | 'custom'
@@ -289,7 +295,7 @@ function FairCard({ fair }: { fair: DashboardStats['salesByFair'][number] }): JS
                 tick={AXIS_TICK}
                 axisLine={false}
                 tickLine={false}
-                tickFormatter={(v) => `R$${v}`}
+                tickFormatter={formatarEixoEmReais}
                 width={48}
               />
               <Tooltip
@@ -529,7 +535,7 @@ export default function Dashboard(): JSX.Element {
                         tick={AXIS_TICK}
                         axisLine={false}
                         tickLine={false}
-                        tickFormatter={(v) => `R$${(v / 1000).toFixed(0)}k`}
+                        tickFormatter={formatarEixoEmReais}
                         width={52}
                       />
                       <Tooltip
@@ -678,7 +684,7 @@ export default function Dashboard(): JSX.Element {
                         tick={AXIS_TICK}
                         axisLine={false}
                         tickLine={false}
-                        tickFormatter={(v) => `R$${(v / 1000).toFixed(0)}k`}
+                        tickFormatter={formatarEixoEmReais}
                         width={52}
                       />
                       <Tooltip

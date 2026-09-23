@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import {
   buildInsights,
   calcDelta,
+  formatarEixoEmReais,
   formatDay,
   formatMonth
 } from '../renderer/src/utils/dashboard-calculations'
@@ -67,6 +68,36 @@ describe('formatDay', () => {
 
   it('should_drop_the_leading_zero_of_the_day', () => {
     expect(formatDay('2026-03-01')).toBe('1 Mar')
+  })
+})
+
+describe('formatarEixoEmReais', () => {
+  it('should_label_a_small_month_in_reais_instead_of_zero_thousands', () => {
+    // As marcas de um mês com R$ 98 de faturamento: antes, todas saíam "R$0k".
+    expect([0, 25, 50, 75, 100].map(formatarEixoEmReais)).toEqual([
+      'R$0',
+      'R$25',
+      'R$50',
+      'R$75',
+      'R$100'
+    ])
+  })
+
+  it('should_use_the_brazilian_decimal_comma_on_fractional_ticks', () => {
+    expect([2.5, 7.25].map(formatarEixoEmReais)).toEqual(['R$2,5', 'R$7,25'])
+  })
+
+  it('should_show_thousands_with_up_to_one_decimal', () => {
+    expect([1000, 1500, 2500, 12000].map(formatarEixoEmReais)).toEqual([
+      'R$1k',
+      'R$1,5k',
+      'R$2,5k',
+      'R$12k'
+    ])
+  })
+
+  it('should_keep_the_sign_of_a_negative_value', () => {
+    expect([-250, -1500].map(formatarEixoEmReais)).toEqual(['-R$250', '-R$1,5k'])
   })
 })
 

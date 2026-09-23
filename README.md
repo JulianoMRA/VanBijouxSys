@@ -137,7 +137,7 @@ O passo a passo — branch de documentação, `npm version`, build e `gh release
 
 <a id="fronteira-ipc"></a>
 
-Os 47 canais são registrados por `registrarCanal` ([src/main/ipc/canal.ts](src/main/ipc/canal.ts)), que valida os argumentos com o schema zod do domínio ([src/shared/ipc/](src/shared/ipc/)) **antes** de qualquer escrita. Payload fora do formato é recusado com uma mensagem legível, e o log guarda só o caminho e o código do problema — nunca os valores, que são dados do negócio.
+Os 48 canais são registrados por `registrarCanal` ([src/main/ipc/canal.ts](src/main/ipc/canal.ts)), que valida os argumentos com o schema zod do domínio ([src/shared/ipc/](src/shared/ipc/)) **antes** de qualquer escrita. Payload fora do formato é recusado com uma mensagem legível, e o log guarda só o caminho e o código do problema — nunca os valores, que são dados do negócio.
 
 Depois da validação, o handler delega para o repositório do domínio, que recebe a conexão por parâmetro. A falha sempre vira exceção — nunca um `{ success: false }` de retorno, que o renderer ignorava silenciosamente. A tradução de erro técnico (violação de chave estrangeira, nome duplicado) para texto que a cliente entende fica em [src/main/ipc/mensagens.ts](src/main/ipc/mensagens.ts), indexada por canal; um canal novo sem entrada cai numa mensagem genérica. No renderer, sempre trate a chamada com `try/catch` e mostre `err.message`.
 

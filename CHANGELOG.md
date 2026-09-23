@@ -1,5 +1,31 @@
 # Changelog
 
+## [1.15.0] - 2026-09-23
+
+### Adicionado
+
+- **Pagamento em partes**: a venda "A receber" pode ser paga aos poucos. O botão **Receber**, na lista de Vendas, já vem com o valor que falta: é só confirmar para quitar de uma vez, ou trocar por um valor menor quando a cliente pagar uma parte. Cada pagamento guarda a forma (dinheiro, PIX, débito ou crédito), a taxa e a data. Numa venda de R$ 86,00 com R$ 50,00 pagos, a lista mostra "pago R$ 50,00 · falta R$ 36,00".
+- **O "A receber" mostra o que falta**: na tela de Vendas e no Painel, o valor a receber passa a ser só o que ainda não foi pago, e não o valor cheio da venda.
+- **Cada pagamento entra no Caixa no dia em que o dinheiro entrou**, já sem a taxa. A venda continua contando no faturamento desde o dia em que foi feita.
+- **Pagamento lançado errado**: ao abrir a venda na lista, aparecem os pagamentos dela, e cada um pode ser excluído. O valor volta a faltar e sai do Caixa.
+- **Nome da cliente na venda**: o formulário ganhou o campo **Cliente**, que sugere os nomes já usados para a mesma pessoa não aparecer escrita de dois jeitos. O nome aparece na lista de Vendas e no Caixa.
+- **Busca pela cliente**: a busca de Vendas encontra pelo nome, sem diferenciar maiúsculas e acentos ("marcia" acha "Márcia"). Buscando uma cliente, o card "A receber" mostra quanto ela deve.
+
+### Alterado
+
+- **Venda "A receber" precisa do nome da cliente**, para saber de quem cobrar. Vale ao registrar e ao editar: uma venda a receber antiga, sem nome, vai pedir o nome na próxima vez que for editada. Receber o pagamento dela não depende disso.
+- Numa venda com pagamento registrado, a forma continua "A receber" e o total não pode ficar abaixo do que já foi pago. Para mudar, exclua o pagamento antes.
+- O card **Entradas** do Caixa conta recebimentos em vez de vendas, porque um pagamento parcial também é uma entrada.
+- As vendas já recebidas continuam como estavam, inclusive com o "Desfazer recebimento".
+
+### Interno
+
+- Duas mudanças no banco, que só acrescentam: o nome da cliente na venda e a tabela de pagamentos. Nenhuma venda existente é alterada, e o app faz um backup antes de aplicá-las, como em toda mudança de banco.
+- Regras RN-16 (cliente na venda a receber) e RN-17 (pagamento em partes) documentadas, e RN-08 atualizada.
+- A suíte de testes vai de 468 para 566, com um fluxo de ponta a ponta novo: venda a receber paga em duas vezes.
+
+---
+
 ## [1.14.0] - 2026-09-18
 
 ### Corrigido

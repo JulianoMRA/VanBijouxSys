@@ -7,6 +7,7 @@ import {
   ehArquivoDeBackup,
   nomeDeBackup,
   selecionarParaRemover,
+  temBackupAntesDaVersao,
   temBackupDoDia,
   type ArquivoBackup,
   type MotivoDoBackup
@@ -61,6 +62,24 @@ export async function exportarBackup(destino: string): Promise<string> {
 export async function backupDiario(): Promise<string | null> {
   if (temBackupDoDia(nomesDeBackup(), new Date())) return null
   return criarBackup()
+}
+
+const versoesEmBackup = new Set<string>()
+
+/**
+ * RN-15: uma cópia por versão baixada. O electron-updater avisa de novo a cada
+ * checagem que encontra a atualização já baixada — no boot e a cada clique em
+ * "Verificar atualizações" —, e dois avisos podem chegar quase juntos. Devolve
+ * null quando a cópia daquela versão já existe.
+ */
+export async function backupAntesDaAtualizacao(versao: string): Promise<string | null> {
+  if (versoesEmBackup.has(versao) || temBackupAntesDaVersao(nomesDeBackup(), versao)) return null
+  versoesEmBackup.add(versao)
+  try {
+    return await criarBackup({ tipo: 'atualizacao', versao })
+  } finally {
+    versoesEmBackup.delete(versao)
+  }
 }
 
 export function validarBackup(caminho: string): { ok: true } | { ok: false; erro: string } {

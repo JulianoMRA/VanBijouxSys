@@ -218,6 +218,49 @@ export function versaoAlvo(): number {
   return MIGRACOES.reduce((maior, m) => Math.max(maior, m.versao), 0)
 }
 
+/**
+ * O banco foi migrado por uma versão do app mais nova do que esta. Acontece quando
+ * um instalador antigo roda por cima do app atual — foi o que levou a 1.7.1 a abrir,
+ * na cliente, um banco migrado pela 1.11. O código antigo não conhece as colunas e
+ * tabelas novas e gravaria nelas com as regras antigas, então o boot recusa.
+ */
+export class BancoMaisNovoQueOApp extends Error {
+  constructor(
+    readonly versaoDoBanco: number,
+    readonly versaoConhecida: number
+  ) {
+    super(
+      'O banco de dados foi atualizado por uma versão mais nova do Van Bijoux Sys ' +
+        `(estrutura ${versaoDoBanco}; esta cópia do aplicativo conhece até a ${versaoConhecida}). ` +
+        'Isso acontece quando um instalador antigo é executado por cima do aplicativo. ' +
+        'Nenhum dado foi alterado. Para voltar a usar, instale a versão mais recente: ' +
+        'github.com/JulianoMRA/VanBijouxSys/releases/latest'
+    )
+    this.name = 'BancoMaisNovoQueOApp'
+  }
+}
+
+export interface OpcoesDoEsquema {
+  /** Banco recém-criado não tem o que preservar. */
+  bancoJaExistia: boolean
+  /** A chance de guardar uma cópia antes de o schema mudar. */
+  antesDeMigrar?: () => Promise<void>
+}
+
+/**
+ * O que o boot faz com o schema, nesta ordem: recusa banco de versão mais nova, sai
+ * sem fazer nada quando não há pendência, guarda a cópia e só então migra. Se a
+ * cópia falhar, a migração não roda: sem ela não haveria como voltar atrás.
+ */
+export async function atualizarEsquema(sqlite: Sqlite, opcoes: OpcoesDoEsquema): Promise<number[]> {
+  const versao = versaoAtual(sqlite)
+  if (versao > versaoAlvo()) throw new BancoMaisNovoQueOApp(versao, versaoAlvo())
+  if (migracoesPendentes(versao).length === 0) return []
+
+  if (opcoes.bancoJaExistia && opcoes.antesDeMigrar) await opcoes.antesDeMigrar()
+  return aplicarMigracoes(sqlite)
+}
+
 export function versaoAtual(sqlite: Sqlite): number {
   return sqlite.pragma('user_version', { simple: true }) as number
 }

@@ -1,7 +1,9 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { type Database } from 'sql.js'
 import {
   aplicarMigracoes,
+  atualizarEsquema,
+  BancoMaisNovoQueOApp,
   MIGRACOES,
   migracoesPendentes,
   versaoAlvo,
@@ -206,5 +208,78 @@ describe('aplicação das migrações num banco de verdade', () => {
     db.run('DELETE FROM sales WHERE id = 1')
 
     expect(queryAll(db, 'SELECT * FROM sale_payments')).toEqual([])
+  })
+})
+
+describe('atualizarEsquema (o que o boot faz com o schema)', () => {
+  it('should_refuse_a_database_migrated_by_a_newer_version_of_the_app', async () => {
+    // Instalador antigo rodado por cima do app atual: a 1.7.1 abriu na cliente um
+    // banco migrado pela 1.11 e gravou nele com as regras antigas.
+    const db = await createEmptyDb()
+    aplicarMigracoes(alvo(db))
+    db.run(`PRAGMA user_version = ${versaoAlvo() + 1}`)
+    const antesDeMigrar = vi.fn(async () => {})
+
+    await expect(
+      atualizarEsquema(alvo(db), { bancoJaExistia: true, antesDeMigrar })
+    ).rejects.toBeInstanceOf(BancoMaisNovoQueOApp)
+    expect(antesDeMigrar).not.toHaveBeenCalled()
+    expect(versaoAtual(alvo(db))).toBe(versaoAlvo() + 1)
+  })
+
+  it('should_tell_the_user_what_happened_and_how_to_get_back', () => {
+    const erro = new BancoMaisNovoQueOApp(7, 4)
+
+    expect(erro.versaoDoBanco).toBe(7)
+    expect(erro.versaoConhecida).toBe(4)
+    expect(erro.message).toContain('versão mais nova')
+    expect(erro.message).toContain('Nenhum dado foi alterado')
+    expect(erro.message).toContain('releases/latest')
+  })
+
+  it('should_back_up_an_existing_database_before_touching_the_schema', async () => {
+    const db = await createEmptyDb()
+    const versaoNoBackup: number[] = []
+    const antesDeMigrar = vi.fn(async () => {
+      versaoNoBackup.push(versaoAtual(alvo(db)))
+    })
+
+    const aplicadas = await atualizarEsquema(alvo(db), { bancoJaExistia: true, antesDeMigrar })
+
+    expect(aplicadas).toEqual(MIGRACOES.map((m) => m.versao))
+    expect(antesDeMigrar).toHaveBeenCalledTimes(1)
+    expect(versaoNoBackup).toEqual([0])
+  })
+
+  it('should_not_back_up_a_brand_new_database', async () => {
+    const db = await createEmptyDb()
+    const antesDeMigrar = vi.fn(async () => {})
+
+    await atualizarEsquema(alvo(db), { bancoJaExistia: false, antesDeMigrar })
+
+    expect(antesDeMigrar).not.toHaveBeenCalled()
+    expect(versaoAtual(alvo(db))).toBe(versaoAlvo())
+  })
+
+  it('should_neither_back_up_nor_migrate_a_current_database', async () => {
+    const db = await createEmptyDb()
+    aplicarMigracoes(alvo(db))
+    const antesDeMigrar = vi.fn(async () => {})
+
+    expect(await atualizarEsquema(alvo(db), { bancoJaExistia: true, antesDeMigrar })).toEqual([])
+    expect(antesDeMigrar).not.toHaveBeenCalled()
+  })
+
+  it('should_not_migrate_when_the_backup_before_it_fails', async () => {
+    // Sem a cópia não há volta: melhor não abrir do que migrar sem rede de proteção.
+    const db = await createEmptyDb()
+    const antesDeMigrar = vi.fn(async () => {
+      throw new Error('disco cheio')
+    })
+
+    await expect(
+      atualizarEsquema(alvo(db), { bancoJaExistia: true, antesDeMigrar })
+    ).rejects.toThrow('disco cheio')
+    expect(versaoAtual(alvo(db))).toBe(0)
   })
 })

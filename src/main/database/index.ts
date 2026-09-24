@@ -5,7 +5,7 @@ import { existsSync } from 'fs'
 import { join } from 'path'
 import { registro } from '../registro'
 import * as schema from './schema'
-import { aplicarMigracoes, migracoesPendentes, versaoAtual } from './migrations'
+import { atualizarEsquema } from './migrations'
 
 let db: ReturnType<typeof drizzle>
 let sqliteInstance: InstanceType<typeof Database>
@@ -18,6 +18,10 @@ export function getDbPath(): string {
  * `antesDeMigrar` recebe a chance de guardar uma cópia do banco antes de o
  * schema mudar — é o único momento em que ainda dá para voltar atrás. O callback
  * entra por parâmetro para o módulo de banco não depender do de backup.
+ *
+ * Banco migrado por uma versão mais nova do app faz o boot falhar com
+ * `BancoMaisNovoQueOApp`, antes de qualquer escrita; o encerramento mostra a
+ * mensagem e fecha a conexão.
  */
 export async function initDatabase(antesDeMigrar?: () => Promise<void>): Promise<void> {
   const caminho = getDbPath()
@@ -31,12 +35,8 @@ export async function initDatabase(antesDeMigrar?: () => Promise<void>): Promise
 
   db = drizzle(sqlite, { schema })
 
-  const pendentes = migracoesPendentes(versaoAtual(sqlite))
-  if (pendentes.length > 0) {
-    // Banco recém-criado não tem o que preservar.
-    if (bancoJaExistia && antesDeMigrar) await antesDeMigrar()
-
-    const aplicadas = aplicarMigracoes(sqlite)
+  const aplicadas = await atualizarEsquema(sqlite, { bancoJaExistia, antesDeMigrar })
+  if (aplicadas.length > 0) {
     registro.info(`[db] migrações aplicadas: ${aplicadas.join(', ')}`)
   }
 }

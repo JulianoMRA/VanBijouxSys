@@ -127,6 +127,8 @@ A versão 1 é a linha de base e reproduz o schema que os bancos em uso já tinh
 
 Quando existe migração pendente e o banco já existia, um backup é criado **antes** de o schema mudar. É o único momento em que ainda dá para voltar atrás, e importa mais agora que a atualização chega sozinha pelo updater.
 
+Banco com `user_version` maior do que o app conhece faz o boot recusar, com uma mensagem e sem gravar nada. É o que acontece quando um instalador antigo roda por cima do app atual: o código antigo gravaria nas tabelas novas com as regras antigas. A recusa vale daqui para frente; versões publicadas antes dela não têm essa proteção.
+
 ## Publicando uma versão
 
 O app se atualiza pelas releases do GitHub via electron-updater. O repositório é público, então o app baixa a atualização sem token nenhum; o arquivo que o updater lê é o `latest.yml` anexado à release.

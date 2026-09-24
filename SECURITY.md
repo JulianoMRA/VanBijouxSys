@@ -88,6 +88,10 @@ conferência humana dela.
 - Valor que vai para o SQL passa sempre por parâmetro, pelo Drizzle ou por `prepare`
   com `?`. O que se concatena são trechos fixos do código: nomes de tabela nas
   migrações e filtros de data do painel, montados com placeholders.
+- Banco migrado por uma versão mais nova do app é recusado no boot, antes de
+  qualquer escrita (`BancoMaisNovoQueOApp` em `src/main/database/migrations.ts`).
+  Em setembro de 2026 um instalador antigo (1.7.1) rodou por cima da versão atual
+  na máquina da cliente e abriu um banco que já não era dele.
 
 ### Log
 
@@ -98,7 +102,13 @@ boot, com stack. Fica só na máquina e não é enviado a lugar nenhum.
 
 Registradas para não ficarem silenciosas:
 
-- **Canais IPC sem validação de schema** do payload recebido.
+- **Instalador sem assinatura.** Quem publicar uma release no repositório entrega
+  código à máquina da usuária pelo auto-update (ver Atualização automática); a
+  proteção é a conta do GitHub que publica. Assinar também tiraria o alerta do
+  SmartScreen.
+
+Os canais IPC, que já constaram aqui, validam o payload com zod desde a 1.14: os 46
+passam por `registrarCanal` (`src/main/ipc/canal.ts`).
 
 ## Dependências
 

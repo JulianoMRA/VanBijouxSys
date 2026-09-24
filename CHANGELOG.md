@@ -1,5 +1,34 @@
 # Changelog
 
+## [1.16.0] - 2026-09-23
+
+### Alterado
+
+- **A atualização espera você**: o aplicativo não instala mais a versão nova sozinho depois de fechar. Quando ela termina de baixar, aparece a pergunta **Instalar agora** ou **Depois**. Instalando, o app fecha, mostra o andamento da instalação e abre de novo sozinho em cerca de um minuto; até ele voltar, não desligue nem suspenda o computador. Com **Depois**, a pergunta volta na próxima vez que o app abrir, ou no botão **Verificar atualizações**. Antes, a instalação rodava escondida depois de fechar o app, e se o computador fosse desligado ou suspenso logo em seguida ela parava no meio: o app continuava na versão antiga sem avisar, e numa das vezes deixou de abrir.
+- **Instalação que não terminou é avisada**: se a instalação parar no meio, na próxima abertura o app avisa e oferece instalar de novo.
+
+### Corrigido
+
+- **Backups**: o app prometia dez dias de cópias, mas cada vez que procurava atualização gravava mais uma, e as mais antigas iam sendo apagadas: chegou a guardar só um dia. Agora ficam as cópias dos dez últimos dias de uso e, à parte, as feitas antes de uma atualização, de uma mudança no banco ou de uma restauração, com o motivo no nome do arquivo (por exemplo, "antes-da-1.16.0"). A cópia de antes de uma atualização sai uma vez só por versão.
+- **Restaurar o backup mais antigo**: com a pasta de backups cheia, escolher o mais antigo fazia a restauração falhar e apagava justamente esse arquivo. Agora o arquivo escolhido fica protegido antes de qualquer outra coisa.
+- **Datas à noite**: depois das 21h, o Painel contava o período até o dia seguinte, a feira do dia aparecia como realizada e a cópia do **Salvar backup agora** levava a data de amanhã no nome. Agora vale sempre o dia do relógio do computador.
+- **Verificar atualizações sem internet**: a mensagem volta a pedir para conferir a conexão, em vez de um "Tente novamente" genérico.
+
+### Segurança
+
+- **Base do aplicativo atualizada**: o Electron, que é a base do app, foi da versão 41 para a 44. A 41 deixou de receber correções de segurança em agosto; a 44 recebe até março de 2027. Junto, a biblioteca de acesso ao banco de dados foi para uma versão que funciona com qualquer versão da base, sem precisar ser preparada de novo a cada troca.
+- **Versão antiga por cima de dados novos**: se um instalador antigo for aberto por engano depois de uma versão que mudou o banco, o app antigo mostra uma mensagem e fecha, em vez de abrir sobre dados que não conhece. Nenhum dado é alterado. A proteção vale para as versões a partir desta; as anteriores não a têm.
+- **O aplicativo confere a própria integridade ao abrir**: se os arquivos dele forem alterados depois da instalação, ele não abre.
+
+### Interno
+
+- O aplicativo instalado ocupa uns 40 MB a menos: as bibliotecas da tela, que já iam embutidas nela, deixaram de ser copiadas também em separado.
+- O executável passa a mostrar o nome do autor, e não "GitHub, Inc.", em Propriedades e em Aplicativos instalados.
+- Regra RN-15 (backup) atualizada com as duas cotas de cópias.
+- A suíte de testes vai de 570 para 624.
+
+---
+
 ## [1.15.1] - 2026-09-23
 
 ### Corrigido

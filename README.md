@@ -133,6 +133,8 @@ Banco com `user_version` maior do que o app conhece faz o boot recusar, com uma 
 
 O app se atualiza pelas releases do GitHub via electron-updater. O repositório é público, então o app baixa a atualização sem token nenhum; o arquivo que o updater lê é o `latest.yml` anexado à release.
 
+A versão nova é baixada em segundo plano e só é instalada quando a usuária confirma, com o app aberto: o instalador roda com a janela visível e reabre o app ao terminar. Instalar ao fechar, como até a 1.15, deixava o instalador sozinho, e na máquina da cliente o notebook suspendia no meio da instalação. Quem está na 1.15 ou antes ainda recebe a primeira atualização com este fluxo pelo caminho antigo, ao fechar o app.
+
 O passo a passo — branch de documentação, `npm version`, build e `gh release create` com os três arquivos — está em [CONTRIBUTING.md](CONTRIBUTING.md#release), junto com as ressalvas sobre instalador sem assinatura e nome do artefato.
 
 ## Fronteira IPC

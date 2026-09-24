@@ -2,37 +2,103 @@ import { app, dialog, BrowserWindow } from 'electron'
 // electron-updater é CJS; o default import com destructuring é o padrão seguro.
 import electronUpdater from 'electron-updater'
 import log from 'electron-log/main'
+import { existsSync, readFileSync, rmSync, writeFileSync } from 'fs'
+import { join } from 'path'
 import { backupAntesDaAtualizacao } from './database/backup'
+import { servicoDeAtualizacao } from './servicos/atualizacao'
 
 const { autoUpdater } = electronUpdater
 
 autoUpdater.logger = log
+// Instalar ao fechar deixava o instalador sozinho, sem ninguém olhando: na cliente o
+// notebook suspendia logo depois e a instalação morria no meio. A decisão agora é
+// dela, com o app aberto (src/main/servicos/atualizacao.ts).
+autoUpdater.autoInstallOnAppQuit = false
+// Só o instalador completo é publicado; sem isto o electron-updater avisa a cada download.
+autoUpdater.disableWebInstaller = true
 
 function janelaAtual(): BrowserWindow | undefined {
   return BrowserWindow.getFocusedWindow() ?? BrowserWindow.getAllWindows()[0]
 }
 
-/**
- * O instalador é aplicado ao fechar o app, sobre um banco já migrado pela versão
- * nova. Se a migração der errado não há como voltar, então a cópia sai antes —
- * uma por versão, por mais vezes que a checagem encontre a mesma atualização.
- */
-autoUpdater.on('update-downloaded', (info) => {
-  backupAntesDaAtualizacao(info.version)
-    .then((caminho) => {
-      if (caminho) log.info(`[updater] backup antes da versão ${info.version}: ${caminho}`)
+/** O diálogo precisa de dona visível; no boot, a janela ainda pode estar carregando. */
+async function janelaVisivel(): Promise<BrowserWindow | undefined> {
+  const janela = janelaAtual()
+  if (!janela || janela.isDestroyed()) return undefined
+  if (!janela.isVisible()) {
+    await new Promise<void>((pronto) => {
+      const limite = setTimeout(pronto, 30_000)
+      janela.once('show', () => {
+        clearTimeout(limite)
+        pronto()
+      })
     })
-    .catch((err) => log.error('[updater] backup pré-atualização falhou:', err))
+  }
+  return janela.isDestroyed() || !janela.isVisible() ? undefined : janela
+}
+
+const caminhoDoRegistro = (): string =>
+  join(app.getPath('userData'), 'atualizacao-em-andamento.json')
+
+const servico = servicoDeAtualizacao({
+  versaoAtual: () => app.getVersion(),
+  async checar() {
+    const resultado = await autoUpdater.checkForUpdates()
+    return {
+      disponivel: resultado?.isUpdateAvailable ?? false,
+      versao: resultado?.updateInfo.version ?? app.getVersion(),
+      download: resultado?.downloadPromise ?? null
+    }
+  },
+  // Com a janela do instalador (não silencioso): na máquina lenta da cliente, ver o
+  // progresso é o que a faz esperar antes de suspender. Ao terminar, o app reabre.
+  instalar: () => autoUpdater.quitAndInstall(false, true),
+  backupAntesDaVersao: backupAntesDaAtualizacao,
+  async perguntar({ titulo, mensagem, detalhe, botoes }) {
+    const janela = await janelaVisivel()
+    if (!janela) return null
+    const { response } = await dialog.showMessageBox(janela, {
+      type: 'info',
+      title: titulo,
+      message: mensagem,
+      detail: detalhe,
+      buttons: botoes,
+      defaultId: 0,
+      cancelId: 1
+    })
+    return response
+  },
+  async avisar({ titulo, mensagem, detalhe }) {
+    const janela = janelaAtual()
+    if (!janela) return
+    await dialog.showMessageBox(janela, {
+      type: 'info',
+      title: titulo,
+      message: mensagem,
+      detail: detalhe
+    })
+  },
+  registroDaInstalacao: {
+    ler: () => (existsSync(caminhoDoRegistro()) ? readFileSync(caminhoDoRegistro(), 'utf8') : null),
+    gravar: (texto) => writeFileSync(caminhoDoRegistro(), texto),
+    apagar: () => rmSync(caminhoDoRegistro(), { force: true })
+  },
+  log,
+  agora: () => new Date(),
+  esperar: (ms) => new Promise((pronto) => setTimeout(pronto, ms))
+})
+
+autoUpdater.on('update-downloaded', (info) => {
+  servico
+    .atualizacaoBaixada(info.version)
+    .catch((err) => log.error('[updater] convite de instalação falhou:', err))
 })
 
 export function iniciarAutoUpdate(): void {
   log.info(`[updater] versão ${app.getVersion()}, empacotado=${app.isPackaged}`)
   if (!app.isPackaged) return
 
-  autoUpdater.checkForUpdatesAndNotify().catch((err) => {
-    // Sem rede ou release indisponível não é erro fatal — o app segue normal.
-    log.error('[updater] checagem automática falhou:', err)
-  })
+  servico.iniciar().catch((err) => log.error('[updater] checagem automática falhou:', err))
 }
 
 export async function verificarAtualizacoesManual(): Promise<{ atualizacaoDisponivel: boolean }> {
@@ -48,31 +114,5 @@ export async function verificarAtualizacoesManual(): Promise<{ atualizacaoDispon
     return { atualizacaoDisponivel: false }
   }
 
-  try {
-    const resultado = await autoUpdater.checkForUpdates()
-    const novaVersao = resultado?.updateInfo.version
-
-    if (novaVersao && novaVersao !== app.getVersion()) {
-      await dialog.showMessageBox(janela, {
-        type: 'info',
-        title: 'Atualização disponível',
-        message: `Versão ${novaVersao} disponível (atual: ${app.getVersion()}).`,
-        detail:
-          'O download acontece em segundo plano. A atualização é aplicada ao fechar o aplicativo, e um backup do banco é feito antes.'
-      })
-      return { atualizacaoDisponivel: true }
-    }
-
-    await dialog.showMessageBox(janela, {
-      type: 'info',
-      title: 'Atualizações',
-      message: `Você já está na versão mais recente (${app.getVersion()}).`
-    })
-    return { atualizacaoDisponivel: false }
-  } catch (err) {
-    log.error('[updater] checagem manual falhou:', err)
-    throw new Error(
-      'Não foi possível verificar atualizações. Verifique a conexão com a internet e tente novamente.'
-    )
-  }
+  return servico.verificarAgora()
 }

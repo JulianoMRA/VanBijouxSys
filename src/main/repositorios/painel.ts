@@ -6,31 +6,39 @@ import {
   SQL_VARIACOES_ESGOTADAS
 } from '../database/consultas-estoque'
 import { ErroDeNegocio } from '../ipc/mensagens'
+import { diaLocal } from '../../shared/datas'
 import { emCentavos } from '../../shared/dinheiro'
 import type { DashboardParams, DashboardStats, PeriodoDoPainel } from '../../shared/ipc/painel'
 
-function computePeriodDates(period: Exclude<PeriodoDoPainel, 'custom'>): {
+/**
+ * Os limites do período no dia da cliente. Com `toISOString()`, depois das 21h o
+ * período terminava amanhã e o trimestre começava um dia depois do certo.
+ * `now` é parâmetro para o cálculo ser determinístico em teste.
+ */
+export function computePeriodDates(
+  period: Exclude<PeriodoDoPainel, 'custom'>,
+  now = new Date()
+): {
   fromDate: string | null
   toDate: string | null
   prevFromDate: string | null
   prevToDate: string | null
 } {
-  const now = new Date()
-  const today = now.toISOString().slice(0, 10)
+  const today = diaLocal(now)
 
   if (period === 'all') {
     return { fromDate: null, toDate: null, prevFromDate: null, prevToDate: null }
   }
 
   if (period === 'month') {
-    const fromDate = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10)
+    const fromDate = diaLocal(new Date(now.getFullYear(), now.getMonth(), 1))
     const prevFrom = new Date(now.getFullYear(), now.getMonth() - 1, 1)
     const prevTo = new Date(now.getFullYear(), now.getMonth(), 0)
     return {
       fromDate,
       toDate: today,
-      prevFromDate: prevFrom.toISOString().slice(0, 10),
-      prevToDate: prevTo.toISOString().slice(0, 10)
+      prevFromDate: diaLocal(prevFrom),
+      prevToDate: diaLocal(prevTo)
     }
   }
 
@@ -42,10 +50,10 @@ function computePeriodDates(period: Exclude<PeriodoDoPainel, 'custom'>): {
     const prevTo = new Date(from)
     prevTo.setDate(prevTo.getDate() - 1)
     return {
-      fromDate: from.toISOString().slice(0, 10),
+      fromDate: diaLocal(from),
       toDate: today,
-      prevFromDate: prevFrom.toISOString().slice(0, 10),
-      prevToDate: prevTo.toISOString().slice(0, 10)
+      prevFromDate: diaLocal(prevFrom),
+      prevToDate: diaLocal(prevTo)
     }
   }
 
@@ -57,17 +65,17 @@ function computePeriodDates(period: Exclude<PeriodoDoPainel, 'custom'>): {
     const prevTo = new Date(from)
     prevTo.setDate(prevTo.getDate() - 1)
     return {
-      fromDate: from.toISOString().slice(0, 10),
+      fromDate: diaLocal(from),
       toDate: today,
-      prevFromDate: prevFrom.toISOString().slice(0, 10),
-      prevToDate: prevTo.toISOString().slice(0, 10)
+      prevFromDate: diaLocal(prevFrom),
+      prevToDate: diaLocal(prevTo)
     }
   }
 
   // year
-  const fromDate = new Date(now.getFullYear(), 0, 1).toISOString().slice(0, 10)
-  const prevFromDate = new Date(now.getFullYear() - 1, 0, 1).toISOString().slice(0, 10)
-  const prevToDate = new Date(now.getFullYear() - 1, 11, 31).toISOString().slice(0, 10)
+  const fromDate = diaLocal(new Date(now.getFullYear(), 0, 1))
+  const prevFromDate = diaLocal(new Date(now.getFullYear() - 1, 0, 1))
+  const prevToDate = diaLocal(new Date(now.getFullYear() - 1, 11, 31))
   return { fromDate, toDate: today, prevFromDate, prevToDate }
 }
 

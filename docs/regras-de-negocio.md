@@ -289,17 +289,30 @@ em sold_at`, `dashboard: bordas do período`),
 
 ### RN-15 — Backup diário, dez dias de histórico, cópia antes de restaurar
 
-O app faz um backup por dia na abertura e mantém os dez mais recentes. Antes de
-uma atualização e antes de restaurar, ele grava um backup extra: restaurar o
-arquivo errado não pode ser um caminho sem volta. A cópia usa a API de backup do
-SQLite, consistente mesmo com o WAL ativo.
+O app faz um backup por dia na abertura e mantém os dez dias mais recentes. Antes
+de uma atualização, de uma mudança no banco e de uma restauração, ele grava um
+backup extra, com o motivo no nome do arquivo (`...-antes-da-1.16.0.db`,
+`...-antes-de-migrar.db`, `...-antes-de-restaurar.db`): restaurar o arquivo
+errado não pode ser um caminho sem volta. A cópia usa a API de backup do SQLite,
+consistente mesmo com o WAL ativo.
+
+Os dois tipos têm cotas separadas, dez de cada. Com uma cota só, cada checagem
+de atualização gravava uma cópia e empurrava os dias anteriores para fora: em
+setembro de 2026 a cliente ficou com dez backups de um dia só. Pelo mesmo motivo,
+a cópia de antes de uma atualização sai uma vez por versão, e não a cada vez que
+a checagem encontra a atualização já baixada.
 
 Restaurar tem três portas: escolher o arquivo, o app conferir que ele é mesmo um
-banco do Van Bijoux (integridade e tabelas) e a confirmação do aviso. Depois da
-troca, o app reinicia, porque a conexão e os prepared statements morrem ali.
+banco do Van Bijoux (integridade e tabelas) e a confirmação do aviso. O arquivo
+escolhido é copiado antes do backup de segurança, porque a rotação pode apagá-lo:
+restaurar o mais antigo de uma pasta cheia falhava com o banco já fechado. Depois
+da troca, o app reinicia, porque a conexão e os prepared statements morrem ali.
 
 - **Código**: `src/main/database/backup.ts`, `database/backup-rules.ts`
-  (`MAX_BACKUPS = 10`) e `src/main/servicos/backup.ts` (as três portas).
-- **Prova**: `src/tests/backup-rules.test.ts` e
-  `src/tests/integration/backup-payload.test.ts` (16 testes do fluxo, incluindo
-  arquivo inválido e aviso cancelado).
+  (`MAX_BACKUPS_DIARIOS` e `MAX_BACKUPS_DE_EVENTO`) e
+  `src/main/servicos/backup.ts` (as três portas).
+- **Prova**: `src/tests/backup-rules.test.ts` (nomes, cotas e a cópia do dia),
+  `src/tests/integration/backup-arquivos.test.ts` (o `backup.ts` de verdade numa
+  pasta temporária: restauração do mais antigo, dez dias preservados, uma cópia
+  por versão) e `src/tests/integration/backup-payload.test.ts` (o fluxo das três
+  portas, incluindo arquivo inválido e aviso cancelado).

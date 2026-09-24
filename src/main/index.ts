@@ -7,6 +7,7 @@ import { closeDatabase, getDb, getSqlite, initDatabase } from './database'
 import {
   backupDiario,
   criarBackup,
+  exportarBackup,
   getBackupDir,
   restaurarBackup,
   validarBackup
@@ -117,7 +118,7 @@ async function iniciar(): Promise<void> {
   })
 
   await initDatabase(async () => {
-    const caminho = await criarBackup()
+    const caminho = await criarBackup({ tipo: 'migracao' })
     registro.info(`[db] backup antes de migrar: ${caminho}`)
   })
 
@@ -164,7 +165,7 @@ async function iniciar(): Promise<void> {
         },
         pastaDeBackups: getBackupDir,
         criarBackup: async (destino) => {
-          await criarBackup(destino)
+          await exportarBackup(destino)
         },
         validarBackup,
         restaurarBackup,
@@ -189,9 +190,13 @@ async function iniciar(): Promise<void> {
   createWindow()
 
   // Falha de backup não pode impedir a cliente de trabalhar — apenas registra.
-  backupDiario().catch((err) => {
-    registro.error('[backup] backup diário falhou:', err)
-  })
+  backupDiario()
+    .then((caminho) => {
+      if (caminho) registro.info(`[backup] backup do dia: ${caminho}`)
+    })
+    .catch((err) => {
+      registro.error('[backup] backup diário falhou:', err)
+    })
 
   iniciarAutoUpdate()
 

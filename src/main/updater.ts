@@ -2,7 +2,7 @@ import { app, dialog, BrowserWindow } from 'electron'
 // electron-updater é CJS; o default import com destructuring é o padrão seguro.
 import electronUpdater from 'electron-updater'
 import log from 'electron-log/main'
-import { criarBackup } from './database/backup'
+import { backupAntesDaAtualizacao } from './database/backup'
 
 const { autoUpdater } = electronUpdater
 
@@ -14,11 +14,14 @@ function janelaAtual(): BrowserWindow | undefined {
 
 /**
  * O instalador é aplicado ao fechar o app, sobre um banco já migrado pela versão
- * nova. Se a migração der errado não há como voltar, então a cópia sai antes.
+ * nova. Se a migração der errado não há como voltar, então a cópia sai antes —
+ * uma por versão, por mais vezes que a checagem encontre a mesma atualização.
  */
 autoUpdater.on('update-downloaded', (info) => {
-  criarBackup()
-    .then((caminho) => log.info(`[updater] backup antes da versão ${info.version}: ${caminho}`))
+  backupAntesDaAtualizacao(info.version)
+    .then((caminho) => {
+      if (caminho) log.info(`[updater] backup antes da versão ${info.version}: ${caminho}`)
+    })
     .catch((err) => log.error('[updater] backup pré-atualização falhou:', err))
 })
 

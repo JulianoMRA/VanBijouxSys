@@ -7,8 +7,10 @@ import {
   ehArquivoDeBackup,
   nomeDeBackup,
   selecionarParaRemover,
+  temBackupAntesDaVersao,
   temBackupDoDia,
-  type ArquivoBackup
+  type ArquivoBackup,
+  type MotivoDoBackup
 } from './backup-rules'
 
 export function getBackupDir(): string {
@@ -36,21 +38,48 @@ function rotacionar(): void {
 }
 
 /**
- * Copia o banco usando a API de backup do SQLite, que é consistente mesmo com
- * o WAL ativo e o app escrevendo — copiar o arquivo na mão não seria.
+ * Grava uma cópia na pasta de backups pela API de backup do SQLite, que é
+ * consistente mesmo com o WAL ativo e o app escrevendo — copiar o arquivo na mão
+ * não seria. Sem motivo é a cópia do dia; com motivo, a de antes de atualizar,
+ * migrar ou restaurar, que tem cota própria na rotação (RN-15).
  */
-export async function criarBackup(destino?: string): Promise<string> {
-  const caminho = destino ?? join(getBackupDir(), nomeDeBackup(new Date()))
+export async function criarBackup(motivo?: MotivoDoBackup): Promise<string> {
+  const caminho = join(getBackupDir(), nomeDeBackup(new Date(), motivo))
   mkdirSync(dirname(caminho), { recursive: true })
   await getSqlite().backup(caminho)
-  if (!destino) rotacionar()
+  rotacionar()
   return caminho
 }
 
-/** Um backup por dia é o suficiente para o volume de uso e mantém 10 dias de histórico. */
-export async function backupDiario(): Promise<void> {
-  if (temBackupDoDia(nomesDeBackup(), new Date())) return
-  await criarBackup()
+/** Cópia no caminho que a usuária escolheu, fora da pasta de backups e da rotação. */
+export async function exportarBackup(destino: string): Promise<string> {
+  mkdirSync(dirname(destino), { recursive: true })
+  await getSqlite().backup(destino)
+  return destino
+}
+
+/** RN-15: um backup por dia de uso; devolve o caminho, ou null se o do dia já existia. */
+export async function backupDiario(): Promise<string | null> {
+  if (temBackupDoDia(nomesDeBackup(), new Date())) return null
+  return criarBackup()
+}
+
+const versoesEmBackup = new Set<string>()
+
+/**
+ * RN-15: uma cópia por versão baixada. O electron-updater avisa de novo a cada
+ * checagem que encontra a atualização já baixada — no boot e a cada clique em
+ * "Verificar atualizações" —, e dois avisos podem chegar quase juntos. Devolve
+ * null quando a cópia daquela versão já existe.
+ */
+export async function backupAntesDaAtualizacao(versao: string): Promise<string | null> {
+  if (versoesEmBackup.has(versao) || temBackupAntesDaVersao(nomesDeBackup(), versao)) return null
+  versoesEmBackup.add(versao)
+  try {
+    return await criarBackup({ tipo: 'atualizacao', versao })
+  } finally {
+    versoesEmBackup.delete(versao)
+  }
 }
 
 export function validarBackup(caminho: string): { ok: true } | { ok: false; erro: string } {
@@ -81,13 +110,26 @@ export function validarBackup(caminho: string): { ok: true } | { ok: false; erro
  * Substitui o banco em uso. Antes de sobrescrever, guarda o estado atual num
  * backup próprio — restaurar o arquivo errado não pode ser um caminho sem volta.
  * O app reinicia porque a conexão e todos os prepared statements morrem aqui.
+ *
+ * A origem é copiada antes de tudo: ela costuma estar na própria pasta de backups,
+ * e o backup de segurança roda a rotação. Sem a cópia, restaurar o backup mais
+ * antigo de uma pasta cheia apagava o arquivo escolhido com o banco já fechado.
  */
 export async function restaurarBackup(origem: string): Promise<void> {
-  await criarBackup()
+  const destino = getDbPath()
+  const copiaDaOrigem = `${destino}.restaurando`
+  copyFileSync(origem, copiaDaOrigem)
+
+  try {
+    await criarBackup({ tipo: 'restauracao' })
+  } catch (erro) {
+    rmSync(copiaDaOrigem, { force: true })
+    throw erro
+  }
   closeDatabase()
 
-  const destino = getDbPath()
-  copyFileSync(origem, destino)
+  copyFileSync(copiaDaOrigem, destino)
+  rmSync(copiaDaOrigem, { force: true })
   for (const sufixo of ['-wal', '-shm']) {
     rmSync(`${destino}${sufixo}`, { force: true })
   }

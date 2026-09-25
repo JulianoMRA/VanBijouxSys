@@ -7,7 +7,7 @@ import {
   numeroDoArmazenamento,
   numeroParaArmazenamento
 } from '../../utils/numero'
-import { formatCurrency, formatDate } from '../../utils/format'
+import { formatCurrency, formatDate, partesDaData } from '../../utils/format'
 import { totalRecebido } from '../../utils/recebimentos'
 import { emCentavos } from '../../../../shared/dinheiro'
 import { RECUSAS_DE_PAGAMENTO } from '../../../../shared/recebimentos'
@@ -123,7 +123,7 @@ export default function ReceberPagamentoModal({
                 para <span className="font-semibold text-ink-900">{sale.customerName}</span>
               </>
             )}
-            , em {formatDate(sale.soldAt.slice(0, 10))}.
+            {partesDaData(sale.soldAt) ? `, em ${formatDate(sale.soldAt)}.` : ', sem data.'}
           </p>
           {recebido > 0 && (
             <p>

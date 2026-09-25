@@ -46,7 +46,11 @@ export interface DashboardStats {
     totalSales: number
     avgTicket: number
   } | null
-  revenueByMonth: Array<{ month: string; revenue: number; profit: number }>
+  /**
+   * `month` nulo agrupa as vendas antigas gravadas sem data (até a 1.13, apagar a data
+   * e salvar gravava sold_at vazio). Só aparece no período "Tudo".
+   */
+  revenueByMonth: Array<{ month: string | null; revenue: number; profit: number }>
   salesByChannel: Array<{ channel: string; revenue: number; profit: number; count: number }>
   salesByCategory: Array<{ category: string; revenue: number; quantity: number; count: number }>
   salesByFair: Array<{
@@ -58,7 +62,8 @@ export interface DashboardStats {
     enrollmentCost: number
     additionalCosts: number
     netProfit: number
-    dailyBreakdown: Array<{ day: string; revenue: number; salesCount: number }>
+    /** `day` nulo: vendas antigas da feira gravadas sem data. */
+    dailyBreakdown: Array<{ day: string | null; revenue: number; salesCount: number }>
   }>
   topVariations: Array<{
     productName: string
@@ -96,7 +101,8 @@ export interface DashboardStats {
     stockQuantity: number
     minimumStock: number
   }>
-  cashFlow: Array<{ month: string; income: number; expenses: number }>
+  /** `month` nulo: vendas e despesas antigas gravadas sem data, como em `revenueByMonth`. */
+  cashFlow: Array<{ month: string | null; income: number; expenses: number }>
   cashSummary: {
     openingBalance: number
     totalIncome: number

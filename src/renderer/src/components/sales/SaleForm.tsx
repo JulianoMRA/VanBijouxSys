@@ -111,10 +111,16 @@ export default function SaleForm({
 
   useEffect(() => {
     async function load(): Promise<void> {
-      const [prods, frs] = await Promise.all([
-        window.api.products.getAll(),
-        window.api.fairs.getAll()
-      ])
+      let prods: Product[]
+      let frs: Fair[]
+      try {
+        ;[prods, frs] = await Promise.all([window.api.products.getAll(), window.api.fairs.getAll()])
+      } catch (err) {
+        // Sem isto, os seletores ficavam vazios, como se não houvesse produto nem feira.
+        setError('Não foi possível carregar os produtos e as feiras. Feche e abra de novo.')
+        console.error(err)
+        return
+      }
       setProducts(prods)
       setFairs(frs)
 

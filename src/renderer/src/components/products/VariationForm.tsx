@@ -464,27 +464,15 @@ export default function VariationForm({
                   <div className="bg-wine-50 rounded-control p-3 space-y-1 text-micro tabular-nums text-ink-500">
                     <div className="flex justify-between">
                       <span>Materiais × 3</span>
-                      <span>
-                        {(materialsForCalc * 3).toLocaleString('pt-BR', {
-                          style: 'currency',
-                          currency: 'BRL'
-                        })}
-                      </span>
+                      <span>{formatCurrency(materialsForCalc * 3)}</span>
                     </div>
                     <div className="flex justify-between">
                       <span>+ Mão de obra</span>
-                      <span>
-                        {labor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-                      </span>
+                      <span>{formatCurrency(labor)}</span>
                     </div>
                     <div className="flex justify-between">
                       <span>× 1,10 (margem)</span>
-                      <span>
-                        {((materialsForCalc * 3 + labor) * 1.1).toLocaleString('pt-BR', {
-                          style: 'currency',
-                          currency: 'BRL'
-                        })}
-                      </span>
+                      <span>{formatCurrency((materialsForCalc * 3 + labor) * 1.1)}</span>
                     </div>
                     <div className="flex justify-between">
                       <span>+ Embalagem</span>
@@ -492,12 +480,7 @@ export default function VariationForm({
                     </div>
                     <div className="flex justify-between font-semibold text-wine-500 pt-1 border-t border-wine-100">
                       <span>Preço sugerido</span>
-                      <span>
-                        {suggestedPrice.toLocaleString('pt-BR', {
-                          style: 'currency',
-                          currency: 'BRL'
-                        })}
-                      </span>
+                      <span>{formatCurrency(suggestedPrice)}</span>
                     </div>
                   </div>
                 )}

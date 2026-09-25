@@ -8,6 +8,7 @@ import {
   numeroParaArmazenamento
 } from '../../utils/numero'
 import { estaArquivado, variacaoInativa } from '../../utils/arquivamento'
+import { formatCurrency } from '../../utils/format'
 import { custoUnitarioDoItem } from '../../utils/itens-de-venda'
 import { totalRecebido } from '../../utils/recebimentos'
 import { MENSAGEM_CLIENTE_OBRIGATORIA, normalizarNomeDaCliente } from '../../../../shared/clientes'
@@ -53,10 +54,6 @@ const PAYMENT_METHODS: { value: PaymentMethod; label: string }[] = [
 ]
 
 const FEE_STORAGE_KEY = (method: PaymentMethod) => `lastFee_${method}`
-
-function formatCurrency(value: number): string {
-  return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
-}
 
 function loadLastFee(method: PaymentMethod): string {
   if (method === 'dinheiro' || method === 'areceber') return '0'

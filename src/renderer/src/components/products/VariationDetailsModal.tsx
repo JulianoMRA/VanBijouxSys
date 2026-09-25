@@ -1,15 +1,11 @@
 import Modal from '../ui/Modal'
 import type { Product, ProductVariation } from '../../types'
-import { formatarCustoUnitario, formatPercent } from '../../utils/format'
+import { formatarCustoUnitario, formatCurrency, formatPercent } from '../../utils/format'
 
 interface VariationDetailsModalProps {
   product: Product
   variation: ProductVariation
   onClose: () => void
-}
-
-function fmt(value: number): string {
-  return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 }
 
 export default function VariationDetailsModal({
@@ -65,7 +61,7 @@ export default function VariationDetailsModal({
                         {formatarCustoUnitario(i.costPerUnit)}
                       </td>
                       <td className="px-4 py-2.5 text-right tabular-nums text-ink-800">
-                        {fmt(i.costPerUnit * i.quantity)}
+                        {formatCurrency(i.costPerUnit * i.quantity)}
                       </td>
                     </tr>
                   ))}
@@ -79,7 +75,7 @@ export default function VariationDetailsModal({
                       Total materiais
                     </td>
                     <td className="px-4 py-2.5 text-right text-body font-semibold tabular-nums text-wine-500">
-                      {fmt(insumosCost)}
+                      {formatCurrency(insumosCost)}
                     </td>
                   </tr>
                 </tfoot>
@@ -93,17 +89,17 @@ export default function VariationDetailsModal({
           <div className="space-y-2 rounded-control bg-wine-50 p-4 text-body">
             <div className="flex justify-between text-ink-600">
               <span>Materiais {hasMaterials ? '(insumos)' : '(custo manual)'}</span>
-              <span className="tabular-nums">{fmt(materialsForCalc)}</span>
+              <span className="tabular-nums">{formatCurrency(materialsForCalc)}</span>
             </div>
             <div className="flex justify-between text-ink-600">
               <span>Materiais × 3</span>
-              <span className="tabular-nums">{fmt(materialsForCalc * 3)}</span>
+              <span className="tabular-nums">{formatCurrency(materialsForCalc * 3)}</span>
             </div>
             <div className="flex justify-between text-ink-600">
               <span>+ Mão de obra</span>
               <span className="tabular-nums">
                 {labor > 0 ? (
-                  fmt(labor)
+                  formatCurrency(labor)
                 ) : (
                   <span className="italic text-ink-300">Não informada</span>
                 )}
@@ -111,7 +107,9 @@ export default function VariationDetailsModal({
             </div>
             <div className="flex justify-between text-ink-600">
               <span>× 1,10 (margem)</span>
-              <span className="tabular-nums">{fmt((materialsForCalc * 3 + labor) * 1.1)}</span>
+              <span className="tabular-nums">
+                {formatCurrency((materialsForCalc * 3 + labor) * 1.1)}
+              </span>
             </div>
             <div className="flex justify-between text-ink-600">
               <span>+ Embalagem</span>
@@ -119,7 +117,7 @@ export default function VariationDetailsModal({
             </div>
             <div className="flex justify-between border-t border-wine-100 pt-2 text-[15px] font-semibold text-wine-500">
               <span>Preço sugerido</span>
-              <span className="tabular-nums">{fmt(suggestedPrice)}</span>
+              <span className="tabular-nums">{formatCurrency(suggestedPrice)}</span>
             </div>
           </div>
         </section>
@@ -130,13 +128,13 @@ export default function VariationDetailsModal({
             <div className="rounded-control bg-bone-100 p-3 text-center">
               <p className="label mb-1">Custo</p>
               <p className="text-lg font-semibold tabular-nums text-ink-800">
-                {fmt(variation.costPrice)}
+                {formatCurrency(variation.costPrice)}
               </p>
             </div>
             <div className="rounded-control bg-bone-100 p-3 text-center">
               <p className="label mb-1">Venda</p>
               <p className="text-lg font-semibold tabular-nums text-ink-900">
-                {fmt(variation.salePrice)}
+                {formatCurrency(variation.salePrice)}
               </p>
             </div>
             <div
@@ -146,7 +144,7 @@ export default function VariationDetailsModal({
               <p
                 className={`text-lg font-semibold tabular-nums ${profit >= 0 ? 'text-sage-500' : 'text-clay-500'}`}
               >
-                {fmt(profit)}
+                {formatCurrency(profit)}
               </p>
               <p className={`mt-0.5 text-micro ${profit >= 0 ? 'text-sage-600' : 'text-clay-500'}`}>
                 {formatPercent(margin)} margem

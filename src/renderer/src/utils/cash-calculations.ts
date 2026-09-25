@@ -1,6 +1,6 @@
 import { diaLocal, subtrairMeses } from '../../../shared/datas'
 import { emCentavos } from '../../../shared/dinheiro'
-import { formatDate } from './format'
+import { formatCurrency, formatDate } from './format'
 import type { CashExpense, Fair, PaymentMethod, Sale, SalePayment } from '../types'
 
 export type PeriodKey = 'mes' | '3meses' | '6meses' | 'ano' | 'tudo' | 'custom'
@@ -144,13 +144,10 @@ export function filterExpenses(expenses: CashExpense[], range: DateRange | null)
 }
 
 export function buildFairCostSub(fair: Fair): string {
-  const moeda = (valor: number): string =>
-    valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
-
   const partes: string[] = []
-  if (fair.enrollmentCost > 0) partes.push(`Inscrição ${moeda(fair.enrollmentCost)}`)
+  if (fair.enrollmentCost > 0) partes.push(`Inscrição ${formatCurrency(fair.enrollmentCost)}`)
   for (const custo of fair.additionalCosts)
-    partes.push(`${custo.description} ${moeda(custo.amount)}`)
+    partes.push(`${custo.description} ${formatCurrency(custo.amount)}`)
 
   return partes.join(' · ') || 'Sem detalhes'
 }

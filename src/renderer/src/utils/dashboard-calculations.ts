@@ -1,4 +1,4 @@
-import { formatPercent, SEM_DATA } from './format'
+import { formatCurrency, formatPercent, SEM_DATA } from './format'
 import type { DashboardStats } from '../types'
 
 const MESES = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
@@ -89,7 +89,7 @@ export function buildInsights(stats: DashboardStats): Insight[] {
     if (melhor.netProfit > 0) {
       insights.push({
         kind: 'feira',
-        text: `Melhor feira: ${melhor.fairName} com lucro líquido de ${melhor.netProfit.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}`
+        text: `Melhor feira: ${melhor.fairName} com lucro líquido de ${formatCurrency(melhor.netProfit)}`
       })
     }
   }

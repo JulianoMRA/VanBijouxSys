@@ -1,5 +1,8 @@
+import { emReais } from '../../../shared/dinheiro'
+
+/** "R$ 1.234,56": a mesma escrita das mensagens do processo principal. */
 export function formatCurrency(value: number): string {
-  return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+  return emReais(value)
 }
 
 /**

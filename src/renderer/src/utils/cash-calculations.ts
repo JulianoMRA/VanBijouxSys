@@ -1,6 +1,7 @@
 import { diaLocal, subtrairMeses } from '../../../shared/datas'
 import { emCentavos } from '../../../shared/dinheiro'
 import { formatCurrency, formatDate } from './format'
+import { PAYMENT_LABELS } from './formas-de-pagamento'
 import type { CashExpense, Fair, PaymentMethod, Sale, SalePayment } from '../types'
 
 export type PeriodKey = 'mes' | '3meses' | '6meses' | 'ano' | 'tudo' | 'custom'
@@ -8,14 +9,6 @@ export type PeriodKey = 'mes' | '3meses' | '6meses' | 'ano' | 'tudo' | 'custom'
 export interface DateRange {
   startDate: string
   endDate: string
-}
-
-export const PAYMENT_LABELS: Record<PaymentMethod, string> = {
-  dinheiro: 'Dinheiro',
-  pix: 'PIX',
-  debito: 'Débito',
-  credito: 'Crédito',
-  areceber: 'A receber'
 }
 
 export interface FairExpenseRow {

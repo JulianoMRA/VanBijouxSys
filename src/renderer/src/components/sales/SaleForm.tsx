@@ -1,14 +1,16 @@
 import { useEffect, useState } from 'react'
 import Modal from '../ui/Modal'
 import CampoNumerico from '../ui/CampoNumerico'
-import {
-  formatarNumeroParaCampo,
-  interpretarNumero,
-  numeroDoArmazenamento,
-  numeroParaArmazenamento
-} from '../../utils/numero'
+import { formatarNumeroParaCampo, interpretarNumero } from '../../utils/numero'
 import { estaArquivado, variacaoInativa } from '../../utils/arquivamento'
 import { formatCurrency } from '../../utils/format'
+import {
+  dicaDaTaxa,
+  FORMAS_DA_VENDA,
+  lembrarTaxa,
+  PAYMENT_LABELS,
+  taxaSugerida
+} from '../../utils/formas-de-pagamento'
 import { custoUnitarioDoItem } from '../../utils/itens-de-venda'
 import { totalRecebido } from '../../utils/recebimentos'
 import { MENSAGEM_CLIENTE_OBRIGATORIA, normalizarNomeDaCliente } from '../../../../shared/clientes'
@@ -44,21 +46,6 @@ interface ItemRow {
 }
 
 const CHANNELS: SaleChannel[] = ['Feira', 'WhatsApp', 'Instagram', 'Outro']
-
-const PAYMENT_METHODS: { value: PaymentMethod; label: string }[] = [
-  { value: 'dinheiro', label: 'Dinheiro' },
-  { value: 'pix', label: 'PIX' },
-  { value: 'debito', label: 'Débito' },
-  { value: 'credito', label: 'Crédito' },
-  { value: 'areceber', label: 'A receber' }
-]
-
-const FEE_STORAGE_KEY = (method: PaymentMethod) => `lastFee_${method}`
-
-function loadLastFee(method: PaymentMethod): string {
-  if (method === 'dinheiro' || method === 'areceber') return '0'
-  return numeroDoArmazenamento(localStorage.getItem(FEE_STORAGE_KEY(method)))
-}
 
 export default function SaleForm({
   sale,
@@ -141,7 +128,7 @@ export default function SaleForm({
 
   function handlePaymentMethodChange(method: PaymentMethod): void {
     setPaymentMethod(method)
-    setFeePercentage(loadLastFee(method))
+    setFeePercentage(taxaSugerida(method))
   }
 
   /**
@@ -265,12 +252,7 @@ export default function SaleForm({
       return
     }
 
-    if (paymentMethod !== 'dinheiro' && feePercent > 0) {
-      localStorage.setItem(
-        FEE_STORAGE_KEY(paymentMethod),
-        numeroParaArmazenamento(feePercentage) ?? ''
-      )
-    }
+    lembrarTaxa(paymentMethod, feePercentage)
 
     setSaving(true)
     try {
@@ -417,7 +399,7 @@ export default function SaleForm({
           <div>
             <label className="label">Forma de pagamento</label>
             <div className="flex gap-2 flex-wrap">
-              {PAYMENT_METHODS.map(({ value, label }) => (
+              {FORMAS_DA_VENDA.map((value) => (
                 <button
                   key={value}
                   type="button"
@@ -429,7 +411,7 @@ export default function SaleForm({
                       : 'bg-bone-200 text-ink-600 hover:bg-bone-300'
                   }`}
                 >
-                  {label}
+                  {PAYMENT_LABELS[value]}
                 </button>
               ))}
             </div>
@@ -439,17 +421,12 @@ export default function SaleForm({
           </div>
           {paymentMethod !== 'dinheiro' && paymentMethod !== 'areceber' && (
             <div>
-              <label className="label">
-                Taxa (
-                {paymentMethod === 'pix'
-                  ? 'sugerido: 0,99%'
-                  : paymentMethod === 'debito'
-                    ? 'sugerido: 1,69%'
-                    : 'variável'}
-                )
+              <label className="label" htmlFor="venda-taxa">
+                Taxa ({dicaDaTaxa(paymentMethod)})
               </label>
               <div className="relative">
                 <CampoNumerico
+                  id="venda-taxa"
                   className="input pr-8"
                   value={feePercentage}
                   onChange={setFeePercentage}

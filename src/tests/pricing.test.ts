@@ -52,4 +52,24 @@ describe('calcSuggestedPrice', () => {
     expect(result).toBeGreaterThan(0)
     expect(Number.isInteger(result)).toBe(true)
   })
+
+  it('should_not_add_a_real_when_the_margin_gives_an_exact_value', () => {
+    // materiais 10, mão de obra 20: (30 + 20) × 1,10 + 1 = 56 exatos. Em ponto
+    // flutuante, 50 × 1,1 dá 55,00000000000001, e o teto subia para 57.
+    expect(calcSuggestedPrice(10, 20)).toBe(56)
+    expect(calcSuggestedPrice(0, 100)).toBe(111)
+  })
+
+  it('should_match_the_exact_formula_for_every_round_base_up_to_2000', () => {
+    // Base redonda (múltiplo de 10): × 1,10 dá um valor inteiro, e o preço é esse + 1.
+    // Antes, 111 das 200 bases saíam um real acima.
+    for (let base = 10; base <= 2000; base += 10) {
+      expect(calcSuggestedPrice(0, base)).toBe((base / 10) * 11 + 1)
+    }
+  })
+
+  it('should_round_fractional_insumo_costs_to_cents_before_the_ceiling', () => {
+    // Receita com custo por unidade de quatro casas: 9,9999 é R$ 10,00 na tela.
+    expect(calcSuggestedPrice(3.3333, 0)).toBe(12)
+  })
 })

@@ -64,9 +64,12 @@ export default function VariationForm({
   const [error, setError] = useState('')
 
   const [showCalc, setShowCalc] = useState(false)
-  const [laborCost, setLaborCost] = useState(() =>
-    variation?.laborCost ? formatarNumeroParaCampo(variation.laborCost) : loadDefaultLaborCost()
-  )
+  // O padrão só preenche o cadastro novo. Na edição vale o da variação, mesmo zero:
+  // antes, zero virava o padrão e a edição gravava um valor que ela não digitou.
+  const [laborCost, setLaborCost] = useState(() => {
+    if (!variation) return loadDefaultLaborCost()
+    return variation.laborCost ? formatarNumeroParaCampo(variation.laborCost) : ''
+  })
 
   const [allInsumos, setAllInsumos] = useState<Insumo[]>([])
   const [insumoRows, setInsumoRows] = useState<InsumoRow[]>(

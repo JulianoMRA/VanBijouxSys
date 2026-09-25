@@ -24,11 +24,23 @@ describe('mensagemPara', () => {
     expect(mensagemPara('fairs:delete', err)).toContain('vendas registradas')
   })
 
-  it('should_fall_back_to_generic_link_message_for_unmapped_channel', () => {
+  it('should_fall_back_to_generic_link_message_for_an_unmapped_delete_channel', () => {
     const err = new Error('SqliteError: FOREIGN KEY constraint failed')
-    expect(mensagemPara('canal:desconhecido', err)).toBe(
+    expect(mensagemPara('canal:delete', err)).toBe(
       'Este item está vinculado a outros registros e não pode ser excluído.'
     )
+  })
+
+  it('should_not_talk_about_deleting_when_saving_points_to_something_gone', () => {
+    // Ao criar ou editar, a chave estrangeira falha porque a venda, a receita ou o
+    // produto apontam para algo que não existe mais; "não pode ser excluído" não fazia
+    // sentido para quem estava salvando.
+    const err = new Error('FOREIGN KEY constraint failed')
+    for (const canal of ['sales:create', 'variations:update', 'products:create']) {
+      expect(mensagemPara(canal, err)).toBe(
+        'Um dos itens escolhidos não existe mais. Feche a janela e tente de novo.'
+      )
+    }
   })
 
   it('should_report_duplicate_expense_category_by_name', () => {

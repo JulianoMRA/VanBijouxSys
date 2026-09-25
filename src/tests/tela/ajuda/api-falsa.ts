@@ -32,7 +32,10 @@ export interface ApiFalsa {
   dashboard: { getStats: ReturnType<typeof vi.fn> }
   cashExpenses: { getAll: ReturnType<typeof vi.fn> }
   expenseCategories: { getAll: ReturnType<typeof vi.fn> }
-  cashSettings: { get: ReturnType<typeof vi.fn> }
+  cashSettings: {
+    get: ReturnType<typeof vi.fn>
+    setOpeningBalance: ReturnType<typeof vi.fn>
+  }
 }
 
 /** Painel de um período sem venda nenhuma; o teste sobrescreve o que precisa. */
@@ -93,7 +96,8 @@ export function instalarApiFalsa(): ApiFalsa {
     cashExpenses: { getAll: vi.fn(async () => []) },
     expenseCategories: { getAll: vi.fn(async () => []) },
     cashSettings: {
-      get: vi.fn(async () => ({ id: 1, openingBalance: 0, updatedAt: '2026-01-01 00:00:00' }))
+      get: vi.fn(async () => ({ id: 1, openingBalance: 0, updatedAt: '2026-01-01 00:00:00' })),
+      setOpeningBalance: vi.fn(async () => ({ success: true }))
     }
   }
   Object.defineProperty(window, 'api', { value: api, configurable: true, writable: true })

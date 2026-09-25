@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
 import { calcSuggestedPrice } from '../utils/pricing'
 import { formatCurrency } from '../utils/format'
-import { interpretarNumero, numeroDoArmazenamento, numeroParaArmazenamento } from '../utils/numero'
+import { interpretarNumero } from '../utils/numero'
+import { maoDeObraPadrao, salvarMaoDeObraPadrao } from '../utils/mao-de-obra'
 import CampoNumerico from '../components/ui/CampoNumerico'
 import { estaArquivado, opcoesComSelecionados, variacoesAtivas } from '../utils/arquivamento'
 import type { Insumo, Product } from '../types'
 
-const LABOR_COST_KEY = 'pricing_default_labor_cost'
 const FORMULA = 'teto((materiais × 3 + mão de obra) × 1,10 + 1,00)'
 
 interface MaterialRow {
@@ -154,9 +154,7 @@ export default function PriceCalculator(): JSX.Element {
   const [materials, setMaterials] = useState<MaterialRow[]>([
     { id: 'item-0', name: '', cost: '', insumoId: null, quantity: '' }
   ])
-  const [laborCost, setLaborCost] = useState(() =>
-    numeroDoArmazenamento(localStorage.getItem(LABOR_COST_KEY))
-  )
+  const [laborCost, setLaborCost] = useState(maoDeObraPadrao)
   const [products, setProducts] = useState<Product[]>([])
   const [insumos, setInsumos] = useState<Insumo[]>([])
   const [laborSaved, setLaborSaved] = useState(false)
@@ -183,7 +181,7 @@ export default function PriceCalculator(): JSX.Element {
   }, [])
 
   function saveDefaultLaborCost(): void {
-    localStorage.setItem(LABOR_COST_KEY, numeroParaArmazenamento(laborCost) ?? '')
+    salvarMaoDeObraPadrao(laborCost)
     setLaborSaved(true)
     setTimeout(() => setLaborSaved(false), 2000)
   }
@@ -406,6 +404,7 @@ export default function PriceCalculator(): JSX.Element {
                 R$
               </span>
               <CampoNumerico
+                aria-label="Mão de obra (R$)"
                 className="input pl-9 font-semibold tabular-nums"
                 placeholder="0,00"
                 value={laborCost}

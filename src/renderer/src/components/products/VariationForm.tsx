@@ -4,21 +4,11 @@ import InsumoForm from '../insumos/InsumoForm'
 import MotivoDoEstoqueDialog from './MotivoDoEstoqueDialog'
 import { opcoesComSelecionados } from '../../utils/arquivamento'
 import { precisaPerguntarMotivo } from '../../utils/ajuste-de-estoque'
-import {
-  formatarNumeroParaCampo,
-  interpretarNumero,
-  numeroDoArmazenamento,
-  numeroParaArmazenamento
-} from '../../utils/numero'
+import { formatarNumeroParaCampo, interpretarNumero } from '../../utils/numero'
 import CampoNumerico from '../ui/CampoNumerico'
 import { formatarCustoUnitario, formatCurrency } from '../../utils/format'
+import { maoDeObraPadrao, salvarMaoDeObraPadrao } from '../../utils/mao-de-obra'
 import type { CreateVariationInput, Insumo, MotivoDeAjuste, ProductVariation } from '../../types'
-
-const LABOR_COST_KEY = 'pricing_default_labor_cost'
-
-function loadDefaultLaborCost(): string {
-  return numeroDoArmazenamento(localStorage.getItem(LABOR_COST_KEY))
-}
 
 interface InsumoRow {
   key: number
@@ -68,7 +58,7 @@ export default function VariationForm({
   // O padrão só preenche o cadastro novo. Na edição vale o da variação, mesmo zero:
   // antes, zero virava o padrão e a edição gravava um valor que ela não digitou.
   const [laborCost, setLaborCost] = useState(() => {
-    if (!variation) return loadDefaultLaborCost()
+    if (!variation) return maoDeObraPadrao()
     return variation.laborCost ? formatarNumeroParaCampo(variation.laborCost) : ''
   })
 
@@ -134,7 +124,7 @@ export default function VariationForm({
   }
 
   function saveDefaultLaborCost(): void {
-    localStorage.setItem(LABOR_COST_KEY, numeroParaArmazenamento(laborCost) ?? '')
+    salvarMaoDeObraPadrao(laborCost)
   }
 
   function useSuggestedPrice(): void {

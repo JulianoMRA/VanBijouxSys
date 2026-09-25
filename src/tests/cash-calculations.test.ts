@@ -9,7 +9,10 @@ import {
   filterCashSales,
   filterExpenses,
   getPeriodDates,
-  resolveDateRange
+  movimentoAntesDoPeriodo,
+  resolveDateRange,
+  rotuloDoSaldoFinal,
+  rotuloDoSaldoInicial
 } from '../renderer/src/utils/cash-calculations'
 import type { CashExpense, Fair, Sale, SalePayment } from '../renderer/src/types'
 
@@ -355,7 +358,122 @@ describe('calcCashSummary', () => {
       expenses: [],
       fairExpenses: []
     })
-    expect(resumo).toEqual({ totalIncome: 0, totalExpenses: 0, currentBalance: 0 })
+    expect(resumo).toEqual({ startBalance: 0, totalIncome: 0, totalExpenses: 0, currentBalance: 0 })
+  })
+
+  it('should_start_the_period_from_the_opening_plus_what_happened_before_it', () => {
+    const resumo = calcCashSummary({
+      openingBalance: 1000,
+      saldoAnterior: 1500,
+      sales: [venda({ netAmount: 100 })],
+      payments: [],
+      expenses: [despesa({ amount: 30 })],
+      fairExpenses: []
+    })
+    expect(resumo.startBalance).toBe(2500)
+    expect(resumo.currentBalance).toBe(2570)
+  })
+})
+
+describe('movimentoAntesDoPeriodo (RN-18)', () => {
+  const setembro = { startDate: '2026-09-01', endDate: '2026-09-25' }
+
+  it('should_be_zero_without_a_range_because_nothing_comes_before_everything', () => {
+    const antes = movimentoAntesDoPeriodo(null, {
+      sales: [venda({ netAmount: 100 })],
+      expenses: [despesa({ amount: 30 })],
+      fairs: []
+    })
+    expect(antes).toBe(0)
+  })
+
+  it('should_add_income_and_subtract_expenses_and_fair_costs_before_the_period', () => {
+    const antes = movimentoAntesDoPeriodo(setembro, {
+      sales: [
+        venda({ id: 1, soldAt: '2026-08-10', netAmount: 2000 }),
+        venda({ id: 2, soldAt: '2026-09-02', netAmount: 70 })
+      ],
+      expenses: [
+        despesa({ id: 1, expenseDate: '2026-08-20', amount: 500 }),
+        despesa({ id: 2, expenseDate: '2026-09-01', amount: 40 })
+      ],
+      fairs: [feira({ date: '2026-08-05', enrollmentCost: 80 })]
+    })
+    expect(antes).toBe(2000 - 500 - 80)
+  })
+
+  it('should_follow_the_cash_rules_for_credit_sales_and_their_payments', () => {
+    // A venda a receber não entra; o pagamento dela entra pela data em que foi recebido.
+    const antesDoPeriodo = pagamento({ id: 1, receivedAt: '2026-08-15', netAmount: 49.5 })
+    const noPeriodo = pagamento({ id: 2, receivedAt: '2026-09-03', netAmount: 30 })
+    const antes = movimentoAntesDoPeriodo(setembro, {
+      sales: [aReceberCom(antesDoPeriodo, noPeriodo)],
+      expenses: [],
+      fairs: []
+    })
+    expect(antes).toBe(49.5)
+  })
+
+  it('should_count_a_legacy_record_saved_without_date_before_any_period', () => {
+    // Não cai em período nenhum com data, mas o dinheiro existiu: sem ele, o saldo do
+    // mês não bateria com o de "Tudo".
+    const antes = movimentoAntesDoPeriodo(setembro, {
+      sales: [venda({ soldAt: '', netAmount: 20 })],
+      expenses: [despesa({ expenseDate: '', amount: 5 })],
+      fairs: []
+    })
+    expect(antes).toBe(15)
+  })
+})
+
+describe('saldo do caixa em qualquer período (RN-18)', () => {
+  it('should_show_the_same_current_balance_in_the_month_and_in_all_time', () => {
+    // Abertura de R$ 1.000, venda de R$ 2.000 e despesa de R$ 500 em agosto; em
+    // setembro, o "Mês" mostrava R$ 1.000 de saldo atual, ignorando agosto inteiro.
+    const hoje = new Date(2026, 8, 25, 12)
+    const vendas = [venda({ soldAt: '2026-08-10', netAmount: 2000 })]
+    const despesas = [despesa({ expenseDate: '2026-08-20', amount: 500 })]
+
+    for (const periodo of ['mes', 'tudo'] as const) {
+      const faixa = resolveDateRange(periodo, '', '', hoje)
+      const resumo = calcCashSummary({
+        openingBalance: 1000,
+        saldoAnterior: movimentoAntesDoPeriodo(faixa, {
+          sales: vendas,
+          expenses: despesas,
+          fairs: []
+        }),
+        sales: filterCashSales(vendas, faixa),
+        payments: filterCashPayments(vendas, faixa),
+        expenses: filterExpenses(despesas, faixa),
+        fairExpenses: buildFairExpenses([], faixa)
+      })
+      expect(resumo.currentBalance).toBe(2500)
+    }
+  })
+})
+
+describe('rótulos do saldo (RN-18)', () => {
+  const hoje = new Date(2026, 8, 25, 12)
+
+  it('should_call_the_first_number_opening_only_without_a_period', () => {
+    expect(rotuloDoSaldoInicial(null)).toBe('Abertura')
+    expect(rotuloDoSaldoInicial({ startDate: '2026-09-01', endDate: '2026-09-25' })).toBe(
+      'Saldo inicial'
+    )
+  })
+
+  it('should_call_the_last_number_current_balance_when_the_period_reaches_today', () => {
+    expect(rotuloDoSaldoFinal(null, hoje)).toBe('Saldo atual')
+    expect(rotuloDoSaldoFinal({ startDate: '2026-09-01', endDate: '2026-09-25' }, hoje)).toBe(
+      'Saldo atual'
+    )
+  })
+
+  it('should_name_the_day_when_a_custom_period_ended_before_today', () => {
+    expect(rotuloDoSaldoFinal({ startDate: '2026-08-01', endDate: '2026-08-31' }, hoje)).toBe(
+      'Saldo em 31/08/2026'
+    )
   })
 })
 

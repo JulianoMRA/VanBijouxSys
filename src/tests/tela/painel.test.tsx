@@ -78,3 +78,28 @@ describe('Painel: vendas antigas sem data', () => {
     expect(await screen.findByText(/Melhor dia: Sem data/)).toBeInTheDocument()
   })
 })
+
+describe('Painel: caixa do período (RN-18)', () => {
+  it('should_start_the_period_cash_from_the_balance_before_it', async () => {
+    // Abertura de R$ 1.000 e R$ 1.400 líquidos antes do período: o card mostrava a
+    // abertura e um "saldo atual" que ignorava tudo o que veio antes.
+    api.dashboard.getStats.mockResolvedValue(
+      painelFalso({
+        overview: duasVendas,
+        cashSummary: {
+          openingBalance: 1000,
+          startBalance: 2400,
+          totalIncome: 30,
+          totalExpenses: 0,
+          currentBalance: 2430
+        }
+      })
+    )
+
+    render(<Dashboard />)
+
+    const inicial = await screen.findByText('Saldo inicial')
+    expect(inicial.parentElement).toHaveTextContent('R$ 2.400,00')
+    expect(screen.getByText('Saldo atual').parentElement).toHaveTextContent('R$ 2.430,00')
+  })
+})

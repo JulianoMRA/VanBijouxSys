@@ -18,6 +18,8 @@ import {
   formatDay,
   formatMonth
 } from '../utils/dashboard-calculations'
+import { rotuloDoSaldoFinal, rotuloDoSaldoInicial } from '../utils/cash-calculations'
+import { diaLocal } from '../../../shared/datas'
 import type { DashboardStats } from '../types'
 
 type Period = 'month' | 'quarter' | 'halfyear' | 'year' | 'all' | 'custom'
@@ -366,6 +368,15 @@ export default function Dashboard(): JSX.Element {
   const canalTotal = stats?.salesByChannel.reduce((acc, c) => acc + c.revenue, 0) ?? 0
   const categoriaTotal = stats?.salesByCategory.reduce((acc, c) => acc + c.revenue, 0) ?? 0
   const insights = stats ? buildInsights(stats) : []
+  // RN-18: os nomes do primeiro e do último número do caixa seguem o período, como no
+  // Caixa. Só o personalizado pode terminar antes de hoje.
+  const faixaDoCaixa =
+    period === 'all'
+      ? null
+      : {
+          startDate: customFrom,
+          endDate: period === 'custom' && customTo ? customTo : diaLocal(new Date())
+        }
 
   return (
     <div className="pb-10">
@@ -584,9 +595,9 @@ export default function Dashboard(): JSX.Element {
                 <SectionTitle>Caixa do período</SectionTitle>
                 <div className="flex flex-col gap-2.5">
                   <div className="flex justify-between text-body text-ink-600">
-                    <span>Abertura</span>
+                    <span>{rotuloDoSaldoInicial(faixaDoCaixa)}</span>
                     <span className="tabular-nums text-ink-800">
-                      {formatCurrency(stats!.cashSummary.openingBalance)}
+                      {formatCurrency(stats!.cashSummary.startBalance)}
                     </span>
                   </div>
                   <div className="flex justify-between text-body text-ink-600">
@@ -603,7 +614,9 @@ export default function Dashboard(): JSX.Element {
                   </div>
                   <div className="h-px bg-bone-300" />
                   <div className="flex items-baseline justify-between">
-                    <span className="text-body font-semibold text-ink-900">Saldo atual</span>
+                    <span className="text-body font-semibold text-ink-900">
+                      {rotuloDoSaldoFinal(faixaDoCaixa)}
+                    </span>
                     <span
                       className={`text-[19px] font-semibold tabular-nums ${
                         stats!.cashSummary.currentBalance >= 0 ? 'text-ink-900' : 'text-clay-500'

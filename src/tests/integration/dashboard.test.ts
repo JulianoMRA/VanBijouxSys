@@ -246,6 +246,69 @@ describe('dashboard: venda antiga sem data', () => {
   })
 })
 
+describe('dashboard: saldo do caixa no período (RN-18)', () => {
+  async function despesa(valor: number, expenseDate: string): Promise<void> {
+    const { id: categoryId } = await ambiente.chamar<{ id: number }>('expense-categories:create', {
+      name: `Categoria ${expenseDate}`
+    })
+    await ambiente.chamar('cash-expenses:create', {
+      categoryId,
+      description: 'Despesa',
+      amount: valor,
+      expenseDate
+    })
+  }
+
+  beforeEach(async () => {
+    // Abertura de R$ 1.000 e um agosto movimentado antes do período de setembro.
+    await ambiente.chamar('cash-settings:setOpeningBalance', 1000)
+    await criarVenda(ambiente, {
+      soldAt: '2026-08-10',
+      items: [{ variationId: colar, quantity: 1, unitPrice: 2000, unitCost: 5 }]
+    })
+    await despesa(500, '2026-08-20')
+    await ambiente.chamar('fairs:create', {
+      name: 'Feira de agosto',
+      location: 'Praça',
+      date: '2026-08-05',
+      enrollmentCost: 80,
+      additionalCosts: [{ description: 'Mesa', amount: 20 }]
+    })
+    await criarVenda(ambiente, {
+      soldAt: '2026-09-05',
+      items: [{ variationId: colar, quantity: 1, unitPrice: 30, unitCost: 5 }]
+    })
+  })
+
+  it('should_start_the_period_from_the_opening_plus_everything_before_it', async () => {
+    const { cashSummary } = await painel('2026-09-01', '2026-09-30')
+
+    expect(cashSummary.openingBalance).toBe(1000)
+    expect(cashSummary.startBalance).toBe(1000 + 2000 - 500 - 100)
+    expect(cashSummary.totalIncome).toBe(30)
+    expect(cashSummary.currentBalance).toBe(2400 + 30)
+  })
+
+  it('should_end_with_the_same_balance_as_all_time_when_the_period_reaches_the_last_movement', async () => {
+    const periodo = await painel('2026-09-01', '2026-09-30')
+    const tudo = await ambiente.chamar<DashboardStats>('dashboard:getStats', { period: 'all' })
+
+    expect(tudo.cashSummary.startBalance).toBe(1000)
+    expect(periodo.cashSummary.currentBalance).toBe(tudo.cashSummary.currentBalance)
+  })
+
+  it('should_count_a_legacy_sale_saved_without_date_in_the_starting_balance', async () => {
+    ambiente.banco.run(
+      `INSERT INTO sales (channel, total_amount, total_cost, payment_method, net_amount, sold_at)
+       VALUES ('Outro', 20, 3, 'dinheiro', 20, '')`
+    )
+
+    const { cashSummary } = await painel('2026-09-01', '2026-09-30')
+
+    expect(cashSummary.startBalance).toBe(2400 + 20)
+  })
+})
+
 describe('dashboard: validação do período', () => {
   it('should_refuse_an_end_date_without_a_start_date', async () => {
     await expect(

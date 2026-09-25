@@ -70,6 +70,7 @@ function insumo(over: Partial<Insumo> = {}): Insumo {
     createdAt: '2026-01-01',
     archivedAt: null,
     usadoPorVariacoesAtivas: 0,
+    usadoEmReceitas: 0,
     ...over
   }
 }

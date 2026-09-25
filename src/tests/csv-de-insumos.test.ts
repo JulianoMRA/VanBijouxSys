@@ -12,6 +12,7 @@ const insumo = (dados: Partial<Insumo> = {}): Insumo => ({
   createdAt: '2026-05-01',
   archivedAt: null,
   usadoPorVariacoesAtivas: 0,
+  usadoEmReceitas: 0,
   ...dados
 })
 

@@ -83,13 +83,22 @@ reconhece. Quatro casas bastam para cm, g e unidade.
 ### RN-05 — Unidade do insumo trava quando ele está em receita
 
 Trocar a unidade não converte nada: 20 cm de fio numa receita virariam 20 g. Por
-isso, insumo usado em variação ativa não muda de unidade — o caminho é cadastrar
-outro insumo com a unidade certa. Sem receita, a troca é permitida, mas só junto
-com a contagem do estoque na unidade nova.
+isso, insumo usado em receita não muda de unidade — o caminho é cadastrar outro
+insumo com a unidade certa. Vale para qualquer receita, inclusive de variação
+arquivada ou de produto arquivado, que podem voltar. Sem receita, a troca é
+permitida, mas só junto com a contagem do estoque na unidade nova.
 
-- **Código**: `src/main/repositorios/insumos.ts` (`validarTrocaDeUnidade`).
-- **Prova**: `src/tests/integration/insumos.test.ts` e
-  `src/tests/tela/insumo-e-exclusao.test.tsx` (botões das outras unidades
+Até a 1.16 a tela travava a unidade só pelas variações ativas: num insumo de
+receita arquivada, ela deixava escolher outra unidade, e o app recusava só ao
+salvar.
+
+- **Código**: `src/main/repositorios/insumos.ts` (`validarTrocaDeUnidade`),
+  `src/main/database/consultas-estoque.ts` (`usadoEmReceitas`, a mesma contagem,
+  que a tela usa) e `src/renderer/src/components/insumos/InsumoForm.tsx`.
+- **Prova**: `src/tests/integration/insumos.test.ts` (`insumos:update trocando a
+unidade`, `insumos:getAll: uso em receitas`),
+  `src/tests/tela/insumo-e-exclusao.test.tsx` e
+  `src/tests/tela/unidade-do-insumo.test.tsx` (botões das outras unidades
   desabilitados, com o aviso na tela).
 
 ### RN-19 — Esgotado é sem estoque; abaixo do mínimo é ter menos que o mínimo

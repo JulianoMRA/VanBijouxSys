@@ -64,6 +64,16 @@ conferência humana dela.
   página recusa tudo.
 - O preload expõe só o `window.api`, com uma função por canal IPC do app. Não há
   `ipcRenderer` genérico nem `process` ao alcance do renderer.
+- Os canais só respondem ao documento do app, no frame principal da janela
+  (`src/main/ipc/remetente.ts`). O preload roda em qualquer página que carregue na
+  janela: se uma navegação escapasse da guarda, a página estranha teria o
+  `window.api` inteiro, e as chamadas dela são recusadas e registradas no log. O
+  documento do app é o primeiro que a janela carrega, na forma em que o Chromium o
+  registra, para acento ou espaço no caminho da instalação não recusarem o próprio
+  app.
+- Toda permissão do navegador (câmera, microfone, notificação, localização, área de
+  transferência e as demais) é negada (`src/main/permissoes.ts`). O app não usa
+  nenhuma, e o Electron concede todas quando ninguém responde.
 - `window.open` é sempre negado. Só URL `http:` ou `https:` segue para o navegador
   do sistema; `javascript:`, `file:`, `data:` e handlers de protocolo do Windows
   são recusados e registrados no log.

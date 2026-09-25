@@ -1,4 +1,4 @@
-import { app, shell, BrowserWindow, dialog, ipcMain } from 'electron'
+import { app, shell, BrowserWindow, dialog, ipcMain, session } from 'electron'
 import { join, resolve } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import log from 'electron-log/main'
@@ -14,7 +14,9 @@ import {
 } from './database/backup'
 import { criarEncerramento } from './encerramento'
 import { registerAllHandlers } from './ipc'
+import { soDoDocumentoDoApp } from './ipc/remetente'
 import { ehNavegacaoInterna, urlExternaPermitida } from './navegacao'
+import { negarPermissoesDoNavegador } from './permissoes'
 import { definirRegistro, registro } from './registro'
 import { iniciarAutoUpdate, verificarAtualizacoesManual } from './updater'
 
@@ -52,6 +54,12 @@ app.on('before-quit', () => encerramento.marcarSaidaNormal())
 
 const BANCO_DE_DADOS = { name: 'Banco de dados', extensions: ['db'] }
 
+/**
+ * O primeiro documento que a janela carregou, como o Chromium o registrou. Só ele
+ * chama os canais IPC (`soDoDocumentoDoApp`).
+ */
+let documentoDoApp: string | null = null
+
 /** Diálogo nativo precisa de janela dona; sem ela, ficaria solto na área de trabalho. */
 function janelaObrigatoria(): BrowserWindow {
   const janela = BrowserWindow.getFocusedWindow() ?? BrowserWindow.getAllWindows()[0]
@@ -81,6 +89,12 @@ function createWindow(): void {
 
   mainWindow.on('ready-to-show', () => {
     mainWindow.show()
+  })
+
+  // A primeira navegação da janela é a do app, logo abaixo; as outras que mudarem de
+  // documento são canceladas pelo will-navigate.
+  mainWindow.webContents.on('did-navigate', (_evento, url) => {
+    documentoDoApp ??= url
   })
 
   mainWindow.webContents.setWindowOpenHandler((details) => {
@@ -122,8 +136,10 @@ async function iniciar(): Promise<void> {
     registro.info(`[db] backup antes de migrar: ${caminho}`)
   })
 
+  negarPermissoesDoNavegador(session.defaultSession)
+
   registerAllHandlers({
-    ipc: ipcMain,
+    ipc: soDoDocumentoDoApp(ipcMain, () => documentoDoApp),
     banco: { db: getDb(), sqlite: getSqlite() },
     dialogoDeArquivo: {
       async escolherOndeSalvar(nomePadrao, filtros) {

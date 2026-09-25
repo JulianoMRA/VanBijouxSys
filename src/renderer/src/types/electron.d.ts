@@ -26,7 +26,8 @@ import type {
   CashSettings,
   BackupInfo,
   ResultadoDaExportacao,
-  ResultadoDaRestauracao
+  ResultadoDaRestauracao,
+  ErroDaTela
 } from '.'
 
 declare global {
@@ -118,6 +119,7 @@ declare global {
       app: {
         versao: () => Promise<string>
         verificarAtualizacoes: () => Promise<{ atualizacaoDisponivel: boolean }>
+        registrarErroDaTela: (erro: ErroDaTela) => Promise<{ registrado: boolean }>
       }
     }
   }

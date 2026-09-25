@@ -76,6 +76,7 @@ export const CANAIS_IPC = {
   },
   app: {
     versao: 'app:versao',
-    verificarAtualizacoes: 'app:verificarAtualizacoes'
+    verificarAtualizacoes: 'app:verificarAtualizacoes',
+    registrarErroDaTela: 'app:registrarErroDaTela'
   }
 } as const

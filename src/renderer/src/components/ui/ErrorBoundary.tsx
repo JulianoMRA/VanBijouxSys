@@ -1,5 +1,6 @@
 import { Component } from 'react'
 import type { ErrorInfo, ReactNode } from 'react'
+import { registrarErroDaTela } from '../../utils/registro-de-erros'
 
 interface Props {
   children: ReactNode
@@ -18,6 +19,7 @@ export default class ErrorBoundary extends Component<Props, State> {
 
   componentDidCatch(error: Error, info: ErrorInfo): void {
     console.error('[ErrorBoundary]', error, info)
+    registrarErroDaTela('renderizacao', error, info.componentStack ?? undefined)
   }
 
   render(): ReactNode {

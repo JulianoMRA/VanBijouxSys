@@ -2,6 +2,7 @@ import { servicoDeBackup, type DependenciasDeBackup } from '../servicos/backup'
 import { CANAIS_IPC } from '../../shared/ipc/channels'
 import { ARGUMENTOS_APP, ARGUMENTOS_BACKUP } from '../../shared/ipc/backup'
 import { registrarCanal, type RegistroDeCanais } from './canal'
+import { registro } from '../registro'
 
 export interface DependenciasDosCanaisDeBackup {
   servicos: DependenciasDeBackup
@@ -25,4 +26,9 @@ export function registerBackupHandlers(
   registrarCanal(ipc, app.verificarAtualizacoes, ARGUMENTOS_APP.verificarAtualizacoes, () =>
     verificarAtualizacoes()
   )
+  // O app empacotado não tem console: sem este canal, erro de tela não chegava ao log.
+  registrarCanal(ipc, app.registrarErroDaTela, ARGUMENTOS_APP.registrarErroDaTela, (erro) => {
+    registro.error(`[tela] ${erro.origem}: ${erro.mensagem}`, erro.detalhe ?? '')
+    return { registrado: true }
+  })
 }

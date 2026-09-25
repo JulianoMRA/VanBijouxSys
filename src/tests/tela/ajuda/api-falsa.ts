@@ -38,6 +38,7 @@ export interface ApiFalsa {
     get: ReturnType<typeof vi.fn>
     setOpeningBalance: ReturnType<typeof vi.fn>
   }
+  app: { registrarErroDaTela: ReturnType<typeof vi.fn> }
 }
 
 /** Painel de um período sem venda nenhuma; o teste sobrescreve o que precisa. */
@@ -102,7 +103,8 @@ export function instalarApiFalsa(): ApiFalsa {
     cashSettings: {
       get: vi.fn(async () => ({ id: 1, openingBalance: 0, updatedAt: '2026-01-01 00:00:00' })),
       setOpeningBalance: vi.fn(async () => ({ success: true }))
-    }
+    },
+    app: { registrarErroDaTela: vi.fn(async () => ({ registrado: true })) }
   }
   Object.defineProperty(window, 'api', { value: api, configurable: true, writable: true })
   return api

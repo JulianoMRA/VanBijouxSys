@@ -92,6 +92,23 @@ com a contagem do estoque na unidade nova.
   `src/tests/tela/insumo-e-exclusao.test.tsx` (botões das outras unidades
   desabilitados, com o aviso na tela).
 
+### RN-19 — Esgotado é sem estoque; abaixo do mínimo é ter menos que o mínimo
+
+Insumo sem estoque — zero ou negativo — está **esgotado**, tenha mínimo definido
+ou não. Está **abaixo do mínimo** quando ainda tem estoque, mas menos que o mínimo
+que a Van definiu; sem mínimo, nunca fica "abaixo". A tela de Estoque, o contador
+da barra lateral e os avisos do Painel usam a mesma regra. Até a 1.16 o Painel
+exigia mínimo definido para avisar de insumo esgotado, e a barra lateral contava
+um número que o Painel não mostrava. Item arquivado não entra em aviso nenhum
+(RN-10).
+
+- **Código**: `src/renderer/src/utils/situacao-do-insumo.ts`
+  (`situacaoDoInsumo`, `precisaDeReposicao`) e as consultas
+  `SQL_INSUMOS_ESGOTADOS` e `SQL_INSUMOS_ABAIXO_DO_MINIMO` em
+  `src/main/database/consultas-estoque.ts`.
+- **Prova**: `src/tests/situacao-do-insumo.test.ts` e
+  `src/tests/integration/insumos.test.ts` (`alerta de reposição`).
+
 ---
 
 ## Estoque de peças e vendas

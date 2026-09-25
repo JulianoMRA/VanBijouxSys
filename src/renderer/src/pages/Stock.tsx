@@ -3,6 +3,11 @@ import { ChevronDown } from 'lucide-react'
 import { formatCurrency } from '../utils/format'
 import { avisarInsumosAlterados } from '../utils/eventos'
 import { estaArquivado, insumosAtivos, mensagemDeArquivamento } from '../utils/arquivamento'
+import {
+  precisaDeReposicao,
+  situacaoDoInsumo,
+  type SituacaoDoInsumo
+} from '../utils/situacao-do-insumo'
 import InsumoForm from '../components/insumos/InsumoForm'
 import AddInsumoStockForm from '../components/insumos/AddInsumoStockForm'
 import ActionMenu from '../components/ui/ActionMenu'
@@ -29,15 +34,7 @@ type SortOption =
   | 'custo-asc'
   | 'custo-desc'
 
-type Status = 'ok' | 'low' | 'out'
-
-function stockStatus(insumo: Insumo): Status {
-  if (insumo.stockQuantity <= 0) return 'out'
-  if (insumo.minimumStock > 0 && insumo.stockQuantity < insumo.minimumStock) return 'low'
-  return 'ok'
-}
-
-const CORES: Record<Status, { marcador: string; texto: string }> = {
+const CORES: Record<SituacaoDoInsumo, { marcador: string; texto: string }> = {
   out: { marcador: '#b3413f', texto: 'text-clay-500' },
   low: { marcador: '#c98b2e', texto: 'text-honey-500' },
   ok: { marcador: '#5d8f76', texto: 'text-ink-900' }
@@ -180,9 +177,9 @@ export default function Stock(): JSX.Element {
 
   const ativos = insumosAtivos(insumos)
   const arquivados = insumos.filter(estaArquivado)
-  const precisamReposicao = ativos.filter((i) => stockStatus(i) !== 'ok')
-  const esgotados = ativos.filter((i) => stockStatus(i) === 'out')
-  const baixos = ativos.filter((i) => stockStatus(i) === 'low')
+  const precisamReposicao = ativos.filter(precisaDeReposicao)
+  const esgotados = ativos.filter((i) => situacaoDoInsumo(i) === 'out')
+  const baixos = ativos.filter((i) => situacaoDoInsumo(i) === 'low')
   const totalStockValue = ativos.reduce((s, i) => s + valorEmEstoque(i), 0)
   const valorArquivado = arquivados.reduce((s, i) => s + valorEmEstoque(i), 0)
   const valorReposicao = custoDeReposicao(precisamReposicao)
@@ -197,15 +194,15 @@ export default function Stock(): JSX.Element {
     }
 
     if (statusFilter !== 'todos') {
-      result = result.filter((i) => stockStatus(i) === statusFilter)
+      result = result.filter((i) => situacaoDoInsumo(i) === statusFilter)
     }
 
-    const urgencia: Record<Status, number> = { out: 0, low: 1, ok: 2 }
+    const urgencia: Record<SituacaoDoInsumo, number> = { out: 0, low: 1, ok: 2 }
 
     return [...result].sort((a, b) => {
       switch (sortBy) {
         case 'reposicao': {
-          const diff = urgencia[stockStatus(a)] - urgencia[stockStatus(b)]
+          const diff = urgencia[situacaoDoInsumo(a)] - urgencia[situacaoDoInsumo(b)]
           if (diff !== 0) return diff
           // Dentro do mesmo status, quem está proporcionalmente mais longe do
           // mínimo aparece antes.
@@ -432,7 +429,7 @@ export default function Stock(): JSX.Element {
                     </tr>
                   ) : (
                     displayedInsumos.map((insumo) => {
-                      const status = stockStatus(insumo)
+                      const status = situacaoDoInsumo(insumo)
                       const cores = CORES[status]
                       const ul = unitLabel(insumo.unit)
                       const pct =

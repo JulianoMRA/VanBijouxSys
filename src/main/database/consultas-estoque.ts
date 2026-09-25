@@ -44,13 +44,17 @@ export const SQL_VARIACOES_ABAIXO_DO_MINIMO = `
   ORDER BY (pv.stock_quantity - pv.minimum_stock) ASC
 `
 
+/**
+ * RN-19. Sem estoque é esgotado, com mínimo definido ou não: é a regra da tela de
+ * Estoque e do contador da barra lateral (`situacao-do-insumo.ts`). Exigir mínimo
+ * aqui calava o Painel sobre insumo zerado ou negativo que ela nunca configurou.
+ */
 export const SQL_INSUMOS_ESGOTADOS = `
   SELECT id, name, unit,
     stock_quantity AS stockQuantity,
     minimum_stock  AS minimumStock
   FROM insumos
-  WHERE minimum_stock > 0
-    AND stock_quantity <= 0
+  WHERE stock_quantity <= 0
     AND archived_at IS NULL
   ORDER BY name
 `

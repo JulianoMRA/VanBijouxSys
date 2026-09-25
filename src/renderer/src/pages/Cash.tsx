@@ -171,8 +171,9 @@ export default function Cash(): JSX.Element {
       setCategoryError('')
       const updated = await window.api.expenseCategories.getAll()
       setCategories(updated)
-    } catch {
-      setCategoryError('Já existe uma categoria com esse nome.')
+    } catch (err) {
+      // O app já traduz nome repetido para "Já existe uma categoria com esse nome.".
+      setCategoryError(err instanceof Error ? err.message : 'Não foi possível salvar a categoria.')
     }
   }
 
@@ -187,8 +188,9 @@ export default function Cash(): JSX.Element {
       setCategoryError('')
       const updated = await window.api.expenseCategories.getAll()
       setCategories(updated)
-    } catch {
-      setCategoryError('Já existe uma categoria com esse nome.')
+    } catch (err) {
+      // O app já traduz nome repetido para "Já existe uma categoria com esse nome.".
+      setCategoryError(err instanceof Error ? err.message : 'Não foi possível salvar a categoria.')
     }
   }
 

@@ -13,14 +13,16 @@ export interface ApiFalsa {
     getAll: ReturnType<typeof vi.fn>
     create: ReturnType<typeof vi.fn>
     update: ReturnType<typeof vi.fn>
+    addStock: ReturnType<typeof vi.fn>
   }
   variations: {
     create: ReturnType<typeof vi.fn>
     update: ReturnType<typeof vi.fn>
     setSalePrice: ReturnType<typeof vi.fn>
     delete: ReturnType<typeof vi.fn>
+    addStock: ReturnType<typeof vi.fn>
   }
-  products: { getAll: ReturnType<typeof vi.fn> }
+  products: { getAll: ReturnType<typeof vi.fn>; create: ReturnType<typeof vi.fn> }
   sales: {
     getAll: ReturnType<typeof vi.fn>
     create: ReturnType<typeof vi.fn>
@@ -28,10 +30,10 @@ export interface ApiFalsa {
     registerPayment: ReturnType<typeof vi.fn>
     deletePayment: ReturnType<typeof vi.fn>
   }
-  fairs: { getAll: ReturnType<typeof vi.fn> }
+  fairs: { getAll: ReturnType<typeof vi.fn>; create: ReturnType<typeof vi.fn> }
   dashboard: { getStats: ReturnType<typeof vi.fn> }
-  cashExpenses: { getAll: ReturnType<typeof vi.fn> }
-  expenseCategories: { getAll: ReturnType<typeof vi.fn> }
+  cashExpenses: { getAll: ReturnType<typeof vi.fn>; create: ReturnType<typeof vi.fn> }
+  expenseCategories: { getAll: ReturnType<typeof vi.fn>; create: ReturnType<typeof vi.fn> }
   cashSettings: {
     get: ReturnType<typeof vi.fn>
     setOpeningBalance: ReturnType<typeof vi.fn>
@@ -75,15 +77,17 @@ export function instalarApiFalsa(): ApiFalsa {
     insumos: {
       getAll: vi.fn(async () => []),
       create: vi.fn(async () => ({ id: 1 })),
-      update: vi.fn(async () => ({ success: true }))
+      update: vi.fn(async () => ({ success: true })),
+      addStock: vi.fn(async () => ({ success: true }))
     },
     variations: {
       create: vi.fn(async () => ({ id: 1 })),
       update: vi.fn(async () => ({ success: true })),
       setSalePrice: vi.fn(async () => ({ success: true })),
-      delete: vi.fn(async () => ({ success: true }))
+      delete: vi.fn(async () => ({ success: true })),
+      addStock: vi.fn(async () => ({ success: true }))
     },
-    products: { getAll: vi.fn(async () => []) },
+    products: { getAll: vi.fn(async () => []), create: vi.fn(async () => ({ id: 1 })) },
     sales: {
       getAll: vi.fn(async () => []),
       create: vi.fn(async () => ({ id: 1 })),
@@ -91,10 +95,10 @@ export function instalarApiFalsa(): ApiFalsa {
       registerPayment: vi.fn(async () => ({ id: 1 })),
       deletePayment: vi.fn(async () => ({ success: true }))
     },
-    fairs: { getAll: vi.fn(async () => []) },
+    fairs: { getAll: vi.fn(async () => []), create: vi.fn(async () => ({ id: 1 })) },
     dashboard: { getStats: vi.fn(async () => painelFalso()) },
-    cashExpenses: { getAll: vi.fn(async () => []) },
-    expenseCategories: { getAll: vi.fn(async () => []) },
+    cashExpenses: { getAll: vi.fn(async () => []), create: vi.fn(async () => ({ id: 1 })) },
+    expenseCategories: { getAll: vi.fn(async () => []), create: vi.fn(async () => ({ id: 1 })) },
     cashSettings: {
       get: vi.fn(async () => ({ id: 1, openingBalance: 0, updatedAt: '2026-01-01 00:00:00' })),
       setOpeningBalance: vi.fn(async () => ({ success: true }))

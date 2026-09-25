@@ -141,8 +141,8 @@ export default function FairForm({ fair, onSave, onClose }: FairFormProps): JSX.
       }
       onSave()
       onClose()
-    } catch {
-      setError('Erro ao salvar. Tente novamente.')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erro ao salvar. Tente novamente.')
     } finally {
       setSaving(false)
     }

@@ -122,6 +122,36 @@ describe('VariationForm: pergunta de onde veio o estoque', () => {
       insumos: []
     })
   })
+
+  it('should_close_only_the_question_on_escape_and_keep_what_was_typed', async () => {
+    // Com a pergunta aberta sobre o formulário, Esc fechava os dois e a variação
+    // digitada se perdia.
+    const fecharFormulario = vi.fn()
+    const usuaria = userEvent.setup()
+    render(
+      <VariationForm
+        productId={1}
+        productName="Colar Aurora"
+        onSave={vi.fn()}
+        onClose={fecharFormulario}
+      />
+    )
+
+    await usuaria.type(campo('Identificador'), 'Dourado')
+    await usuaria.type(campo('Preço de custo (R$)'), '3')
+    await usuaria.type(campo('Preço de venda (R$)'), '25')
+    await preencherReceita(usuaria)
+    await usuaria.clear(campo('Quantidade em estoque'))
+    await usuaria.type(campo('Quantidade em estoque'), '4')
+    await usuaria.click(screen.getByRole('button', { name: 'Cadastrar variação' }))
+    await screen.findByText('Estoque inicial')
+
+    await usuaria.keyboard('{Escape}')
+
+    expect(screen.queryByText('Estoque inicial')).not.toBeInTheDocument()
+    expect(fecharFormulario).not.toHaveBeenCalled()
+    expect(campo('Identificador')).toHaveValue('Dourado')
+  })
 })
 
 describe('VariationForm: edição', () => {

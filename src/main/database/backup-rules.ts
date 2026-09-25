@@ -1,3 +1,5 @@
+import { diaLocal } from '../../shared/datas'
+
 export const PREFIXO_BACKUP = 'vanbijouxsys-'
 /** RN-15: dez dias de histórico, um backup por dia de uso. */
 export const MAX_BACKUPS_DIARIOS = 10
@@ -29,10 +31,7 @@ export function ehBackupDiario(nome: string): boolean {
 /** Carimbo local (não UTC): o backup precisa bater com o dia da cliente, não com Greenwich. */
 export function carimboDeBackup(data: Date): string {
   const p = (n: number): string => String(n).padStart(2, '0')
-  return (
-    `${data.getFullYear()}-${p(data.getMonth() + 1)}-${p(data.getDate())}` +
-    `-${p(data.getHours())}${p(data.getMinutes())}${p(data.getSeconds())}`
-  )
+  return `${diaLocal(data)}-${p(data.getHours())}${p(data.getMinutes())}${p(data.getSeconds())}`
 }
 
 function sufixoDoMotivo(motivo: MotivoDoBackup): string {

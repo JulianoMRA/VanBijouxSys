@@ -2,6 +2,7 @@ import { useState } from 'react'
 import Modal from '../ui/Modal'
 import CampoNumerico from '../ui/CampoNumerico'
 import { formatarNumeroParaCampo, interpretarNumero } from '../../utils/numero'
+import { diaLocal } from '../../../../shared/datas'
 import type { CashExpense, ExpenseCategory, CreateCashExpenseInput } from '../../types'
 
 interface ExpenseFormProps {
@@ -22,8 +23,7 @@ export default function ExpenseForm({
   const [amount, setAmount] = useState(expense ? formatarNumeroParaCampo(expense.amount) : '')
   const [expenseDate, setExpenseDate] = useState(() => {
     if (expense) return expense.expenseDate
-    const d = new Date()
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+    return diaLocal(new Date())
   })
   const [notes, setNotes] = useState(expense?.notes ?? '')
   const [saving, setSaving] = useState(false)

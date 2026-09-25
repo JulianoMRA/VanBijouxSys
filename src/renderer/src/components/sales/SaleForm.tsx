@@ -11,6 +11,7 @@ import { estaArquivado, variacaoInativa } from '../../utils/arquivamento'
 import { custoUnitarioDoItem } from '../../utils/itens-de-venda'
 import { totalRecebido } from '../../utils/recebimentos'
 import { MENSAGEM_CLIENTE_OBRIGATORIA, normalizarNomeDaCliente } from '../../../../shared/clientes'
+import { diaLocal } from '../../../../shared/datas'
 import { emCentavos } from '../../../../shared/dinheiro'
 import { RECUSAS_DE_PAGAMENTO } from '../../../../shared/recebimentos'
 import type {
@@ -82,8 +83,7 @@ export default function SaleForm({
   )
   const [soldAt, setSoldAt] = useState(() => {
     if (sale) return sale.soldAt.slice(0, 10)
-    const d = new Date()
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+    return diaLocal(new Date())
   })
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>(
     sale?.paymentMethod ?? 'dinheiro'

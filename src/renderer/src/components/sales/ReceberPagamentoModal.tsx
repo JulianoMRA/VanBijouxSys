@@ -9,6 +9,7 @@ import {
 } from '../../utils/numero'
 import { formatCurrency, formatDate, partesDaData } from '../../utils/format'
 import { totalRecebido } from '../../utils/recebimentos'
+import { diaLocal } from '../../../../shared/datas'
 import { emCentavos } from '../../../../shared/dinheiro'
 import { RECUSAS_DE_PAGAMENTO } from '../../../../shared/recebimentos'
 import type { ReceivedPaymentMethod, Sale } from '../../types'
@@ -25,11 +26,6 @@ const PAYMENT_METHODS: { value: ReceivedPaymentMethod; label: string }[] = [
   { value: 'debito', label: 'Débito' },
   { value: 'credito', label: 'Crédito' }
 ]
-
-function todayIso(): string {
-  const d = new Date()
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-}
 
 function loadLastFee(method: ReceivedPaymentMethod): string {
   if (method === 'dinheiro') return '0'
@@ -49,7 +45,7 @@ export default function ReceberPagamentoModal({
   const [amount, setAmount] = useState(formatarNumeroParaCampo(sale.amountDue))
   const [paymentMethod, setPaymentMethod] = useState<ReceivedPaymentMethod>('dinheiro')
   const [feePercentage, setFeePercentage] = useState('0')
-  const [receivedAt, setReceivedAt] = useState(todayIso())
+  const [receivedAt, setReceivedAt] = useState(() => diaLocal(new Date()))
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 

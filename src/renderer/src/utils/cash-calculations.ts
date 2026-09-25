@@ -56,24 +56,20 @@ export type TransactionRow =
       amount: number
     }
 
-function pad(n: number): string {
-  return String(n).padStart(2, '0')
-}
-
 /** `today` é parâmetro para o cálculo ser determinístico em teste. */
 export function getPeriodDates(period: PeriodKey, today = new Date()): DateRange | null {
   if (period === 'tudo') return null
   const endDate = diaLocal(today)
 
   if (period === 'mes') {
-    return { startDate: `${today.getFullYear()}-${pad(today.getMonth() + 1)}-01`, endDate }
+    return { startDate: diaLocal(new Date(today.getFullYear(), today.getMonth(), 1)), endDate }
   }
   if (period === '3meses' || period === '6meses') {
     const inicio = subtrairMeses(today, period === '3meses' ? 3 : 6)
     return { startDate: diaLocal(inicio), endDate }
   }
   if (period === 'ano') {
-    return { startDate: `${today.getFullYear()}-01-01`, endDate }
+    return { startDate: diaLocal(new Date(today.getFullYear(), 0, 1)), endDate }
   }
   return null
 }

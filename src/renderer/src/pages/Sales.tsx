@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import AvisoDeErro from '../components/ui/AvisoDeErro'
 import { ChevronDown, ChevronUp } from 'lucide-react'
 import SaleForm from '../components/sales/SaleForm'
 import ReceberPagamentoModal from '../components/sales/ReceberPagamentoModal'
@@ -181,17 +182,7 @@ export default function Sales(): JSX.Element {
       </div>
 
       <div className="px-8 pt-5">
-        {errorMessage && (
-          <div className="mb-4 flex items-start justify-between gap-3 rounded-[11px] border border-bone-500 bg-clay-100 px-4 py-3">
-            <p className="text-body text-clay-600">{errorMessage}</p>
-            <button
-              onClick={() => setErrorMessage('')}
-              className="shrink-0 text-lg leading-none text-clay-500 hover:text-clay-600"
-            >
-              ×
-            </button>
-          </div>
-        )}
+        <AvisoDeErro mensagem={errorMessage} onFechar={() => setErrorMessage('')} />
 
         {filtered.length > 0 && (
           <div className="mb-4 grid grid-cols-4 gap-3.5">

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import AvisoDeErro from '../components/ui/AvisoDeErro'
 import { ChevronDown, ChevronUp } from 'lucide-react'
 import FairForm from '../components/fairs/FairForm'
 import ConfirmDialog from '../components/ui/ConfirmDialog'
@@ -149,17 +150,7 @@ export default function Fairs(): JSX.Element {
       </div>
 
       <div className="px-8 pt-[22px]">
-        {errorMessage && (
-          <div className="mb-4 flex items-start justify-between gap-3 rounded-[11px] border border-bone-500 bg-clay-100 px-4 py-3">
-            <p className="text-body text-clay-600">{errorMessage}</p>
-            <button
-              onClick={() => setErrorMessage('')}
-              className="shrink-0 text-lg leading-none text-clay-500 hover:text-clay-600"
-            >
-              ×
-            </button>
-          </div>
-        )}
+        <AvisoDeErro mensagem={errorMessage} onFechar={() => setErrorMessage('')} />
 
         {loading ? (
           <div className="card flex h-40 items-center justify-center">

@@ -3,8 +3,34 @@ import {
   formatDate,
   formatDateRange,
   calcSaleTotals,
+  formatarCustoUnitario,
+  formatPercent,
   partesDaData
 } from '../renderer/src/utils/format'
+
+describe('formatPercent', () => {
+  it('should_use_a_decimal_comma_like_the_rest_of_the_app', () => {
+    expect(formatPercent(12.5)).toBe('12,5%')
+    expect(formatPercent(40)).toBe('40,0%')
+    expect(formatPercent(1234.56)).toBe('1.234,6%')
+  })
+
+  it('should_round_to_the_places_asked', () => {
+    expect(formatPercent(33.333, 0)).toBe('33%')
+  })
+})
+
+describe('formatarCustoUnitario', () => {
+  it('should_keep_four_places_below_ten_cents_so_bulk_costs_do_not_look_zero', () => {
+    // Fio a R$ 0,012/cm: com duas casas, apareceria "R$ 0,01" ao lado de um total maior.
+    expect(formatarCustoUnitario(0.012)).toBe('R$ 0,0120')
+  })
+
+  it('should_use_two_places_from_ten_cents_up', () => {
+    expect(formatarCustoUnitario(1.5)).toBe('R$ 1,50')
+    expect(formatarCustoUnitario(0)).toBe('R$ 0,00')
+  })
+})
 
 describe('formatDate', () => {
   it('should format ISO date string to dd/mm/yyyy', () => {

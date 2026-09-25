@@ -11,6 +11,7 @@ import {
   numeroParaArmazenamento
 } from '../../utils/numero'
 import CampoNumerico from '../ui/CampoNumerico'
+import { formatarCustoUnitario, formatCurrency } from '../../utils/format'
 import type { CreateVariationInput, Insumo, MotivoDeAjuste, ProductVariation } from '../../types'
 
 const LABOR_COST_KEY = 'pricing_default_labor_cost'
@@ -312,7 +313,7 @@ export default function VariationForm({
                   className="text-micro text-wine-500 mt-1 cursor-pointer hover:underline"
                   onClick={useInsumosCost}
                 >
-                  Calculado pelos insumos: R$ {insumosCost.toFixed(2)} — clique para usar
+                  Calculado pelos insumos: {formatCurrency(insumosCost)} — clique para usar
                 </p>
               )}
             </div>
@@ -367,7 +368,7 @@ export default function VariationForm({
                         <option value="">Selecione o insumo…</option>
                         {insumosDisponiveis.map((i) => (
                           <option key={i.id} value={i.id}>
-                            {i.name} (R${i.costPerUnit.toFixed(4)}/
+                            {i.name} ({formatarCustoUnitario(i.costPerUnit)}/
                             {i.unit === 'unidade' ? 'un.' : i.unit})
                           </option>
                         ))}
@@ -390,7 +391,7 @@ export default function VariationForm({
 
                       {rowCost !== null && (
                         <span className="text-micro tabular-nums text-ink-400 w-16 text-right shrink-0">
-                          R$ {rowCost.toFixed(2)}
+                          {formatCurrency(rowCost)}
                         </span>
                       )}
 
@@ -408,7 +409,7 @@ export default function VariationForm({
                 {hasInsumos && (
                   <div className="flex justify-between text-micro font-semibold text-wine-500 pt-1 border-t border-bone-300">
                     <span>Custo total de materiais</span>
-                    <span>R$ {insumosCost.toFixed(2)}</span>
+                    <span>{formatCurrency(insumosCost)}</span>
                   </div>
                 )}
               </div>
@@ -430,8 +431,8 @@ export default function VariationForm({
               <div className="px-4 py-3 space-y-3">
                 {hasInsumos && (
                   <p className="text-micro text-wine-500">
-                    Usando custo calculado pelos insumos (R$ {insumosCost.toFixed(2)}) como base de
-                    materiais.
+                    Usando custo calculado pelos insumos ({formatCurrency(insumosCost)}) como base
+                    de materiais.
                   </p>
                 )}
 

@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo } from 'react'
 import { ChevronDown } from 'lucide-react'
-import { formatCurrency } from '../utils/format'
+import { formatarCustoUnitario, formatCurrency } from '../utils/format'
 import { avisarInsumosAlterados } from '../utils/eventos'
 import { montarCsvDeInsumos } from '../utils/csv-de-insumos'
 import { abreviacaoDaUnidade } from '../utils/unidades'
@@ -44,21 +44,6 @@ const CORES: Record<SituacaoDoInsumo, { marcador: string; texto: string }> = {
 
 function nomeUnidade(unit: Insumo['unit']): string {
   return unit === 'unidade' ? 'Por unidade' : `Por ${unit}`
-}
-
-/**
- * Insumos vendidos a granel têm custo unitário abaixo de um centavo (fio a
- * R$ 0,012/cm). Arredondar para duas casas mostraria "R$ 0,01" e faria a conta
- * parecer errada ao lado do valor total.
- */
-function formatarCustoUnitario(valor: number): string {
-  const casas = valor > 0 && valor < 0.1 ? 4 : 2
-  return valor.toLocaleString('pt-BR', {
-    style: 'currency',
-    currency: 'BRL',
-    minimumFractionDigits: casas,
-    maximumFractionDigits: casas
-  })
 }
 
 /** Saldo negativo não é material na prateleira: não vale dinheiro, só indica o que falta lançar. */

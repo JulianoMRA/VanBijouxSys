@@ -2,6 +2,8 @@ import { useEffect, useState, useMemo } from 'react'
 import { ChevronDown } from 'lucide-react'
 import { formatCurrency } from '../utils/format'
 import { avisarInsumosAlterados } from '../utils/eventos'
+import { montarCsvDeInsumos } from '../utils/csv-de-insumos'
+import { abreviacaoDaUnidade } from '../utils/unidades'
 import { estaArquivado, insumosAtivos, mensagemDeArquivamento } from '../utils/arquivamento'
 import {
   precisaDeReposicao,
@@ -38,10 +40,6 @@ const CORES: Record<SituacaoDoInsumo, { marcador: string; texto: string }> = {
   out: { marcador: '#b3413f', texto: 'text-clay-500' },
   low: { marcador: '#c98b2e', texto: 'text-honey-500' },
   ok: { marcador: '#5d8f76', texto: 'text-ink-900' }
-}
-
-function unitLabel(unit: Insumo['unit']): string {
-  return unit === 'unidade' ? 'un.' : unit
 }
 
 function nomeUnidade(unit: Insumo['unit']): string {
@@ -106,25 +104,6 @@ export default function Stock(): JSX.Element {
     loadInsumos()
   }, [])
 
-  function buildCsv(rows: Insumo[]): string {
-    const headers = ['Nome', 'Unidade', 'Estoque Atual', 'Estoque Mínimo', 'Déficit']
-    const lines = rows.map((i) => {
-      const ul = unitLabel(i.unit)
-      const deficit =
-        i.minimumStock > 0 && i.stockQuantity < i.minimumStock
-          ? `${(i.minimumStock - i.stockQuantity).toLocaleString('pt-BR')} ${ul}`
-          : '—'
-      return [
-        `"${i.name}"`,
-        ul,
-        `${i.stockQuantity.toLocaleString('pt-BR')} ${ul}`,
-        i.minimumStock > 0 ? `${i.minimumStock.toLocaleString('pt-BR')} ${ul}` : '—',
-        deficit
-      ].join(';')
-    })
-    return [headers.join(';'), ...lines].join('\r\n')
-  }
-
   async function handleExport(mode: 'todos' | 'baixo' | 'atual'): Promise<void> {
     let rows: Insumo[]
     let fileName: string
@@ -144,7 +123,7 @@ export default function Stock(): JSX.Element {
       return
     }
     try {
-      const result = await window.api.insumos.exportCsv(buildCsv(rows), fileName)
+      const result = await window.api.insumos.exportCsv(montarCsvDeInsumos(rows), fileName)
       if (result.salvo) showToast('Arquivo exportado com sucesso!')
     } catch (err) {
       setErrorMessage(err instanceof Error ? err.message : 'Erro ao exportar o arquivo.')
@@ -431,7 +410,7 @@ export default function Stock(): JSX.Element {
                     displayedInsumos.map((insumo) => {
                       const status = situacaoDoInsumo(insumo)
                       const cores = CORES[status]
-                      const ul = unitLabel(insumo.unit)
+                      const ul = abreviacaoDaUnidade(insumo.unit)
                       const pct =
                         insumo.minimumStock > 0
                           ? Math.min(Math.max(insumo.stockQuantity, 0) / insumo.minimumStock, 1) *
@@ -605,7 +584,7 @@ export default function Stock(): JSX.Element {
       {modal?.type === 'archive' && (
         <ConfirmDialog
           title="Arquivar insumo"
-          message={mensagemDeArquivamento(modal.insumo, unitLabel(modal.insumo.unit))}
+          message={mensagemDeArquivamento(modal.insumo, abreviacaoDaUnidade(modal.insumo.unit))}
           confirmLabel="Arquivar"
           onConfirm={() => arquivarInsumo(modal.insumo, true)}
           onClose={() => setModal(null)}

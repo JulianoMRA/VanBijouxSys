@@ -170,8 +170,7 @@ continuava marcada como recebida naquele dia.
   `received_at`, e `atualizarVenda`).
 - **Prova**: `src/tests/integration/receivable.test.ts`,
   `src/tests/integration/pagamentos.test.ts` (`pagamento no caixa e no painel`,
-  `vendas recebidas antes da migração 4`), `src/tests/integration/cash.test.ts` e
-  `src/tests/cash-calculations.test.ts`.
+  `vendas recebidas antes da migração 4`) e `src/tests/cash-calculations.test.ts`.
 
 ### RN-16 — Venda "a receber" precisa do nome da cliente
 

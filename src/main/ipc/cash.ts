@@ -48,9 +48,6 @@ export function registerCashHandlers(ipc: RegistroDeCanais, banco: ConexaoBanco)
     repositorio.excluirDespesa(id)
     return OK
   })
-  registrarCanal(ipc, cashExpenses.getStats, ARGUMENTOS_DESPESAS.getStats, (filtro) =>
-    repositorio.estatisticas(filtro)
-  )
 
   registrarCanal(ipc, cashSettings.get, ARGUMENTOS_CAIXA.get, () => repositorio.configuracoes())
   registrarCanal(

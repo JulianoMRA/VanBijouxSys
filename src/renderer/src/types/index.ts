@@ -47,7 +47,6 @@ export type {
 export type {
   CashExpense,
   CashSettings,
-  CashStats,
   CreateCashExpenseInput,
   CreateExpenseCategoryInput,
   ExpenseCategory,

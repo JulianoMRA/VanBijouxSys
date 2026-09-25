@@ -100,11 +100,6 @@ declare global {
         create: (data: CreateCashExpenseInput) => Promise<{ id: number }>
         update: (data: UpdateCashExpenseInput) => Promise<{ success: boolean }>
         delete: (id: number) => Promise<{ success: boolean }>
-        getStats: (filters?: { startDate?: string; endDate?: string }) => Promise<{
-          totalExpenses: number
-          totalIncome: number
-          openingBalance: number
-        }>
       }
       cashSettings: {
         get: () => Promise<CashSettings>

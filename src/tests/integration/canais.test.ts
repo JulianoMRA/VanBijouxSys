@@ -13,6 +13,6 @@ describe('canais IPC', () => {
     expect([...ambiente.canais()].sort()).toEqual([...conhecidos].sort())
     // 47 até a 1.14; o recebimento em pagamentos troca markAsReceived por
     // registerPayment e deletePayment; o erro de tela ganha app:registrarErroDaTela.
-    expect(conhecidos).toHaveLength(49)
+    expect(conhecidos).toHaveLength(48)
   })
 })

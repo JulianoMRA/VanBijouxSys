@@ -121,6 +121,15 @@ conferência humana dela.
   Em setembro de 2026 um instalador antigo (1.7.1) rodou por cima da versão atual
   na máquina da cliente e abriu um banco que já não era dele.
 
+### Exportação
+
+A lista de insumos sai em CSV para a usuária abrir no Excel. O nome do insumo, o
+único texto livre da planilha, vai entre aspas, com as aspas internas dobradas, e
+ganha um apóstrofo na frente quando começa com `=`, `+`, `-`, `@`, tab ou CR: sem
+isso, um nome como `=HYPERLINK(...)` viraria fórmula ao abrir a planilha
+(`src/renderer/src/utils/csv-de-insumos.ts`). O caminho do arquivo é escolhido
+em diálogo nativo aberto pelo processo principal.
+
 ### Log
 
 `<userData>/logs/main.log` recebe falhas de handler, de backup, de migração e de

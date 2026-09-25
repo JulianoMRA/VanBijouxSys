@@ -154,14 +154,20 @@ cada um pela data em que foi recebido, com a forma e a taxa informadas ali.
 
 As vendas recebidas até a 1.14 guardam o recebimento na própria linha
 (`received_at`) e continuam entrando no caixa por essa data. Desfazer o
-recebimento delas devolve a venda para "a receber", zera a taxa e volta o líquido
-para o total. Numa venda paga por pagamentos, desfazer é excluir o pagamento.
+recebimento delas devolve a venda para "a receber", sem taxa e com o líquido
+igual ao total; editar a venda e escolher "A receber" faz o mesmo. Se a venda já
+tiver pagamentos, as taxas deles continuam descontadas do líquido (RN-17). Numa
+venda paga por pagamentos, desfazer é excluir o pagamento.
 
-- **Código**: `src/main/repositorios/caixa.ts` (`estatisticas`: vendas por
-  `date(COALESCE(received_at, sold_at))` com o filtro
-  `payment_method != 'areceber'`, mais os pagamentos pelo `received_at` deles),
-  `repositorios/painel.ts` (entradas e fluxo de caixa) e `repositorios/vendas.ts`
-  (`desmarcarRecebida`, que só age em venda com `received_at`).
+Até a 1.16 a edição mantinha o `received_at`: a venda voltava a dever tudo e
+continuava marcada como recebida naquele dia.
+
+- **Código**: `src/renderer/src/utils/cash-calculations.ts` (`cashDateOf`,
+  `filterCashSales` e `filterCashPayments`: vendas pela data do recebimento, fora
+  as "a receber", mais os pagamentos pela data deles), usado pela tela de Caixa;
+  `src/main/repositorios/painel.ts` (entradas e fluxo de caixa do Painel) e
+  `src/main/repositorios/vendas.ts` (`desmarcarRecebida`, que só age em venda com
+  `received_at`, e `atualizarVenda`).
 - **Prova**: `src/tests/integration/receivable.test.ts`,
   `src/tests/integration/pagamentos.test.ts` (`pagamento no caixa e no painel`,
   `vendas recebidas antes da migração 4`), `src/tests/integration/cash.test.ts` e

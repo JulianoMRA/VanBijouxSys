@@ -79,12 +79,53 @@ export interface RepositorioDoPainel {
   estatisticas(params: DashboardParams): DashboardStats
 }
 
+/** O trecho do WHERE que recorta o período numa coluna de data, e os valores dele. */
+interface Recorte {
+  clausula: string
+  parametros: string[]
+}
+
+/**
+ * RN-14: `date()` normaliza o registro antigo que guarda hora, para ele entrar no dia
+ * certo. Sem data inicial não há recorte. A coluna é sempre um trecho fixo deste
+ * arquivo; as datas vão por parâmetro.
+ */
+function recorteDeDatas(coluna: string, de: string | null, ate: string | null): Recorte {
+  if (!de) return { clausula: '', parametros: [] }
+  if (!ate) return { clausula: ` AND date(${coluna}) >= ?`, parametros: [de] }
+  return {
+    clausula: ` AND date(${coluna}) >= ? AND date(${coluna}) <= ?`,
+    parametros: [de, ate]
+  }
+}
+
+/** Os custos de uma feira `f` além da inscrição. */
+const CUSTOS_ADICIONAIS_DA_FEIRA =
+  'COALESCE((SELECT SUM(fac.amount) FROM fair_additional_costs fac WHERE fac.fair_id = f.id), 0)'
+
 /**
  * Só leitura: junta as consultas do painel num lugar só. O recorte de datas usa
  * `date(...)` em toda cláusula, para registro antigo que guarda hora entrar no
  * período certo.
  */
 export function repositorioDoPainel({ sqlite }: ConexaoBanco): RepositorioDoPainel {
+  /** Faturamento, custo, lucro e ticket das vendas do recorte: do período e do anterior. */
+  function resumoDasVendas(recorte: Recorte): NonNullable<DashboardStats['previousOverview']> {
+    return sqlite
+      .prepare(
+        `SELECT
+          COALESCE(SUM(s.total_amount), 0)              AS totalRevenue,
+          COALESCE(SUM(s.net_amount), 0)                AS totalNetRevenue,
+          COALESCE(SUM(s.total_cost), 0)                AS totalCost,
+          COALESCE(SUM(s.net_amount - s.total_cost), 0) AS totalProfit,
+          COUNT(s.id)                                    AS totalSales,
+          COALESCE(AVG(s.total_amount), 0)              AS avgTicket
+         FROM sales s
+         WHERE 1=1${recorte.clausula}`
+      )
+      .get(...recorte.parametros) as NonNullable<DashboardStats['previousOverview']>
+  }
+
   return {
     estatisticas(params) {
       let fromDate: string | null
@@ -107,38 +148,16 @@ export function repositorioDoPainel({ sqlite }: ConexaoBanco): RepositorioDoPain
         throw new ErroDeNegocio('Informe a data inicial do período personalizado.')
       }
 
-      // Cláusulas com date() para normalizar timestamps completos legados.
-      const sSoldAtClause = fromDate
-        ? ` AND date(s.sold_at) >= ?${toDate ? ' AND date(s.sold_at) <= ?' : ''}`
-        : ''
-      const soldAtClause = fromDate
-        ? ` AND date(sold_at) >= ?${toDate ? ' AND date(sold_at) <= ?' : ''}`
-        : ''
-      const expenseDateClause = fromDate
-        ? ` AND date(expense_date) >= ?${toDate ? ' AND date(expense_date) <= ?' : ''}`
-        : ''
-      const fDateClause = fromDate
-        ? ` AND date(f.date) >= ?${toDate ? ' AND date(f.date) <= ?' : ''}`
-        : ''
-      const prevSoldAtClause =
-        prevFromDate && prevToDate ? ` AND date(s.sold_at) >= ? AND date(s.sold_at) <= ?` : ''
-
-      const dateParams: string[] = [...(fromDate ? [fromDate] : []), ...(toDate ? [toDate] : [])]
-      const prevDateParams: string[] = prevFromDate && prevToDate ? [prevFromDate, prevToDate] : []
-
-      const overviewBase = sqlite
-        .prepare(
-          `SELECT
-            COALESCE(SUM(s.total_amount), 0)              AS totalRevenue,
-            COALESCE(SUM(s.net_amount), 0)                AS totalNetRevenue,
-            COALESCE(SUM(s.total_cost), 0)                AS totalCost,
-            COALESCE(SUM(s.net_amount - s.total_cost), 0) AS totalProfit,
-            COUNT(s.id)                                    AS totalSales,
-            COALESCE(AVG(s.total_amount), 0)              AS avgTicket
-           FROM sales s
-           WHERE 1=1${sSoldAtClause}`
-        )
-        .get(...dateParams) as Omit<DashboardStats['overview'], 'totalReceivable'>
+      const vendas = recorteDeDatas('s.sold_at', fromDate, toDate)
+      const vendasDaTabela = recorteDeDatas('sold_at', fromDate, toDate)
+      const despesas = recorteDeDatas('expense_date', fromDate, toDate)
+      const feiras = recorteDeDatas('f.date', fromDate, toDate)
+      // Vendas 'A receber' pendentes (received_at IS NULL) NÃO entram no caixa.
+      // Data efetiva de entrada = COALESCE(received_at, sold_at) — vendas liquidadas
+      // depois (fiado) aparecem no mês do recebimento, não da venda.
+      const entradas = recorteDeDatas('COALESCE(received_at, sold_at)', fromDate, toDate)
+      // RN-17: o pagamento de venda a receber entra no caixa no dia em que foi recebido.
+      const pagamentos = recorteDeDatas('received_at', fromDate, toDate)
 
       // RN-17: o que falta receber é o total menos o que já foi pago. O arredondamento
       // em centavos tira o resíduo de ponto flutuante de uma venda que já fechou.
@@ -148,31 +167,19 @@ export function repositorioDoPainel({ sqlite }: ConexaoBanco): RepositorioDoPain
              (SELECT SUM(p.amount) FROM sale_payments p WHERE p.sale_id = s.id), 0)), 0)
              AS totalReceivable
            FROM sales s
-           WHERE s.payment_method = 'areceber'${sSoldAtClause}`
+           WHERE s.payment_method = 'areceber'${vendas.clausula}`
         )
-        .get(...dateParams) as { totalReceivable: number }
+        .get(...vendas.parametros) as { totalReceivable: number }
 
       const overview: DashboardStats['overview'] = {
-        ...overviewBase,
+        ...resumoDasVendas(vendas),
         totalReceivable: emCentavos(receivable.totalReceivable)
       }
 
-      let previousOverview: DashboardStats['previousOverview'] = null
-      if (prevSoldAtClause) {
-        previousOverview = sqlite
-          .prepare(
-            `SELECT
-              COALESCE(SUM(s.total_amount), 0)              AS totalRevenue,
-              COALESCE(SUM(s.net_amount), 0)                AS totalNetRevenue,
-              COALESCE(SUM(s.total_cost), 0)                AS totalCost,
-              COALESCE(SUM(s.net_amount - s.total_cost), 0) AS totalProfit,
-              COUNT(s.id)                                    AS totalSales,
-              COALESCE(AVG(s.total_amount), 0)              AS avgTicket
-             FROM sales s
-             WHERE 1=1${prevSoldAtClause}`
-          )
-          .get(...prevDateParams) as NonNullable<DashboardStats['previousOverview']>
-      }
+      const previousOverview: DashboardStats['previousOverview'] =
+        prevFromDate && prevToDate
+          ? resumoDasVendas(recorteDeDatas('s.sold_at', prevFromDate, prevToDate))
+          : null
 
       const revenueByMonth = sqlite
         .prepare(
@@ -181,11 +188,11 @@ export function repositorioDoPainel({ sqlite }: ConexaoBanco): RepositorioDoPain
             COALESCE(SUM(s.total_amount), 0)              AS revenue,
             COALESCE(SUM(s.net_amount - s.total_cost), 0) AS profit
            FROM sales s
-           WHERE 1=1${sSoldAtClause}
+           WHERE 1=1${vendas.clausula}
            GROUP BY month
            ORDER BY month ASC`
         )
-        .all(...dateParams) as DashboardStats['revenueByMonth']
+        .all(...vendas.parametros) as DashboardStats['revenueByMonth']
 
       const salesByChannel = sqlite
         .prepare(
@@ -195,11 +202,11 @@ export function repositorioDoPainel({ sqlite }: ConexaoBanco): RepositorioDoPain
             COALESCE(SUM(s.net_amount - s.total_cost), 0) AS profit,
             COUNT(s.id)                                    AS count
            FROM sales s
-           WHERE 1=1${sSoldAtClause}
+           WHERE 1=1${vendas.clausula}
            GROUP BY s.channel
            ORDER BY revenue DESC`
         )
-        .all(...dateParams) as DashboardStats['salesByChannel']
+        .all(...vendas.parametros) as DashboardStats['salesByChannel']
 
       // LEFT JOIN + COALESCE garante que itens sem categoria (variação removida etc.)
       // ainda contam para o total, mantendo SUM(salesByCategory.revenue) === overview.totalRevenue.
@@ -215,17 +222,14 @@ export function repositorioDoPainel({ sqlite }: ConexaoBanco): RepositorioDoPain
            LEFT JOIN product_variations pv ON pv.id = si.variation_id
            LEFT JOIN products p ON p.id = pv.product_id
            LEFT JOIN categories c ON c.id = p.category_id
-           WHERE 1=1${sSoldAtClause}
+           WHERE 1=1${vendas.clausula}
            GROUP BY COALESCE(c.name, 'Sem categoria')
            ORDER BY revenue DESC`
         )
-        .all(...dateParams) as DashboardStats['salesByCategory']
+        .all(...vendas.parametros) as DashboardStats['salesByCategory']
 
-      // fairDateClause usa s.sold_at dentro do LEFT JOIN; date() para consistência.
-      const fairJoinClause = fromDate
-        ? ` AND date(s.sold_at) >= ?${toDate ? ' AND date(s.sold_at) <= ?' : ''}`
-        : ''
-
+      // O recorte das vendas fica dentro do LEFT JOIN: feira sem venda no período
+      // continua na lista, com faturamento zero.
       const salesByFairRaw = sqlite
         .prepare(
           `SELECT
@@ -234,18 +238,18 @@ export function repositorioDoPainel({ sqlite }: ConexaoBanco): RepositorioDoPain
             f.date,
             f.end_date                                     AS endDate,
             f.enrollment_cost                              AS enrollmentCost,
-            COALESCE((SELECT SUM(fac.amount) FROM fair_additional_costs fac WHERE fac.fair_id = f.id), 0) AS additionalCosts,
+            ${CUSTOS_ADICIONAIS_DA_FEIRA} AS additionalCosts,
             COALESCE(SUM(s.total_amount), 0)              AS revenue,
             COALESCE(SUM(s.net_amount - s.total_cost), 0) AS profit,
             COALESCE(SUM(s.net_amount - s.total_cost), 0)
               - f.enrollment_cost
-              - COALESCE((SELECT SUM(fac.amount) FROM fair_additional_costs fac WHERE fac.fair_id = f.id), 0) AS netProfit
+              - ${CUSTOS_ADICIONAIS_DA_FEIRA} AS netProfit
            FROM fairs f
-           LEFT JOIN sales s ON s.fair_id = f.id${fairJoinClause}
+           LEFT JOIN sales s ON s.fair_id = f.id${vendas.clausula}
            GROUP BY f.id
            ORDER BY f.date DESC`
         )
-        .all(...dateParams) as Array<{
+        .all(...vendas.parametros) as Array<{
         fairId: number
         fairName: string
         date: string
@@ -265,11 +269,11 @@ export function repositorioDoPainel({ sqlite }: ConexaoBanco): RepositorioDoPain
             COALESCE(SUM(total_amount), 0)   AS revenue,
             COUNT(id)                        AS salesCount
            FROM sales
-           WHERE fair_id IS NOT NULL${soldAtClause}
+           WHERE fair_id IS NOT NULL${vendasDaTabela.clausula}
            GROUP BY fair_id, day
            ORDER BY fair_id, day ASC`
         )
-        .all(...dateParams) as Array<{
+        .all(...vendasDaTabela.parametros) as Array<{
         fairId: number
         day: string
         revenue: number
@@ -301,12 +305,12 @@ export function repositorioDoPainel({ sqlite }: ConexaoBanco): RepositorioDoPain
            JOIN sales s ON s.id = si.sale_id
            JOIN product_variations pv ON pv.id = si.variation_id
            JOIN products p ON p.id = pv.product_id
-           WHERE 1=1${sSoldAtClause}
+           WHERE 1=1${vendas.clausula}
            GROUP BY si.variation_id
            ORDER BY quantity DESC
            LIMIT 8`
         )
-        .all(...dateParams) as DashboardStats['topVariations']
+        .all(...vendas.parametros) as DashboardStats['topVariations']
 
       const outOfStock = sqlite
         .prepare(SQL_VARIACOES_ESGOTADAS)
@@ -324,19 +328,6 @@ export function repositorioDoPainel({ sqlite }: ConexaoBanco): RepositorioDoPain
         .prepare(SQL_INSUMOS_ABAIXO_DO_MINIMO)
         .all() as DashboardStats['lowInsumos']
 
-      // Vendas 'A receber' pendentes (received_at IS NULL) NÃO entram no caixa.
-      // Data efetiva de entrada = COALESCE(received_at, sold_at) — vendas liquidadas
-      // depois (fiado) aparecem no mês do recebimento, não da venda.
-      const cashIncomeClause = fromDate
-        ? ` AND date(COALESCE(received_at, sold_at)) >= ?${toDate ? ' AND date(COALESCE(received_at, sold_at)) <= ?' : ''}`
-        : ''
-      // RN-17: o pagamento de venda a receber entra no caixa no dia em que foi recebido.
-      const paymentDateClause = fromDate
-        ? ` AND date(received_at) >= ?${toDate ? ' AND date(received_at) <= ?' : ''}`
-        : ''
-
-      const cashFlowParams: string[] = [...dateParams, ...dateParams, ...dateParams, ...dateParams]
-
       const cashFlow = sqlite
         .prepare(
           `SELECT
@@ -345,23 +336,28 @@ export function repositorioDoPainel({ sqlite }: ConexaoBanco): RepositorioDoPain
             COALESCE(SUM(expenses), 0) AS expenses
            FROM (
              SELECT strftime('%Y-%m', COALESCE(received_at, sold_at)) AS month, net_amount AS income, 0 AS expenses
-             FROM sales WHERE payment_method != 'areceber'${cashIncomeClause}
+             FROM sales WHERE payment_method != 'areceber'${entradas.clausula}
              UNION ALL
              SELECT strftime('%Y-%m', received_at) AS month, net_amount AS income, 0 AS expenses
-             FROM sale_payments WHERE 1=1${paymentDateClause}
+             FROM sale_payments WHERE 1=1${pagamentos.clausula}
              UNION ALL
              SELECT strftime('%Y-%m', expense_date) AS month, 0 AS income, amount AS expenses
-             FROM cash_expenses WHERE 1=1${expenseDateClause}
+             FROM cash_expenses WHERE 1=1${despesas.clausula}
              UNION ALL
              SELECT strftime('%Y-%m', f.date) AS month, 0 AS income,
-               f.enrollment_cost + COALESCE((SELECT SUM(fac.amount) FROM fair_additional_costs fac WHERE fac.fair_id = f.id), 0) AS expenses
+               f.enrollment_cost + ${CUSTOS_ADICIONAIS_DA_FEIRA} AS expenses
              FROM fairs f
-             WHERE (f.enrollment_cost > 0 OR EXISTS (SELECT 1 FROM fair_additional_costs fac WHERE fac.fair_id = f.id))${fDateClause}
+             WHERE (f.enrollment_cost > 0 OR EXISTS (SELECT 1 FROM fair_additional_costs fac WHERE fac.fair_id = f.id))${feiras.clausula}
            )
            GROUP BY month
            ORDER BY month ASC`
         )
-        .all(...cashFlowParams) as DashboardStats['cashFlow']
+        .all(
+          ...entradas.parametros,
+          ...pagamentos.parametros,
+          ...despesas.parametros,
+          ...feiras.parametros
+        ) as DashboardStats['cashFlow']
 
       const cashSettings = sqlite
         .prepare('SELECT opening_balance FROM cash_settings WHERE id = 1')
@@ -371,24 +367,24 @@ export function repositorioDoPainel({ sqlite }: ConexaoBanco): RepositorioDoPain
         .prepare(
           `SELECT
              (SELECT COALESCE(SUM(net_amount), 0) FROM sales
-              WHERE payment_method != 'areceber'${cashIncomeClause})
+              WHERE payment_method != 'areceber'${entradas.clausula})
              + (SELECT COALESCE(SUM(net_amount), 0) FROM sale_payments
-                WHERE 1=1${paymentDateClause}) AS total`
+                WHERE 1=1${pagamentos.clausula}) AS total`
         )
-        .get(...dateParams, ...dateParams) as { total: number }
+        .get(...entradas.parametros, ...pagamentos.parametros) as { total: number }
 
       const cashExpensesTotal = sqlite
         .prepare(
-          `SELECT COALESCE(SUM(amount), 0) AS total FROM cash_expenses WHERE 1=1${expenseDateClause}`
+          `SELECT COALESCE(SUM(amount), 0) AS total FROM cash_expenses WHERE 1=1${despesas.clausula}`
         )
-        .get(...dateParams) as { total: number }
+        .get(...despesas.parametros) as { total: number }
 
       const fairCostsTotal = sqlite
         .prepare(
-          `SELECT COALESCE(SUM(f.enrollment_cost + COALESCE((SELECT SUM(fac.amount) FROM fair_additional_costs fac WHERE fac.fair_id = f.id), 0)), 0) AS total
-           FROM fairs f WHERE 1=1${fDateClause}`
+          `SELECT COALESCE(SUM(f.enrollment_cost + ${CUSTOS_ADICIONAIS_DA_FEIRA}), 0) AS total
+           FROM fairs f WHERE 1=1${feiras.clausula}`
         )
-        .get(...dateParams) as { total: number }
+        .get(...feiras.parametros) as { total: number }
 
       // RN-18: o caixa do período começa na abertura mais tudo o que entrou e saiu antes
       // dele, pelas mesmas regras das entradas e saídas acima. Registro antigo sem data
@@ -406,7 +402,7 @@ export function repositorioDoPainel({ sqlite }: ConexaoBanco): RepositorioDoPain
                       WHERE COALESCE(date(received_at), '') < ?)
                    - (SELECT COALESCE(SUM(amount), 0) FROM cash_expenses
                       WHERE COALESCE(date(expense_date), '') < ?)
-                   - (SELECT COALESCE(SUM(f.enrollment_cost + COALESCE((SELECT SUM(fac.amount) FROM fair_additional_costs fac WHERE fac.fair_id = f.id), 0)), 0)
+                   - (SELECT COALESCE(SUM(f.enrollment_cost + ${CUSTOS_ADICIONAIS_DA_FEIRA}), 0)
                       FROM fairs f WHERE COALESCE(date(f.date), '') < ?) AS saldo`
               )
               .get(fromDate, fromDate, fromDate, fromDate) as { saldo: number }

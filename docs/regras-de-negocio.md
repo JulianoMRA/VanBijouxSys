@@ -305,14 +305,17 @@ a checagem encontra a atualização já baixada.
 Restaurar tem três portas: escolher o arquivo, o app conferir que ele é mesmo um
 banco do Van Bijoux (integridade e tabelas) e a confirmação do aviso. O arquivo
 escolhido é copiado antes do backup de segurança, porque a rotação pode apagá-lo:
-restaurar o mais antigo de uma pasta cheia falhava com o banco já fechado. Depois
-da troca, o app reinicia, porque a conexão e os prepared statements morrem ali.
+restaurar o mais antigo de uma pasta cheia falhava com o banco já fechado. A troca
+do arquivo é um rename na mesma pasta, feito de uma vez, e não uma cópia por cima
+do banco. Depois de fechar o banco, o app reinicia de qualquer jeito, porque a
+conexão e os prepared statements morrem ali: se a troca falhar, ela vê o aviso e o
+app volta com os dados que estavam em uso, em vez de ficar aberto sem banco.
 
 - **Código**: `src/main/database/backup.ts`, `database/backup-rules.ts`
   (`MAX_BACKUPS_DIARIOS` e `MAX_BACKUPS_DE_EVENTO`) e
   `src/main/servicos/backup.ts` (as três portas).
 - **Prova**: `src/tests/backup-rules.test.ts` (nomes, cotas e a cópia do dia),
   `src/tests/integration/backup-arquivos.test.ts` (o `backup.ts` de verdade numa
-  pasta temporária: restauração do mais antigo, dez dias preservados, uma cópia
-  por versão) e `src/tests/integration/backup-payload.test.ts` (o fluxo das três
+  pasta temporária: restauração do mais antigo, falha depois de fechar o banco,
+  dez dias preservados, uma cópia por versão) e `src/tests/integration/backup-payload.test.ts` (o fluxo das três
   portas, incluindo arquivo inválido e aviso cancelado).

@@ -6,13 +6,11 @@ import ConfirmDialog from '../components/ui/ConfirmDialog'
 import ActionMenu from '../components/ui/ActionMenu'
 import Toast from '../components/ui/Toast'
 import { useToast } from '../hooks/useToast'
-import { formatCurrency, formatDate, formatDateRange } from '../utils/format'
+import { formatCurrency, formatDate, formatDateRange, MESES_ABREVIADOS } from '../utils/format'
 import { diaLocal } from '../../../shared/datas'
 import type { Fair, Sale } from '../types'
 
 type Modal = { type: 'new' } | { type: 'edit'; fair: Fair } | { type: 'delete'; fair: Fair }
-
-const MESES = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
 
 /** O dia da cliente: em UTC, a feira de hoje passava a "realizada" depois das 21h. */
 function hojeISO(): string {
@@ -38,7 +36,7 @@ function prazoLabel(fair: Fair): string {
 }
 
 function DataBadge({ data, futura }: { data: string; futura: boolean }): JSX.Element {
-  const mes = MESES[parseInt(data.slice(5, 7), 10) - 1]
+  const mes = MESES_ABREVIADOS[parseInt(data.slice(5, 7), 10) - 1]
   return (
     <div
       className={`w-[54px] shrink-0 rounded-[10px] py-[7px] text-center ${

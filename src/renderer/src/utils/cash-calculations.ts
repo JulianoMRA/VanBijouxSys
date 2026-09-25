@@ -1,4 +1,4 @@
-import { diaLocal } from '../../../shared/datas'
+import { diaLocal, subtrairMeses } from '../../../shared/datas'
 import { emCentavos } from '../../../shared/dinheiro'
 import { formatDate } from './format'
 import type { CashExpense, Fair, PaymentMethod, Sale, SalePayment } from '../types'
@@ -69,8 +69,7 @@ export function getPeriodDates(period: PeriodKey, today = new Date()): DateRange
     return { startDate: `${today.getFullYear()}-${pad(today.getMonth() + 1)}-01`, endDate }
   }
   if (period === '3meses' || period === '6meses') {
-    const inicio = new Date(today)
-    inicio.setMonth(inicio.getMonth() - (period === '3meses' ? 3 : 6))
+    const inicio = subtrairMeses(today, period === '3meses' ? 3 : 6)
     return { startDate: diaLocal(inicio), endDate }
   }
   if (period === 'ano') {

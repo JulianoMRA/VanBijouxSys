@@ -10,6 +10,7 @@ import {
   sales
 } from '../database/schema'
 import { ErroDeNegocio } from '../ipc/mensagens'
+import { agruparPor } from './agrupar'
 import { movimentarEstoqueDaVariacao } from './estoque'
 import { MENSAGEM_CLIENTE_OBRIGATORIA } from '../../shared/clientes'
 import { emCentavos } from '../../shared/dinheiro'
@@ -53,6 +54,19 @@ function taxaELiquido(
   const feeAmount = (total * porcentagem) / 100
   return { feeAmount, netAmount: total - feeAmount }
 }
+
+const colunasDoPagamento = {
+  id: salePayments.id,
+  amount: salePayments.amount,
+  paymentMethod: salePayments.paymentMethod,
+  feePercentage: salePayments.feePercentage,
+  feeAmount: salePayments.feeAmount,
+  netAmount: salePayments.netAmount,
+  receivedAt: salePayments.receivedAt
+}
+
+/** Do mais antigo para o mais recente; no mesmo dia, na ordem de lançamento. */
+const ordemDosPagamentos = [asc(salePayments.receivedAt), asc(salePayments.id)]
 
 const somaDe = (pagamentos: SalePayment[], campo: 'amount' | 'feeAmount'): number =>
   pagamentos.reduce((soma, pagamento) => soma + pagamento[campo], 0)
@@ -102,21 +116,12 @@ export function repositorioDeVendas({ db, sqlite }: ConexaoBanco): RepositorioDe
     }
   }
 
-  /** Do mais antigo para o mais recente; no mesmo dia, na ordem de lançamento. */
   function pagamentosDa(saleId: number): SalePayment[] {
     return db
-      .select({
-        id: salePayments.id,
-        amount: salePayments.amount,
-        paymentMethod: salePayments.paymentMethod,
-        feePercentage: salePayments.feePercentage,
-        feeAmount: salePayments.feeAmount,
-        netAmount: salePayments.netAmount,
-        receivedAt: salePayments.receivedAt
-      })
+      .select(colunasDoPagamento)
       .from(salePayments)
       .where(eq(salePayments.saleId, saleId))
-      .orderBy(asc(salePayments.receivedAt), asc(salePayments.id))
+      .orderBy(...ordemDosPagamentos)
       .all() as SalePayment[]
   }
 
@@ -162,6 +167,11 @@ export function repositorioDeVendas({ db, sqlite }: ConexaoBanco): RepositorioDe
   }
 
   return {
+    /**
+     * Itens e pagamentos saem numa consulta cada, para todas as vendas. Buscar os de
+     * cada venda varria `sale_items` inteira por venda: com 5.000 vendas, a lista
+     * levava quase 2 s no SQLite real, com o processo principal parado.
+     */
     listarVendas() {
       const linhas = db
         .select({
@@ -186,27 +196,44 @@ export function repositorioDeVendas({ db, sqlite }: ConexaoBanco): RepositorioDe
         .orderBy(desc(sales.soldAt), desc(sales.id))
         .all()
 
-      return linhas.map((venda) => {
-        const itens = db
+      const itensPorVenda = agruparPor(
+        db
           .select({
-            id: saleItems.id,
-            variationId: saleItems.variationId,
-            variationIdentifier: productVariations.identifier,
-            productName: products.name,
-            quantity: saleItems.quantity,
-            unitPrice: saleItems.unitPrice,
-            unitCost: saleItems.unitCost
+            saleId: saleItems.saleId,
+            item: {
+              id: saleItems.id,
+              variationId: saleItems.variationId,
+              variationIdentifier: productVariations.identifier,
+              productName: products.name,
+              quantity: saleItems.quantity,
+              unitPrice: saleItems.unitPrice,
+              unitCost: saleItems.unitCost
+            }
           })
           .from(saleItems)
           .innerJoin(productVariations, eq(saleItems.variationId, productVariations.id))
           .innerJoin(products, eq(productVariations.productId, products.id))
-          .where(eq(saleItems.saleId, venda.id))
-          .all()
-        const pagamentos = pagamentosDa(venda.id)
+          .orderBy(asc(saleItems.id))
+          .all(),
+        (linha) => linha.saleId,
+        (linha) => linha.item
+      )
+      const pagamentosPorVenda = agruparPor(
+        db
+          .select({ saleId: salePayments.saleId, pagamento: colunasDoPagamento })
+          .from(salePayments)
+          .orderBy(...ordemDosPagamentos)
+          .all(),
+        (linha) => linha.saleId,
+        (linha) => linha.pagamento as SalePayment
+      )
+
+      return linhas.map((venda) => {
+        const pagamentos = pagamentosPorVenda.get(venda.id) ?? []
 
         return {
           ...venda,
-          items: itens,
+          items: itensPorVenda.get(venda.id) ?? [],
           payments: pagamentos,
           amountDue: quantoFalta(venda, pagamentos)
         }

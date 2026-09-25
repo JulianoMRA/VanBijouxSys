@@ -351,6 +351,35 @@ describe('vendas recebidas antes da migração 4', () => {
     expect(estado()).toEqual(antes)
   })
 
+  it('should_clear_the_old_receipt_when_the_sale_is_edited_back_to_a_receber', async () => {
+    // Editar a venda recebida pela 1.14 e escolher "A receber" mantinha o received_at:
+    // a venda voltava a dever tudo e continuava marcada como recebida naquele dia.
+    const id = await vendaAReceber()
+    simularRecebimentoAntigo(ambiente, id, recebimentoAntigo)
+
+    await ambiente.chamar('sales:update', edicao(id))
+
+    expect(await venda(id)).toMatchObject({
+      paymentMethod: 'areceber',
+      receivedAt: null,
+      netAmount: 86,
+      amountDue: 86
+    })
+  })
+
+  it('should_keep_the_payment_fees_when_undoing_an_old_receipt_on_a_sale_with_payments', async () => {
+    // Estado que a edição acima deixava: venda a receber com o received_at antigo e um
+    // pagamento com taxa. Desfazer o recebimento zerava a taxa e punha o líquido no
+    // total, e o lucro passava a ignorar a taxa do pagamento.
+    const id = await vendaAReceber()
+    await receber(ambiente, id, { amount: 50, feePercentage: 1 })
+    ambiente.banco.run('UPDATE sales SET received_at = ? WHERE id = ?', ['2026-09-22', id])
+
+    await ambiente.chamar('sales:unmarkAsReceived', id)
+
+    expect(await venda(id)).toMatchObject({ receivedAt: null, feeAmount: 0.5, netAmount: 85.5 })
+  })
+
   it('should_keep_an_old_receipt_in_the_cash_on_the_day_it_was_received', async () => {
     const id = await vendaAReceber({ soldAt: '2026-08-30' })
     simularRecebimentoAntigo(ambiente, id, recebimentoAntigo)

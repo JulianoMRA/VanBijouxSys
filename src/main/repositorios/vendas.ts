@@ -257,7 +257,11 @@ export function repositorioDeVendas({ db, sqlite }: ConexaoBanco): RepositorioDe
             feePercentage: dados.feePercentage,
             feeAmount: dados.feeAmount,
             netAmount: dados.netAmount,
-            soldAt: dados.soldAt
+            soldAt: dados.soldAt,
+            // Venda a receber não tem recebimento na própria linha (RN-17): voltar para
+            // "a receber" uma venda recebida pela 1.14 desfaz esse recebimento, senão
+            // ela devia tudo de novo e continuava marcada como recebida.
+            ...(dados.paymentMethod === 'areceber' ? { receivedAt: null } : {})
           })
           .where(eq(sales.id, dados.id))
           .run()
@@ -354,16 +358,24 @@ export function repositorioDeVendas({ db, sqlite }: ConexaoBanco): RepositorioDe
      * pagamento, senão as taxas dele sumiriam do lucro.
      */
     desmarcarRecebida(id) {
-      db.update(sales)
-        .set({
-          paymentMethod: 'areceber',
-          feePercentage: 0,
-          feeAmount: 0,
-          netAmount: sql`total_amount`,
-          receivedAt: null
-        })
-        .where(and(eq(sales.id, id), isNotNull(sales.receivedAt)))
-        .run()
+      const desmarcar = sqlite.transaction(() => {
+        const resultado = db
+          .update(sales)
+          .set({
+            paymentMethod: 'areceber',
+            feePercentage: 0,
+            feeAmount: 0,
+            netAmount: sql`total_amount`,
+            receivedAt: null
+          })
+          .where(and(eq(sales.id, id), isNotNull(sales.receivedAt)))
+          .run()
+        // Venda que já tinha pagamentos (a edição deixava esse estado até a 1.16) continua
+        // com as taxas deles descontadas do líquido, como manda a RN-17.
+        if (resultado.changes > 0) recalcularLiquidoDaVendaAReceber(id)
+      })
+
+      desmarcar()
     }
   }
 }

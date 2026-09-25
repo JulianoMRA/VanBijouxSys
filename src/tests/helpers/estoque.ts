@@ -57,21 +57,18 @@ export async function registrarVenda(
   itens: Array<{ variationId: number; quantity: number; unitCost?: number }>
 ): Promise<number> {
   const items = itens.map((i) => ({ unitPrice: 25, unitCost: 3, ...i }))
-  const total = items.reduce((s, i) => s + i.quantity * i.unitPrice, 0)
   const { id } = await ambiente.chamar<{ id: number }>('sales:create', {
     channel: 'WhatsApp',
     soldAt: '2026-09-10',
     paymentMethod: 'pix',
     feePercentage: 0,
-    feeAmount: 0,
-    netAmount: total,
     items
   })
   return Number(id)
 }
 
 /**
- * Venda com data, canal e pagamento escolhidos; o líquido padrão é o total sem taxa.
+ * Venda com data, canal e pagamento escolhidos; sem taxa, a não ser que venha a porcentagem.
  * A cliente padrão existe porque venda a receber sem nome é recusada (RN-16); para
  * uma venda sem cliente, passe `customerName: undefined`.
  */
@@ -81,15 +78,12 @@ export async function criarVenda(
     items: Array<{ variationId: number; quantity: number; unitPrice: number; unitCost: number }>
   }
 ): Promise<number> {
-  const total = dados.items.reduce((s, i) => s + i.quantity * i.unitPrice, 0)
   const { id } = await ambiente.chamar<{ id: number }>('sales:create', {
     channel: 'WhatsApp',
     customerName: 'Maria',
     soldAt: '2026-05-10',
     paymentMethod: 'dinheiro',
     feePercentage: 0,
-    feeAmount: 0,
-    netAmount: total - (dados.feeAmount ?? 0),
     ...dados
   })
   return Number(id)

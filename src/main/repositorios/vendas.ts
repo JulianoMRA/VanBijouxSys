@@ -41,6 +41,19 @@ export interface RepositorioDeVendas {
 const totalDe = (itens: ItemDaVenda[], campo: 'unitPrice' | 'unitCost'): number =>
   itens.reduce((soma, item) => soma + item.quantity * item[campo], 0)
 
+/**
+ * RN-20. Taxa e líquido da venda paga na hora, a partir do total e da porcentagem,
+ * como o pagamento de venda a receber já fazia (RN-17). A tela mandava os dois prontos,
+ * e uma conta errada nela iria direto para o Painel e o Caixa.
+ */
+function taxaELiquido(
+  total: number,
+  porcentagem: number
+): { feeAmount: number; netAmount: number } {
+  const feeAmount = (total * porcentagem) / 100
+  return { feeAmount, netAmount: total - feeAmount }
+}
+
 const somaDe = (pagamentos: SalePayment[], campo: 'amount' | 'feeAmount'): number =>
   pagamentos.reduce((soma, pagamento) => soma + pagamento[campo], 0)
 
@@ -206,6 +219,7 @@ export function repositorioDeVendas({ db, sqlite }: ConexaoBanco): RepositorioDe
      */
     criarVenda(dados) {
       exigirClienteNoAReceber(dados)
+      const total = totalDe(dados.items, 'unitPrice')
 
       const criar = sqlite.transaction(() => {
         const resultado = db
@@ -214,12 +228,11 @@ export function repositorioDeVendas({ db, sqlite }: ConexaoBanco): RepositorioDe
             channel: dados.channel,
             fairId: dados.fairId ?? null,
             customerName: dados.customerName,
-            totalAmount: totalDe(dados.items, 'unitPrice'),
+            totalAmount: total,
             totalCost: totalDe(dados.items, 'unitCost'),
             paymentMethod: dados.paymentMethod,
             feePercentage: dados.feePercentage,
-            feeAmount: dados.feeAmount,
-            netAmount: dados.netAmount,
+            ...taxaELiquido(total, dados.feePercentage),
             soldAt: dados.soldAt
           })
           .run()
@@ -240,6 +253,7 @@ export function repositorioDeVendas({ db, sqlite }: ConexaoBanco): RepositorioDe
      */
     atualizarVenda(dados) {
       exigirClienteNoAReceber(dados)
+      const total = totalDe(dados.items, 'unitPrice')
 
       const atualizar = sqlite.transaction(() => {
         conferirEdicaoComPagamentos(dados)
@@ -251,12 +265,11 @@ export function repositorioDeVendas({ db, sqlite }: ConexaoBanco): RepositorioDe
             channel: dados.channel,
             fairId: dados.fairId ?? null,
             customerName: dados.customerName,
-            totalAmount: totalDe(dados.items, 'unitPrice'),
+            totalAmount: total,
             totalCost: totalDe(dados.items, 'unitCost'),
             paymentMethod: dados.paymentMethod,
             feePercentage: dados.feePercentage,
-            feeAmount: dados.feeAmount,
-            netAmount: dados.netAmount,
+            ...taxaELiquido(total, dados.feePercentage),
             soldAt: dados.soldAt,
             // Venda a receber não tem recebimento na própria linha (RN-17): voltar para
             // "a receber" uma venda recebida pela 1.14 desfaz esse recebimento, senão

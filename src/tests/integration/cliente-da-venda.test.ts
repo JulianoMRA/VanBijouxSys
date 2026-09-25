@@ -34,8 +34,6 @@ const edicao = (id: number, dados: Record<string, unknown> = {}): Record<string,
   soldAt: '2026-09-20',
   paymentMethod: 'dinheiro',
   feePercentage: 0,
-  feeAmount: 0,
-  netAmount: 86,
   items: itens(),
   ...dados
 })

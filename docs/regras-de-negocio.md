@@ -230,6 +230,22 @@ o saldo do mês não bateria com o de "Tudo".
 período`), `src/tests/tela/caixa.test.tsx` e `src/tests/tela/painel.test.tsx`
   (`Painel: caixa do período`).
 
+### RN-20 — Taxa e líquido da venda são calculados pelo app
+
+Na venda paga na hora, a taxa em reais é o total vezes a porcentagem informada, e
+o líquido é o total menos a taxa. A conta é feita ao gravar e ao editar a venda,
+fora da tela: a tela mostra a mesma conta enquanto a venda é preenchida, mas o
+líquido gravado, que o Painel e o Caixa leem, não depende do que ela enviou. Na
+venda a receber, a taxa vem dos pagamentos (RN-17).
+
+Até a 1.16 a tela mandava a taxa e o líquido prontos, e o app gravava o que
+viesse: uma conta errada na tela iria direto para o faturamento e o caixa.
+
+- **Código**: `src/main/repositorios/vendas.ts` (`taxaELiquido`, em `criarVenda` e
+  `atualizarVenda`).
+- **Prova**: `src/tests/integration/vendas-payload.test.ts` (`vendas: taxa e
+líquido calculados no processo principal`).
+
 ---
 
 ## Preço

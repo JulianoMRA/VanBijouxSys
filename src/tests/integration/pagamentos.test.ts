@@ -48,8 +48,6 @@ const edicao = (id: number, dados: Record<string, unknown> = {}): Record<string,
   soldAt: '2026-09-21',
   paymentMethod: 'areceber',
   feePercentage: 0,
-  feeAmount: 0,
-  netAmount: 86,
   items: itens(),
   ...dados
 })
@@ -290,7 +288,7 @@ describe('venda com pagamento: editar e excluir', () => {
     const id = await vendaAReceber()
     await receber(ambiente, id, { amount: 50, feePercentage: 1 })
 
-    await ambiente.chamar('sales:update', edicao(id, { items: itens(100), netAmount: 100 }))
+    await ambiente.chamar('sales:update', edicao(id, { items: itens(100) }))
 
     const atual = await venda(id)
     expect(atual.amountDue).toBe(50)

@@ -284,8 +284,6 @@ export default function SaleForm({
         soldAt,
         paymentMethod,
         feePercentage: feePercent,
-        feeAmount,
-        netAmount,
         items: builtItems
       }
       if (sale) {

@@ -123,8 +123,6 @@ describe('sales:update', () => {
       soldAt: '2026-09-10',
       paymentMethod: 'pix',
       feePercentage: 0,
-      feeAmount: 0,
-      netAmount: 125,
       items: [{ variationId: variacao, quantity: 5, unitPrice: 25, unitCost: 3 }]
     })
 
@@ -140,8 +138,6 @@ describe('sales:update', () => {
       soldAt: '2026-09-10',
       paymentMethod: 'pix',
       feePercentage: 0,
-      feeAmount: 0,
-      netAmount: 300,
       items: [{ variationId: variacao, quantity: 12, unitPrice: 25, unitCost: 3 }]
     })
 

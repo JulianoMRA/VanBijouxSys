@@ -1,4 +1,5 @@
 import Modal from '../ui/Modal'
+import { calcSuggestedPrice } from '../../utils/pricing'
 import type { Product, ProductVariation } from '../../types'
 
 interface VariationDetailsModalProps {
@@ -20,7 +21,7 @@ export default function VariationDetailsModal({
   const hasMaterials = variation.insumos.length > 0
   const materialsForCalc = hasMaterials ? insumosCost : variation.costPrice
   const labor = variation.laborCost
-  const suggestedPrice = Math.ceil((materialsForCalc * 3 + labor) * 1.1 + 1)
+  const suggestedPrice = calcSuggestedPrice(materialsForCalc, labor)
   const profit = variation.salePrice - variation.costPrice
   const margin = variation.salePrice > 0 ? (profit / variation.salePrice) * 100 : 0
 

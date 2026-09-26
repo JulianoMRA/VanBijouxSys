@@ -196,6 +196,13 @@ O preço sugerido é `teto((materiais × 3 + mão de obra) × 1,10 + 1,00)`. Os 
 multiplicam o material, a mão de obra entra depois, a margem de 10% cobre o
 imprevisto e o arredondamento para cima fecha o preço num valor cheio.
 
+A conta é feita em centavos inteiros, com a base arredondada para centavos como a
+tela mostra os materiais. Até a 1.16 ela era feita em ponto flutuante, e 50 × 1,1
+dava 55,00000000000001: com materiais de R$ 10 e mão de obra de R$ 20, o preço
+saía R$ 57 em vez de R$ 56, e isso acontecia em mais da metade das bases redondas.
+A fórmula mora num lugar só; a calculadora do cadastro da variação e o "Ver
+detalhes" tinham cópias próprias.
+
 Aplicar o preço sugerido a uma variação muda **apenas** o preço de venda: não
 toca no custo, no estoque nem na receita. Esse foi o defeito mais caro do app
 (v1.11.0), em que aplicar preço apagava a receita da variação em silêncio.
@@ -203,8 +210,9 @@ toca no custo, no estoque nem na receita. Esse foi o defeito mais caro do app
 - **Código**: `src/renderer/src/utils/pricing.ts` (`calcSuggestedPrice`) e o
   canal `variations:setSalePrice` (`src/main/repositorios/produtos.ts`,
   `definirPrecoDeVenda`).
-- **Prova**: `src/tests/pricing.test.ts`,
-  `src/tests/tela/precificacao.test.tsx` (a tela só pode chamar
+- **Prova**: `src/tests/pricing.test.ts` (inclui todas as bases redondas até
+  2.000), `src/tests/tela/variacao.test.tsx` (`Preço sugerido nas telas de
+variação`), `src/tests/tela/precificacao.test.tsx` (a tela só pode chamar
   `setSalePrice`), `src/tests/integration/variations.test.ts`
   (`should_keep_the_recipe_so_later_production_still_deducts_insumos`) e
   `e2e/producao-e-venda.spec.ts` ("aplicar preço mantém a receita").

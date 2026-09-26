@@ -4,6 +4,7 @@ import InsumoForm from '../insumos/InsumoForm'
 import MotivoDoEstoqueDialog from './MotivoDoEstoqueDialog'
 import { opcoesComSelecionados } from '../../utils/arquivamento'
 import { precisaPerguntarMotivo } from '../../utils/ajuste-de-estoque'
+import { calcSuggestedPrice } from '../../utils/pricing'
 import {
   formatarNumeroParaCampo,
   interpretarNumero,
@@ -108,7 +109,7 @@ export default function VariationForm({
   const hasInsumos = insumoRows.length > 0 && insumoRows.some((r) => r.insumoId !== '')
   const materialsForCalc = hasInsumos ? insumosCost : (interpretarNumero(costPrice) ?? 0)
   const labor = interpretarNumero(laborCost) ?? 0
-  const suggestedPrice = Math.ceil((materialsForCalc * 3 + labor) * 1.1 + 1)
+  const suggestedPrice = calcSuggestedPrice(materialsForCalc, labor)
   const hasCalcResult = materialsForCalc > 0 || labor > 0
 
   function addInsumoRow(): void {
@@ -428,7 +429,9 @@ export default function VariationForm({
 
                 <div>
                   <div className="flex items-center justify-between mb-1">
-                    <label className="label mb-0">Mão de obra (R$)</label>
+                    <label className="label mb-0" htmlFor="variacao-mao-de-obra">
+                      Mão de obra (R$)
+                    </label>
                     <button
                       type="button"
                       onClick={saveDefaultLaborCost}
@@ -442,6 +445,7 @@ export default function VariationForm({
                       R$
                     </span>
                     <CampoNumerico
+                      id="variacao-mao-de-obra"
                       className="input pl-8"
                       placeholder="0,00"
                       value={laborCost}

@@ -20,7 +20,8 @@ import { join } from 'path'
 const ambiente = vi.hoisted(() => ({ pasta: '' }))
 
 vi.mock('electron', () => ({
-  app: { getPath: () => ambiente.pasta, relaunch: vi.fn(), exit: vi.fn() }
+  app: { getPath: () => ambiente.pasta, relaunch: vi.fn(), exit: vi.fn() },
+  dialog: { showErrorBox: vi.fn() }
 }))
 
 vi.mock('better-sqlite3', () => ({ default: vi.fn() }))
@@ -43,7 +44,8 @@ vi.mock('../../main/database/index', async () => {
   }
 })
 
-import { app } from 'electron'
+import { app, dialog } from 'electron'
+import { closeDatabase } from '../../main/database/index'
 import {
   backupAntesDaAtualizacao,
   backupDiario,
@@ -87,6 +89,7 @@ beforeEach(() => {
 })
 
 afterEach(() => {
+  vi.restoreAllMocks()
   rmSync(ambiente.pasta, { recursive: true, force: true })
 })
 
@@ -146,6 +149,55 @@ describe('restaurarBackup', () => {
     expect(existsSync(banco())).toBe(false)
     expect(app.relaunch).not.toHaveBeenCalled()
     expect(readdirSync(ambiente.pasta).filter((n) => n.includes('restaurando'))).toEqual([])
+  })
+
+  it('should_remove_the_wal_files_of_the_replaced_database', async () => {
+    // O WAL do banco antigo aplicado sobre o restaurado corromperia os dois.
+    const [maisAntigo] = dezDiasDeBackup()
+    writeFileSync(`${banco()}-wal`, 'wal antigo')
+    writeFileSync(`${banco()}-shm`, 'shm antigo')
+
+    await restaurarBackup(maisAntigo)
+
+    expect(existsSync(`${banco()}-wal`)).toBe(false)
+    expect(existsSync(`${banco()}-shm`)).toBe(false)
+  })
+
+  it('should_restart_with_the_current_data_when_the_swap_fails_after_closing', async () => {
+    // Com o banco já fechado, parar no erro deixava a janela aberta sem banco: toda
+    // tela falhava até ela fechar o app. Aqui o arquivo do banco vira uma pasta ao
+    // fechar, e a troca falha como falharia com o arquivo preso por outro programa.
+    const [maisAntigo] = dezDiasDeBackup()
+    vi.mocked(closeDatabase).mockImplementationOnce(() => {
+      rmSync(banco())
+      mkdirSync(banco())
+      writeFileSync(join(banco(), 'ocupado'), '')
+    })
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+
+    await restaurarBackup(maisAntigo)
+
+    expect(dialog.showErrorBox).toHaveBeenCalledTimes(1)
+    expect(app.relaunch).toHaveBeenCalledTimes(1)
+    expect(app.exit).toHaveBeenCalledWith(0)
+    expect(existsSync(maisAntigo)).toBe(true)
+    expect(readdirSync(ambiente.pasta).filter((n) => n.includes('restaurando'))).toEqual([])
+  })
+
+  it('should_restart_without_touching_any_file_when_closing_the_database_fails', async () => {
+    const [maisAntigo] = dezDiasDeBackup()
+    writeFileSync(`${banco()}-wal`, 'transações ainda não gravadas no banco')
+    vi.mocked(closeDatabase).mockImplementationOnce(() => {
+      throw new Error('database is locked')
+    })
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+
+    await restaurarBackup(maisAntigo)
+
+    expect(readFileSync(banco(), 'utf8')).toBe('banco atual')
+    expect(readFileSync(`${banco()}-wal`, 'utf8')).toBe('transações ainda não gravadas no banco')
+    expect(dialog.showErrorBox).toHaveBeenCalledTimes(1)
+    expect(app.relaunch).toHaveBeenCalledTimes(1)
   })
 })
 

@@ -1,5 +1,6 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import { CANAIS_IPC } from '../shared/ipc/channels'
+import type { ApiDoApp } from '../shared/ipc/api'
 import type { ErroDaTela } from '../shared/ipc/backup'
 import type { CreateFairInput, UpdateFairInput } from '../shared/ipc/feiras'
 import type { DashboardParams } from '../shared/ipc/painel'
@@ -37,7 +38,7 @@ async function invoke<T>(canal: string, ...args: unknown[]): Promise<T> {
   }
 }
 
-const api = {
+const api: ApiDoApp = {
   categories: {
     getAll: () => invoke(CANAIS_IPC.categories.getAll)
   },

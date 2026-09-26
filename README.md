@@ -22,6 +22,7 @@ A distribuição usa **electron-updater** contra as releases do GitHub, com **el
 src/
 ├── shared/ipc/                 # Contrato dos canais: nomes e schemas zod
 │   ├── channels.ts             # CANAIS_IPC (sem runtime: o preload é sandboxed)
+│   ├── api.ts                  # ApiDoApp: o window.api, conferido contra o preload
 │   ├── comum.ts                # id e data, usados por vários domínios
 │   └── <dominio>.ts            # produtos, vendas, insumos, caixa, feiras, painel, backup
 ├── main/                       # Processo principal (Electron)
@@ -148,7 +149,7 @@ O preload importa apenas `CANAIS_IPC`: com `sandbox: true` ele não carrega zod,
 
 ## Manutenção
 
-**Adicionar um domínio novo (ex.: despesas recorrentes).** Na ordem: nomes dos canais em `src/shared/ipc/channels.ts`; schemas e tipos em `src/shared/ipc/<dominio>.ts`; teste de payload em `src/tests/integration/<dominio>-payload.test.ts` **antes** da implementação; regra e SQL em `src/main/repositorios/<dominio>.ts`; registro dos canais em `src/main/ipc/<dominio>.ts` e em `ipc/index.ts`, com o harness de teste (`src/tests/helpers/ambiente-ipc.ts`) registrando o mesmo domínio; API no `src/preload/index.ts`; página em `src/renderer/src/pages/` e rota no `App.tsx`. Se precisar de tabela, ela entra numa migração nova em `migrations.ts` e no `schema.ts`; os testes a recebem pelas migrações.
+**Adicionar um domínio novo (ex.: despesas recorrentes).** Na ordem: nomes dos canais em `src/shared/ipc/channels.ts`; schemas e tipos em `src/shared/ipc/<dominio>.ts`; teste de payload em `src/tests/integration/<dominio>-payload.test.ts` **antes** da implementação; regra e SQL em `src/main/repositorios/<dominio>.ts`; registro dos canais em `src/main/ipc/<dominio>.ts` e em `ipc/index.ts`, com o harness de teste (`src/tests/helpers/ambiente-ipc.ts`) registrando o mesmo domínio; assinatura em `src/shared/ipc/api.ts` e implementação no `src/preload/index.ts`, que o compilador confere uma contra a outra; página em `src/renderer/src/pages/` e rota no `App.tsx`. Se precisar de tabela, ela entra numa migração nova em `migrations.ts` e no `schema.ts`; os testes a recebem pelas migrações.
 
 **Regras de negócio.** As dezessete regras que o app precisa respeitar estão em [docs/regras-de-negocio.md](docs/regras-de-negocio.md), numeradas (RN-01…RN-17), com o código e o teste de cada uma. Os comentários no código citam o número. Mudou a regra, o documento muda junto.
 

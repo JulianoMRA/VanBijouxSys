@@ -14,6 +14,7 @@ import type { LucideIcon } from 'lucide-react'
 import SystemPanel from './SystemPanel'
 import { EVENTO_INSUMOS_ALTERADOS } from '../../utils/eventos'
 import { insumosAtivos } from '../../utils/arquivamento'
+import { precisaDeReposicao } from '../../utils/situacao-do-insumo'
 
 const navItems: { to: string; label: string; Icon: LucideIcon }[] = [
   { to: '/', label: 'Dashboard', Icon: LayoutDashboard },
@@ -41,11 +42,7 @@ export default function Sidebar(): JSX.Element {
   const contarReposicao = useCallback(async (): Promise<void> => {
     try {
       const insumos = await window.api.insumos.getAll()
-      setInsumosParaRepor(
-        insumosAtivos(insumos).filter(
-          (i) => i.stockQuantity <= 0 || (i.minimumStock > 0 && i.stockQuantity < i.minimumStock)
-        ).length
-      )
+      setInsumosParaRepor(insumosAtivos(insumos).filter(precisaDeReposicao).length)
     } catch {
       setInsumosParaRepor(0)
     }

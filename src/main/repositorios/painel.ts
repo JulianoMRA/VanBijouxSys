@@ -138,7 +138,7 @@ export function repositorioDoPainel({ sqlite }: ConexaoBanco): RepositorioDoPain
             COALESCE(SUM(s.total_cost), 0)                AS totalCost,
             COALESCE(SUM(s.net_amount - s.total_cost), 0) AS totalProfit,
             COUNT(s.id)                                    AS totalSales,
-            COALESCE(AVG(s.net_amount), 0)                AS avgTicket
+            COALESCE(AVG(s.total_amount), 0)              AS avgTicket
            FROM sales s
            WHERE 1=1${sSoldAtClause}`
         )
@@ -171,7 +171,7 @@ export function repositorioDoPainel({ sqlite }: ConexaoBanco): RepositorioDoPain
               COALESCE(SUM(s.total_cost), 0)                AS totalCost,
               COALESCE(SUM(s.net_amount - s.total_cost), 0) AS totalProfit,
               COUNT(s.id)                                    AS totalSales,
-              COALESCE(AVG(s.net_amount), 0)                AS avgTicket
+              COALESCE(AVG(s.total_amount), 0)              AS avgTicket
              FROM sales s
              WHERE 1=1${prevSoldAtClause}`
           )

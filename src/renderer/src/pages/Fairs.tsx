@@ -313,7 +313,9 @@ function CardRealizada({
   const extras = fair.additionalCosts.reduce((s, c) => s + c.amount, 0)
   const custo = fair.enrollmentCost + extras
   const faturado = fairSales.reduce((s, sale) => s + sale.totalAmount, 0)
-  const lucroBruto = fairSales.reduce((s, sale) => s + (sale.totalAmount - sale.totalCost), 0)
+  // Lucro sem a taxa do cartão, como no Painel e na lista de Vendas: com o total bruto,
+  // a mesma feira aparecia com resultado maior aqui do que no Painel.
+  const lucroBruto = fairSales.reduce((s, sale) => s + (sale.netAmount - sale.totalCost), 0)
   const liquido = lucroBruto - custo
   const temVendas = fairSales.length > 0
 
@@ -393,7 +395,7 @@ function CardRealizada({
                     {formatCurrency(sale.totalAmount)}
                   </td>
                   <td className="py-2.5 text-right tabular-nums text-sage-500">
-                    {formatCurrency(sale.totalAmount - sale.totalCost)}
+                    {formatCurrency(sale.netAmount - sale.totalCost)}
                   </td>
                 </tr>
               ))}

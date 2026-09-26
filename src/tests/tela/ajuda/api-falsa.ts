@@ -1,5 +1,6 @@
 import { vi } from 'vitest'
 import type { Insumo } from '../../../shared/ipc/insumos'
+import type { DashboardStats } from '../../../shared/ipc/painel'
 import type { ProductVariation } from '../../../shared/ipc/produtos'
 
 /**
@@ -28,7 +29,34 @@ export interface ApiFalsa {
     deletePayment: ReturnType<typeof vi.fn>
   }
   fairs: { getAll: ReturnType<typeof vi.fn> }
+  dashboard: { getStats: ReturnType<typeof vi.fn> }
 }
+
+/** Painel de um período sem venda nenhuma; o teste sobrescreve o que precisa. */
+export const painelFalso = (dados: Partial<DashboardStats> = {}): DashboardStats => ({
+  overview: {
+    totalRevenue: 0,
+    totalNetRevenue: 0,
+    totalCost: 0,
+    totalProfit: 0,
+    totalSales: 0,
+    avgTicket: 0,
+    totalReceivable: 0
+  },
+  previousOverview: null,
+  revenueByMonth: [],
+  salesByChannel: [],
+  salesByCategory: [],
+  salesByFair: [],
+  topVariations: [],
+  outOfStock: [],
+  lowStock: [],
+  outOfInsumos: [],
+  lowInsumos: [],
+  cashFlow: [],
+  cashSummary: { openingBalance: 0, totalIncome: 0, totalExpenses: 0, currentBalance: 0 },
+  ...dados
+})
 
 export function instalarApiFalsa(): ApiFalsa {
   const api: ApiFalsa = {
@@ -51,7 +79,8 @@ export function instalarApiFalsa(): ApiFalsa {
       registerPayment: vi.fn(async () => ({ id: 1 })),
       deletePayment: vi.fn(async () => ({ success: true }))
     },
-    fairs: { getAll: vi.fn(async () => []) }
+    fairs: { getAll: vi.fn(async () => []) },
+    dashboard: { getStats: vi.fn(async () => painelFalso()) }
   }
   Object.defineProperty(window, 'api', { value: api, configurable: true, writable: true })
   return api

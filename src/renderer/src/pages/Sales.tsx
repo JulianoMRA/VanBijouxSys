@@ -6,7 +6,7 @@ import ConfirmDialog from '../components/ui/ConfirmDialog'
 import ActionMenu from '../components/ui/ActionMenu'
 import Toast from '../components/ui/Toast'
 import { useToast } from '../hooks/useToast'
-import { formatCurrency, formatDate } from '../utils/format'
+import { formatCurrency, formatDate, partesDaData, SEM_DATA } from '../utils/format'
 import { PAYMENT_LABELS } from '../utils/cash-calculations'
 import { vendaCorrespondeABusca } from '../utils/busca-de-vendas'
 import { nomesDeClientes } from '../utils/sugestoes-de-clientes'
@@ -261,7 +261,7 @@ export default function Sales(): JSX.Element {
               const isExpanded = expandedSale === sale.id
               const profit = sale.netAmount - sale.totalCost
               const pendente = estaPendente(sale)
-              const [ano, mes, dia] = sale.soldAt.split('-')
+              const data = partesDaData(sale.soldAt)
 
               const acoes = [
                 ...(pendente
@@ -299,10 +299,17 @@ export default function Sales(): JSX.Element {
                     onClick={() => setExpandedSale(isExpanded ? null : sale.id)}
                   >
                     <div className="w-[74px] shrink-0">
-                      <p className="text-body font-semibold tabular-nums text-ink-900">
-                        {dia}/{mes}
-                      </p>
-                      <p className="mt-px text-meta tabular-nums text-ink-300">{ano}</p>
+                      {data ? (
+                        <>
+                          <p className="text-body font-semibold tabular-nums text-ink-900">
+                            {data.dia}/{data.mes}
+                          </p>
+                          <p className="mt-px text-meta tabular-nums text-ink-300">{data.ano}</p>
+                        </>
+                      ) : (
+                        // Venda antiga gravada sem data: editar e informar o dia resolve.
+                        <p className="text-aux font-semibold text-honey-500">{SEM_DATA}</p>
+                      )}
                     </div>
 
                     <div className="min-w-0 flex-1">

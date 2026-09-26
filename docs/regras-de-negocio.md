@@ -275,13 +275,22 @@ nos canais, e todo filtro de período usa `date(...)` para o registro antigo cai
 no período certo. Data da venda e da despesa são obrigatórias: sem elas o
 registro some dos relatórios por mês.
 
+Até a 1.13 (vendas) e a 1.14 (despesas), apagar a data e salvar gravava o campo
+vazio, e essas linhas continuam no banco: a data real não dá para recuperar. Elas
+ficam fora de todo período com data e aparecem só em "Tudo", onde as telas mostram
+"Sem data" — na lista de Vendas, no Caixa e nos gráficos por mês do Painel, que
+antes quebravam. Editar a venda e informar o dia resolve.
+
 - **Código**: `src/shared/ipc/comum.ts` (`dataIsoSchema` aceita os dois;
-  `dataSimplesSchema`, só data, para o período do painel) e os `date(...)` em
-  `repositorios/painel.ts` e `repositorios/caixa.ts`.
+  `dataSimplesSchema`, só data, para o período do painel), os `date(...)` em
+  `repositorios/painel.ts` e `repositorios/caixa.ts`, e
+  `src/renderer/src/utils/format.ts` (`partesDaData`, `formatDate`, `SEM_DATA`).
 - **Prova**: `src/tests/integration/dashboard.test.ts` (`dashboard: data com hora
-em sold_at`, `dashboard: bordas do período`),
-  `src/tests/integration/vendas-payload.test.ts` e
-  `src/tests/integration/datas-de-criacao.test.ts`.
+em sold_at`, `dashboard: bordas do período`, `dashboard: venda antiga sem data`),
+  `src/tests/integration/vendas-payload.test.ts`,
+  `src/tests/integration/datas-de-criacao.test.ts`, `src/tests/format.test.ts`,
+  `src/tests/tela/painel.test.tsx` e `src/tests/tela/vendas.test.tsx`
+  (`Vendas: data de venda antiga`).
 
 ---
 

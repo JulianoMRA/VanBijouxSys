@@ -10,7 +10,7 @@ import {
   Cell
 } from 'recharts'
 import { ChevronDown, ChevronUp } from 'lucide-react'
-import { formatCurrency } from '../utils/format'
+import { formatCurrency, SEM_DATA } from '../utils/format'
 import {
   buildInsights,
   calcDelta,
@@ -305,7 +305,10 @@ function FairCard({ fair }: { fair: DashboardStats['salesByFair'][number] }): JS
               />
               <Bar dataKey="revenue" name="Faturamento" radius={[4, 4, 0, 0]}>
                 {fair.dailyBreakdown.map((d) => (
-                  <Cell key={d.day} fill={d.day === melhorDia?.day ? '#8b3a5c' : '#dcbccb'} />
+                  <Cell
+                    key={d.day ?? SEM_DATA}
+                    fill={d.day === melhorDia?.day ? '#8b3a5c' : '#dcbccb'}
+                  />
                 ))}
               </Bar>
             </BarChart>

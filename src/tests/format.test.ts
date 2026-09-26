@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest'
-import { formatDate, formatDateRange, calcSaleTotals } from '../renderer/src/utils/format'
+import {
+  formatDate,
+  formatDateRange,
+  calcSaleTotals,
+  partesDaData
+} from '../renderer/src/utils/format'
 
 describe('formatDate', () => {
   it('should format ISO date string to dd/mm/yyyy', () => {
@@ -12,6 +17,26 @@ describe('formatDate', () => {
 
   it('should handle end-of-year dates', () => {
     expect(formatDate('2024-12-31')).toBe('31/12/2024')
+  })
+
+  it('should_ignore_the_time_saved_by_old_versions', () => {
+    // RN-14: registros gravados até a v1.12.1 guardam a hora que o SQLite escreveu.
+    expect(formatDate('2026-03-10 14:30:00')).toBe('10/03/2026')
+  })
+
+  it('should_say_sem_data_for_a_record_saved_without_date', () => {
+    // Até a 1.13 (vendas) e a 1.14 (despesas), apagar a data e salvar gravava vazio.
+    expect(formatDate('')).toBe('Sem data')
+  })
+})
+
+describe('partesDaData', () => {
+  it('should_split_day_month_and_year_ignoring_the_time', () => {
+    expect(partesDaData('2026-03-10 14:30:00')).toEqual({ dia: '10', mes: '03', ano: '2026' })
+  })
+
+  it('should_return_null_for_a_record_saved_without_date', () => {
+    expect(partesDaData('')).toBeNull()
   })
 })
 

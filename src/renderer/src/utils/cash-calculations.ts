@@ -1,5 +1,6 @@
 import { diaLocal } from '../../../shared/datas'
 import { emCentavos } from '../../../shared/dinheiro'
+import { formatDate } from './format'
 import type { CashExpense, Fair, PaymentMethod, Sale, SalePayment } from '../types'
 
 export type PeriodKey = 'mes' | '3meses' | '6meses' | 'ano' | 'tudo' | 'custom'
@@ -103,9 +104,21 @@ function withinRange(day: string, range: DateRange | null): boolean {
   return day >= range.startDate && day <= range.endDate
 }
 
+/** Quais dias entram num recorte do caixa: os do período, ou os de antes dele. */
+type FiltroDeDia = (dia: string) => boolean
+
+const dentroDo =
+  (range: DateRange | null): FiltroDeDia =>
+  (dia) =>
+    withinRange(dia, range)
+
+function vendasNoCaixa(sales: Sale[], entra: FiltroDeDia): Sale[] {
+  return sales.filter((s) => s.paymentMethod !== 'areceber' && entra(cashDateOf(s)))
+}
+
 /** A venda "a receber" não compõe o caixa: o que entra são os pagamentos dela. */
 export function filterCashSales(sales: Sale[], range: DateRange | null): Sale[] {
-  return sales.filter((s) => s.paymentMethod !== 'areceber' && withinRange(cashDateOf(s), range))
+  return vendasNoCaixa(sales, dentroDo(range))
 }
 
 /** Um pagamento de venda a receber, com a venda de onde ele veio. */
@@ -114,17 +127,25 @@ export interface PagamentoNoCaixa {
   payment: SalePayment
 }
 
-/** RN-17. Cada pagamento entra no caixa no dia em que foi recebido. */
-export function filterCashPayments(sales: Sale[], range: DateRange | null): PagamentoNoCaixa[] {
+function pagamentosNoCaixa(sales: Sale[], entra: FiltroDeDia): PagamentoNoCaixa[] {
   return sales.flatMap((sale) =>
     sale.payments
-      .filter((payment) => withinRange(payment.receivedAt.slice(0, 10), range))
+      .filter((payment) => entra(payment.receivedAt.slice(0, 10)))
       .map((payment) => ({ sale, payment }))
   )
 }
 
+/** RN-17. Cada pagamento entra no caixa no dia em que foi recebido. */
+export function filterCashPayments(sales: Sale[], range: DateRange | null): PagamentoNoCaixa[] {
+  return pagamentosNoCaixa(sales, dentroDo(range))
+}
+
+function despesasNoCaixa(expenses: CashExpense[], entra: FiltroDeDia): CashExpense[] {
+  return expenses.filter((e) => entra(e.expenseDate))
+}
+
 export function filterExpenses(expenses: CashExpense[], range: DateRange | null): CashExpense[] {
-  return expenses.filter((e) => withinRange(e.expenseDate, range))
+  return despesasNoCaixa(expenses, dentroDo(range))
 }
 
 export function buildFairCostSub(fair: Fair): string {
@@ -139,8 +160,7 @@ export function buildFairCostSub(fair: Fair): string {
   return partes.join(' · ') || 'Sem detalhes'
 }
 
-/** Feira sem custo nenhum não vira linha de despesa. */
-export function buildFairExpenses(fairs: Fair[], range: DateRange | null): FairExpenseRow[] {
+function custosDeFeira(fairs: Fair[], entra: FiltroDeDia): FairExpenseRow[] {
   return fairs
     .flatMap((f) => {
       const total = f.enrollmentCost + f.additionalCosts.reduce((s, c) => s + c.amount, 0)
@@ -149,28 +169,82 @@ export function buildFairExpenses(fairs: Fair[], range: DateRange | null): FairE
         { fairId: f.id, date: f.date, label: f.name, sub: buildFairCostSub(f), amount: total }
       ]
     })
-    .filter((row) => withinRange(row.date, range))
+    .filter((row) => entra(row.date))
 }
 
-export function calcCashSummary(input: {
-  openingBalance: number
+/** Feira sem custo nenhum não vira linha de despesa. */
+export function buildFairExpenses(fairs: Fair[], range: DateRange | null): FairExpenseRow[] {
+  return custosDeFeira(fairs, dentroDo(range))
+}
+
+interface MovimentosDoCaixa {
   sales: Sale[]
   payments: PagamentoNoCaixa[]
   expenses: CashExpense[]
   fairExpenses: FairExpenseRow[]
-}): { totalIncome: number; totalExpenses: number; currentBalance: number } {
-  const totalIncome =
-    input.sales.reduce((s, sale) => s + sale.netAmount, 0) +
-    input.payments.reduce((s, { payment }) => s + payment.netAmount, 0)
-  const totalExpenses =
-    input.expenses.reduce((s, e) => s + e.amount, 0) +
-    input.fairExpenses.reduce((s, fe) => s + fe.amount, 0)
+}
 
+function totais(movimentos: MovimentosDoCaixa): { entradas: number; saidas: number } {
   return {
-    totalIncome,
-    totalExpenses,
-    currentBalance: input.openingBalance + totalIncome - totalExpenses
+    entradas:
+      movimentos.sales.reduce((s, sale) => s + sale.netAmount, 0) +
+      movimentos.payments.reduce((s, { payment }) => s + payment.netAmount, 0),
+    saidas:
+      movimentos.expenses.reduce((s, e) => s + e.amount, 0) +
+      movimentos.fairExpenses.reduce((s, fe) => s + fe.amount, 0)
   }
+}
+
+/**
+ * RN-18. O que entrou menos o que saiu antes do começo do período, pelas mesmas
+ * regras do caixa; somado à abertura, é o saldo com que o período começa. Registro
+ * antigo gravado sem data conta aqui: não cai em período nenhum com data, mas o
+ * dinheiro dele existiu, e sem ele o saldo do mês não bateria com o de "Tudo".
+ */
+export function movimentoAntesDoPeriodo(
+  range: DateRange | null,
+  dados: { sales: Sale[]; expenses: CashExpense[]; fairs: Fair[] }
+): number {
+  if (!range) return 0
+  const antes: FiltroDeDia = (dia) => dia < range.startDate
+  const { entradas, saidas } = totais({
+    sales: vendasNoCaixa(dados.sales, antes),
+    payments: pagamentosNoCaixa(dados.sales, antes),
+    expenses: despesasNoCaixa(dados.expenses, antes),
+    fairExpenses: custosDeFeira(dados.fairs, antes)
+  })
+  return entradas - saidas
+}
+
+/**
+ * RN-18. O saldo com que o período começa, o que entrou e saiu nele e o saldo com
+ * que termina. `saldoAnterior` é o movimento de antes do período
+ * (`movimentoAntesDoPeriodo`): sem ele, o "Mês" somava só a abertura cadastrada e
+ * ignorava todos os meses anteriores.
+ */
+export function calcCashSummary(
+  input: MovimentosDoCaixa & { openingBalance: number; saldoAnterior?: number }
+): { startBalance: number; totalIncome: number; totalExpenses: number; currentBalance: number } {
+  const { entradas, saidas } = totais(input)
+  const startBalance = input.openingBalance + (input.saldoAnterior ?? 0)
+  return {
+    startBalance,
+    totalIncome: entradas,
+    totalExpenses: saidas,
+    currentBalance: startBalance + entradas - saidas
+  }
+}
+
+/** RN-18. Sem período, o primeiro número do caixa é a abertura cadastrada. */
+export function rotuloDoSaldoInicial(range: DateRange | null): string {
+  return range ? 'Saldo inicial' : 'Abertura'
+}
+
+/** RN-18. O saldo do fim do período só é o atual quando o período chega até hoje. */
+export function rotuloDoSaldoFinal(range: DateRange | null, hoje = new Date()): string {
+  return range && range.endDate < diaLocal(hoje)
+    ? `Saldo em ${formatDate(range.endDate)}`
+    : 'Saldo atual'
 }
 
 function saleLabel(sale: Sale): string {

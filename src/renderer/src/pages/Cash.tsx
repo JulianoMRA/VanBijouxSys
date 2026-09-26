@@ -16,7 +16,10 @@ import {
   filterCashPayments,
   filterCashSales,
   filterExpenses,
-  resolveDateRange
+  movimentoAntesDoPeriodo,
+  resolveDateRange,
+  rotuloDoSaldoFinal,
+  rotuloDoSaldoInicial
 } from '../utils/cash-calculations'
 import type { PeriodKey, TransactionRow } from '../utils/cash-calculations'
 import type { Sale, CashExpense, ExpenseCategory, Fair } from '../types'
@@ -114,8 +117,15 @@ export default function Cash(): JSX.Element {
     [fairs, dateRange]
   )
 
-  const { totalIncome, totalExpenses, currentBalance } = calcCashSummary({
+  // RN-18: o período começa no saldo de antes dele, não na abertura cadastrada.
+  const saldoAnterior = useMemo(
+    () => movimentoAntesDoPeriodo(dateRange, { sales, expenses, fairs }),
+    [dateRange, sales, expenses, fairs]
+  )
+
+  const { startBalance, totalIncome, totalExpenses, currentBalance } = calcCashSummary({
     openingBalance,
+    saldoAnterior,
     sales: filteredSales,
     payments: filteredPayments,
     expenses: filteredExpenses,
@@ -291,16 +301,22 @@ export default function Cash(): JSX.Element {
 
         <div className="mb-4 grid grid-cols-4 gap-3.5">
           <div className="card px-[22px] py-[18px]">
-            <p className="label">Abertura</p>
+            <p className="label">{rotuloDoSaldoInicial(dateRange)}</p>
             <p className="text-[22px] font-semibold tabular-nums text-ink-800">
-              {formatCurrency(openingBalance)}
+              {formatCurrency(startBalance)}
             </p>
-            <button
-              className="mt-1.5 text-aux font-semibold text-wine-500 hover:text-wine-600"
-              onClick={abrirSaldoDeAbertura}
-            >
-              Alterar
-            </button>
+            {dateRange ? (
+              <p className="mt-1.5 text-aux text-ink-400">
+                antes de {formatDate(dateRange.startDate)}
+              </p>
+            ) : (
+              <button
+                className="mt-1.5 text-aux font-semibold text-wine-500 hover:text-wine-600"
+                onClick={abrirSaldoDeAbertura}
+              >
+                Alterar
+              </button>
+            )}
           </div>
 
           <div className="card px-[22px] py-[18px]">
@@ -326,7 +342,7 @@ export default function Cash(): JSX.Element {
           </div>
 
           <div className="rounded-card border border-ink-900 bg-ink-900 px-[22px] py-[18px]">
-            <p className="label text-ink-100">Saldo atual</p>
+            <p className="label text-ink-100">{rotuloDoSaldoFinal(dateRange)}</p>
             <p
               className={`text-[22px] font-semibold tabular-nums ${
                 currentBalance >= 0 ? 'text-bone-50' : 'text-clay-100'
@@ -334,7 +350,9 @@ export default function Cash(): JSX.Element {
             >
               {formatCurrency(currentBalance)}
             </p>
-            <p className="mt-1.5 text-aux text-ink-100">abertura + entradas − saídas</p>
+            <p className="mt-1.5 text-aux text-ink-100">
+              {dateRange ? 'saldo inicial + entradas − saídas' : 'abertura + entradas − saídas'}
+            </p>
           </div>
         </div>
 

@@ -186,6 +186,33 @@ leva os pagamentos junto.
   `src/tests/tela/vendas.test.tsx` (`Vendas: pagamento parcial`) e
   `src/tests/tela/venda.test.tsx` (`SaleForm: venda com pagamento registrado`).
 
+### RN-18 — O saldo do caixa conta todo o histórico, em qualquer período
+
+O saldo de abertura é o que havia em caixa antes de a Van usar o app. Num
+período (Mês, 3M, 6M, Ano, Personalizado), o caixa começa no **saldo inicial**:
+a abertura mais tudo o que entrou e saiu antes do primeiro dia do período, pelas
+mesmas regras das entradas (RN-08, RN-17) e das saídas, custos de feira
+incluídos. Saldo inicial + entradas − saídas dá o saldo do fim do período, que é
+o **saldo atual** quando o período chega até hoje; num personalizado que terminou
+antes, ele aparece como "Saldo em DD/MM/AAAA". Em "Tudo" o primeiro número é a
+própria abertura.
+
+Até a 1.16 o período somava só a abertura cadastrada: em setembro, com agosto
+movimentado, o "Mês" mostrava como saldo atual a abertura mais o que entrou em
+setembro, e a coluna de saldo de cada linha herdava o erro. Registro antigo sem
+data (RN-14) conta como anterior a qualquer período: o dinheiro existiu, e sem ele
+o saldo do mês não bateria com o de "Tudo".
+
+- **Código**: `src/renderer/src/utils/cash-calculations.ts`
+  (`movimentoAntesDoPeriodo`, `calcCashSummary`, `rotuloDoSaldoInicial`,
+  `rotuloDoSaldoFinal`), usado pela tela de Caixa, e `repositorios/painel.ts`
+  (`startBalance` do caixa do período).
+- **Prova**: `src/tests/cash-calculations.test.ts` (`movimentoAntesDoPeriodo`,
+  `saldo do caixa em qualquer período`, `rótulos do saldo`),
+  `src/tests/integration/dashboard.test.ts` (`dashboard: saldo do caixa no
+período`), `src/tests/tela/caixa.test.tsx` e `src/tests/tela/painel.test.tsx`
+  (`Painel: caixa do período`).
+
 ---
 
 ## Preço

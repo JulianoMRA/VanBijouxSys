@@ -394,13 +394,38 @@ export function repositorioDoPainel({ sqlite }: ConexaoBanco): RepositorioDoPain
         )
         .get(...dateParams) as { total: number }
 
+      // RN-18: o caixa do período começa na abertura mais tudo o que entrou e saiu antes
+      // dele, pelas mesmas regras das entradas e saídas acima. Registro antigo sem data
+      // conta como anterior: não cai em período nenhum com data, mas o dinheiro existiu,
+      // e sem ele o saldo do mês não bateria com o de "Tudo".
+      const antesDoPeriodo = fromDate
+        ? (
+            sqlite
+              .prepare(
+                `SELECT
+                   (SELECT COALESCE(SUM(net_amount), 0) FROM sales
+                    WHERE payment_method != 'areceber'
+                      AND COALESCE(date(COALESCE(received_at, sold_at)), '') < ?)
+                   + (SELECT COALESCE(SUM(net_amount), 0) FROM sale_payments
+                      WHERE COALESCE(date(received_at), '') < ?)
+                   - (SELECT COALESCE(SUM(amount), 0) FROM cash_expenses
+                      WHERE COALESCE(date(expense_date), '') < ?)
+                   - (SELECT COALESCE(SUM(f.enrollment_cost + COALESCE((SELECT SUM(fac.amount) FROM fair_additional_costs fac WHERE fac.fair_id = f.id), 0)), 0)
+                      FROM fairs f WHERE COALESCE(date(f.date), '') < ?) AS saldo`
+              )
+              .get(fromDate, fromDate, fromDate, fromDate) as { saldo: number }
+          ).saldo
+        : 0
+
       const totalExpenses = cashExpensesTotal.total + fairCostsTotal.total
       const openingBalance = cashSettings?.opening_balance ?? 0
+      const startBalance = openingBalance + antesDoPeriodo
       const cashSummary = {
         openingBalance,
+        startBalance,
         totalIncome: cashIncomeTotal.total,
         totalExpenses,
-        currentBalance: openingBalance + cashIncomeTotal.total - totalExpenses
+        currentBalance: startBalance + cashIncomeTotal.total - totalExpenses
       }
 
       return {

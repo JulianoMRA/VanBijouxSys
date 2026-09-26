@@ -9,6 +9,7 @@ import {
   variationInsumos
 } from '../database/schema'
 import { ErroDeNegocio } from '../ipc/mensagens'
+import { agruparPor } from './agrupar'
 import { movimentarEstoqueDaVariacao, validarEstoqueDePecas } from './estoque'
 import type {
   Category,
@@ -58,6 +59,10 @@ export function repositorioDeProdutos({ db, sqlite }: ConexaoBanco): Repositorio
       return db.select().from(categories).orderBy(categories.name).all()
     },
 
+    /**
+     * Variações e receitas saem numa consulta cada, para todos os produtos, em vez de
+     * uma consulta por produto e outra por variação.
+     */
     listarProdutos() {
       const linhas = db
         .select({
@@ -74,33 +79,36 @@ export function repositorioDeProdutos({ db, sqlite }: ConexaoBanco): Repositorio
         .orderBy(products.name)
         .all()
 
-      return linhas.map((produto) => {
-        const variacoes = db
-          .select()
-          .from(productVariations)
-          .where(eq(productVariations.productId, produto.id))
-          .all()
-        const comReceita = variacoes.map((v) => {
-          const receita = db
-            .select({
-              id: variationInsumos.id,
-              variationId: variationInsumos.variationId,
-              insumoId: variationInsumos.insumoId,
-              insumoName: insumos.name,
-              unit: insumos.unit,
-              costPerUnit: insumos.costPerUnit,
-              quantity: variationInsumos.quantity,
-              // A tela marca as variações que dependem de insumo arquivado.
-              archivedAt: insumos.archivedAt
-            })
-            .from(variationInsumos)
-            .innerJoin(insumos, eq(variationInsumos.insumoId, insumos.id))
-            .where(eq(variationInsumos.variationId, v.id))
-            .all()
-          return { ...v, insumos: receita }
-        })
-        return { ...produto, variations: comReceita }
-      }) as Product[]
+      const receitas = agruparPor(
+        db
+          .select({
+            id: variationInsumos.id,
+            variationId: variationInsumos.variationId,
+            insumoId: variationInsumos.insumoId,
+            insumoName: insumos.name,
+            unit: insumos.unit,
+            costPerUnit: insumos.costPerUnit,
+            quantity: variationInsumos.quantity,
+            // A tela marca as variações que dependem de insumo arquivado.
+            archivedAt: insumos.archivedAt
+          })
+          .from(variationInsumos)
+          .innerJoin(insumos, eq(variationInsumos.insumoId, insumos.id))
+          .orderBy(variationInsumos.id)
+          .all(),
+        (item) => item.variationId,
+        (item) => item
+      )
+      const variacoes = agruparPor(
+        db.select().from(productVariations).orderBy(productVariations.id).all(),
+        (variacao) => variacao.productId,
+        (variacao) => ({ ...variacao, insumos: receitas.get(variacao.id) ?? [] })
+      )
+
+      return linhas.map((produto) => ({
+        ...produto,
+        variations: variacoes.get(produto.id) ?? []
+      })) as Product[]
     },
 
     criarProduto(dados) {

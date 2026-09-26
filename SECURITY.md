@@ -64,6 +64,16 @@ conferência humana dela.
   página recusa tudo.
 - O preload expõe só o `window.api`, com uma função por canal IPC do app. Não há
   `ipcRenderer` genérico nem `process` ao alcance do renderer.
+- Os canais só respondem ao documento do app, no frame principal da janela
+  (`src/main/ipc/remetente.ts`). O preload roda em qualquer página que carregue na
+  janela: se uma navegação escapasse da guarda, a página estranha teria o
+  `window.api` inteiro, e as chamadas dela são recusadas e registradas no log. O
+  documento do app é o primeiro que a janela carrega, na forma em que o Chromium o
+  registra, para acento ou espaço no caminho da instalação não recusarem o próprio
+  app.
+- Toda permissão do navegador (câmera, microfone, notificação, localização, área de
+  transferência e as demais) é negada (`src/main/permissoes.ts`). O app não usa
+  nenhuma, e o Electron concede todas quando ninguém responde.
 - `window.open` é sempre negado. Só URL `http:` ou `https:` segue para o navegador
   do sistema; `javascript:`, `file:`, `data:` e handlers de protocolo do Windows
   são recusados e registrados no log.
@@ -110,6 +120,15 @@ conferência humana dela.
   qualquer escrita (`BancoMaisNovoQueOApp` em `src/main/database/migrations.ts`).
   Em setembro de 2026 um instalador antigo (1.7.1) rodou por cima da versão atual
   na máquina da cliente e abriu um banco que já não era dele.
+
+### Exportação
+
+A lista de insumos sai em CSV para a usuária abrir no Excel. O nome do insumo, o
+único texto livre da planilha, vai entre aspas, com as aspas internas dobradas, e
+ganha um apóstrofo na frente quando começa com `=`, `+`, `-`, `@`, tab ou CR: sem
+isso, um nome como `=HYPERLINK(...)` viraria fórmula ao abrir a planilha
+(`src/renderer/src/utils/csv-de-insumos.ts`). O caminho do arquivo é escolhido
+em diálogo nativo aberto pelo processo principal.
 
 ### Log
 

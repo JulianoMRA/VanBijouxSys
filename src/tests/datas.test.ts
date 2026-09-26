@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { diaLocal } from '../shared/datas'
+import { diaLocal, subtrairMeses } from '../shared/datas'
 import { computePeriodDates } from '../main/repositorios/painel'
 import { noFusoDaCliente } from './helpers/fuso'
 
@@ -64,6 +64,44 @@ describe('períodos do painel à noite', () => {
       toDate: null,
       prevFromDate: null,
       prevToDate: null
+    })
+  })
+})
+
+describe('subtrairMeses', () => {
+  const dia = (data: Date): string => diaLocal(data)
+
+  it('should_keep_the_day_when_it_exists_in_the_target_month', () => {
+    expect(dia(subtrairMeses(new Date(2026, 7, 12), 3))).toBe('2026-05-12')
+    expect(dia(subtrairMeses(new Date(2026, 2, 15), 3))).toBe('2025-12-15')
+    expect(dia(subtrairMeses(new Date(2026, 8, 25), 12))).toBe('2025-09-25')
+  })
+
+  it('should_stop_at_the_last_day_when_the_target_month_is_shorter', () => {
+    // setMonth transbordava: 31 de maio menos três meses virava 3 de março.
+    expect(dia(subtrairMeses(new Date(2026, 4, 31), 3))).toBe('2026-02-28')
+    expect(dia(subtrairMeses(new Date(2028, 4, 31), 3))).toBe('2028-02-29')
+    expect(dia(subtrairMeses(new Date(2026, 7, 31), 6))).toBe('2026-02-28')
+    expect(dia(subtrairMeses(new Date(2026, 11, 31), 1))).toBe('2026-11-30')
+  })
+})
+
+describe('períodos do painel no fim de um mês longo', () => {
+  it('should_start_the_quarter_on_the_last_day_of_february_on_may_31', () => {
+    expect(computePeriodDates('quarter', new Date(2026, 4, 31, 10, 0))).toEqual({
+      fromDate: '2026-02-28',
+      toDate: '2026-05-31',
+      prevFromDate: '2025-11-30',
+      prevToDate: '2026-02-27'
+    })
+  })
+
+  it('should_start_the_half_year_on_the_last_day_of_february_on_august_31', () => {
+    expect(computePeriodDates('halfyear', new Date(2026, 7, 31, 10, 0))).toEqual({
+      fromDate: '2026-02-28',
+      toDate: '2026-08-31',
+      prevFromDate: '2025-08-31',
+      prevToDate: '2026-02-27'
     })
   })
 })

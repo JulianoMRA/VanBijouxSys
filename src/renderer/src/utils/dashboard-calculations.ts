@@ -1,4 +1,4 @@
-import { SEM_DATA } from './format'
+import { formatPercent, SEM_DATA } from './format'
 import type { DashboardStats } from '../types'
 
 const MESES = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
@@ -95,8 +95,8 @@ export function buildInsights(stats: DashboardStats): Insight[] {
   }
 
   if (stats.overview.totalNetRevenue > 0) {
-    const margem = ((stats.overview.totalProfit / stats.overview.totalNetRevenue) * 100).toFixed(1)
-    insights.push({ kind: 'margem', text: `Margem de lucro no período: ${margem}%` })
+    const margem = (stats.overview.totalProfit / stats.overview.totalNetRevenue) * 100
+    insights.push({ kind: 'margem', text: `Margem de lucro no período: ${formatPercent(margem)}` })
   }
 
   return insights

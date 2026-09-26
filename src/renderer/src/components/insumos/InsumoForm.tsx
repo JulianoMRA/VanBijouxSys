@@ -98,7 +98,8 @@ export default function InsumoForm({
           minimumStock: minStock,
           createdAt: new Date().toISOString(),
           archivedAt: null,
-          usadoPorVariacoesAtivas: 0
+          usadoPorVariacoesAtivas: 0,
+          usadoEmReceitas: 0
         })
       }
       onClose()
@@ -110,7 +111,8 @@ export default function InsumoForm({
   }
 
   const unitLabel = UNITS.find((u) => u.value === unit)?.label ?? ''
-  const unidadeTravada = isEditing && insumo.usadoPorVariacoesAtivas > 0
+  // RN-05: trava como o app recusa, por qualquer receita, inclusive de variação arquivada.
+  const unidadeTravada = isEditing && insumo.usadoEmReceitas > 0
   const unidadeMudou = isEditing && unit !== insumo.unit
 
   return (
@@ -151,7 +153,9 @@ export default function InsumoForm({
           </div>
           {unidadeTravada && (
             <p className="text-micro text-ink-300 mt-1">
-              Usado em receitas: trocar a unidade mudaria o sentido das quantidades delas.
+              Usado em receitas
+              {insumo.usadoPorVariacoesAtivas === 0 ? ' de variações arquivadas' : ''}: trocar a
+              unidade mudaria o sentido das quantidades delas.
             </p>
           )}
           {unidadeMudou && insumo.stockQuantity !== 0 && (

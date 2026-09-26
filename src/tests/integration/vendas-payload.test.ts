@@ -52,8 +52,6 @@ const novaVenda = (): Record<string, unknown> => ({
   soldAt: '2026-09-10',
   paymentMethod: 'pix',
   feePercentage: 1.2,
-  feeAmount: 0.6,
-  netAmount: 49.4,
   items: [{ variationId: variacao, quantity: 2, unitPrice: 25, unitCost: 3 }]
 })
 
@@ -99,9 +97,7 @@ describe('vendas: payloads das telas continuam aceitos', () => {
       channel: 'Feira',
       fairId: feira,
       paymentMethod: 'dinheiro',
-      feePercentage: 0,
-      feeAmount: 0,
-      netAmount: 50
+      feePercentage: 0
     })
 
     await ambiente.chamar('sales:update', {
@@ -111,8 +107,6 @@ describe('vendas: payloads das telas continuam aceitos', () => {
       fairId: feira,
       paymentMethod: 'dinheiro',
       feePercentage: 0,
-      feeAmount: 0,
-      netAmount: 75,
       items: [{ variationId: variacao, quantity: 3, unitPrice: 25, unitCost: 3 }]
     })
 
@@ -124,9 +118,7 @@ describe('vendas: payloads das telas continuam aceitos', () => {
     const { id } = await ambiente.chamar<{ id: number }>('sales:create', {
       ...novaVenda(),
       paymentMethod: 'areceber',
-      feePercentage: 0,
-      feeAmount: 0,
-      netAmount: 50
+      feePercentage: 0
     })
 
     const { id: pagamentoId } = await ambiente.chamar<{ id: number }>(
@@ -154,6 +146,39 @@ describe('vendas: payloads das telas continuam aceitos', () => {
     await ambiente.chamar('sales:delete', venda)
 
     expect(await ambiente.chamar<Sale[]>('sales:getAll')).toEqual([])
+  })
+})
+
+describe('vendas: taxa e líquido calculados no processo principal (RN-20)', () => {
+  it('should_compute_fee_and_net_from_the_total_whatever_the_screen_sent', async () => {
+    // O Painel e o Caixa leem o líquido gravado; ele não pode depender de a conta da
+    // tela estar certa. R$ 100 com 10% de taxa: R$ 10 de taxa e R$ 90 de líquido.
+    const { id } = await ambiente.chamar<{ id: number }>('sales:create', {
+      ...novaVenda(),
+      paymentMethod: 'credito',
+      feePercentage: 10,
+      feeAmount: 1,
+      netAmount: 99,
+      items: [{ variationId: variacao, quantity: 1, unitPrice: 100, unitCost: 30 }]
+    })
+
+    const [venda] = await ambiente.chamar<Sale[]>('sales:getAll')
+    expect(venda).toMatchObject({ id: Number(id), feeAmount: 10, netAmount: 90 })
+  })
+
+  it('should_recompute_them_when_the_sale_is_edited', async () => {
+    const { id } = await ambiente.chamar<{ id: number }>('sales:create', novaVenda())
+
+    await ambiente.chamar('sales:update', {
+      ...novaVenda(),
+      id: Number(id),
+      feePercentage: 4,
+      feeAmount: 0,
+      netAmount: 50
+    })
+
+    const [venda] = await ambiente.chamar<Sale[]>('sales:getAll')
+    expect(venda).toMatchObject({ feePercentage: 4, feeAmount: 2, netAmount: 48 })
   })
 })
 
@@ -215,7 +240,7 @@ describe('vendas: payload fora do formato é recusado sem gravar', () => {
   it('should_refuse_a_fee_outside_zero_to_one_hundred', async () => {
     await recusaSemGravar('sales:create', { ...novaVenda(), feePercentage: 120 })
     await recusaSemGravar('sales:create', { ...novaVenda(), feePercentage: -1 })
-    await recusaSemGravar('sales:create', { ...novaVenda(), feeAmount: '0,60' })
+    await recusaSemGravar('sales:create', { ...novaVenda(), feePercentage: '1,2' })
   })
 
   it('should_refuse_updating_without_an_id', async () => {

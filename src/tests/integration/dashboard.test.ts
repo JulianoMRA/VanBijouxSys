@@ -74,7 +74,6 @@ describe('dashboard: bordas do período', () => {
       soldAt: '2026-05-10',
       paymentMethod: 'credito',
       feePercentage: 10,
-      feeAmount: 3,
       items: [{ variationId: colar, quantity: 1, unitPrice: 30, unitCost: 5 }]
     })
 
@@ -317,7 +316,6 @@ describe('dashboard: ticket médio', () => {
       soldAt: '2026-05-10',
       paymentMethod: 'credito',
       feePercentage: 10,
-      feeAmount: 10,
       items: [{ variationId: colar, quantity: 1, unitPrice: 100, unitCost: 5 }]
     })
     await criarVenda(ambiente, {

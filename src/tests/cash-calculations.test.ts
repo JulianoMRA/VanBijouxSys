@@ -129,6 +129,12 @@ describe('getPeriodDates', () => {
     })
   })
 
+  it('should_stop_at_the_last_day_of_a_shorter_month', () => {
+    // setMonth transbordava: em 31/05, o 3M começava em 03/03 e deixava três dias de fora.
+    expect(getPeriodDates('3meses', new Date(2026, 4, 31))?.startDate).toBe('2026-02-28')
+    expect(getPeriodDates('6meses', new Date(2026, 7, 31))?.startDate).toBe('2026-02-28')
+  })
+
   it('should_start_the_year_period_on_january_first', () => {
     expect(getPeriodDates('ano', hoje)).toEqual({
       startDate: '2026-01-01',

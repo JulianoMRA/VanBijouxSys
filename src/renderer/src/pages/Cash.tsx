@@ -83,21 +83,29 @@ export default function Cash(): JSX.Element {
   const [categoryError, setCategoryError] = useState('')
 
   const [balanceInput, setBalanceInput] = useState('')
+  const [balanceError, setBalanceError] = useState('')
 
   async function loadAll(): Promise<void> {
-    const [allSales, allExpenses, allCategories, settings, allFairs] = await Promise.all([
-      window.api.sales.getAll(),
-      window.api.cashExpenses.getAll(),
-      window.api.expenseCategories.getAll(),
-      window.api.cashSettings.get(),
-      window.api.fairs.getAll()
-    ])
-    setSales(allSales)
-    setExpenses(allExpenses)
-    setCategories(allCategories)
-    setFairs(allFairs)
-    setOpeningBalance(settings?.openingBalance ?? 0)
-    setLoading(false)
+    try {
+      const [allSales, allExpenses, allCategories, settings, allFairs] = await Promise.all([
+        window.api.sales.getAll(),
+        window.api.cashExpenses.getAll(),
+        window.api.expenseCategories.getAll(),
+        window.api.cashSettings.get(),
+        window.api.fairs.getAll()
+      ])
+      setSales(allSales)
+      setExpenses(allExpenses)
+      setCategories(allCategories)
+      setFairs(allFairs)
+      setOpeningBalance(settings?.openingBalance ?? 0)
+    } catch (err) {
+      // Sem isto, uma leitura que falhasse deixava o "Carregando…" na tela para sempre.
+      setErrorMessage('Não foi possível carregar o caixa.')
+      console.error(err)
+    } finally {
+      setLoading(false)
+    }
   }
 
   useEffect(() => {
@@ -163,8 +171,9 @@ export default function Cash(): JSX.Element {
       setCategoryError('')
       const updated = await window.api.expenseCategories.getAll()
       setCategories(updated)
-    } catch {
-      setCategoryError('Já existe uma categoria com esse nome.')
+    } catch (err) {
+      // O app já traduz nome repetido para "Já existe uma categoria com esse nome.".
+      setCategoryError(err instanceof Error ? err.message : 'Não foi possível salvar a categoria.')
     }
   }
 
@@ -179,8 +188,9 @@ export default function Cash(): JSX.Element {
       setCategoryError('')
       const updated = await window.api.expenseCategories.getAll()
       setCategories(updated)
-    } catch {
-      setCategoryError('Já existe uma categoria com esse nome.')
+    } catch (err) {
+      // O app já traduz nome repetido para "Já existe uma categoria com esse nome.".
+      setCategoryError(err instanceof Error ? err.message : 'Não foi possível salvar a categoria.')
     }
   }
 
@@ -199,14 +209,25 @@ export default function Cash(): JSX.Element {
 
   async function handleSaveOpeningBalance(): Promise<void> {
     const value = interpretarNumero(balanceInput)
-    if (value === null || value < 0) return
-    await window.api.cashSettings.setOpeningBalance(value)
+    if (value === null || value < 0) {
+      setBalanceError('Informe um valor igual ou maior que zero.')
+      return
+    }
+    try {
+      await window.api.cashSettings.setOpeningBalance(value)
+    } catch (err) {
+      setBalanceError(
+        err instanceof Error ? err.message : 'Não foi possível salvar o saldo de abertura.'
+      )
+      return
+    }
     setOpeningBalance(value)
     setShowOpeningBalance(false)
     showToast('Saldo de abertura atualizado.')
   }
 
   function abrirSaldoDeAbertura(): void {
+    setBalanceError('')
     setShowOpeningBalance(true)
     setBalanceInput(formatarNumeroParaCampo(openingBalance))
   }
@@ -617,8 +638,11 @@ export default function Cash(): JSX.Element {
               calcular o saldo atual.
             </p>
             <div>
-              <label className="label">Valor (R$)</label>
+              <label className="label" htmlFor="saldo-de-abertura">
+                Valor (R$)
+              </label>
               <CampoNumerico
+                id="saldo-de-abertura"
                 className="input"
                 value={balanceInput}
                 onChange={setBalanceInput}
@@ -626,6 +650,7 @@ export default function Cash(): JSX.Element {
                 autoFocus
               />
             </div>
+            {balanceError && <p className="text-body text-clay-500">{balanceError}</p>}
             <div className="flex justify-end gap-3">
               <button className="btn-secondary" onClick={() => setShowOpeningBalance(false)}>
                 Cancelar

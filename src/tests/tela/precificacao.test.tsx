@@ -77,3 +77,34 @@ describe('Precificação: aplicar preço a uma variação', () => {
     expect(api.variations.setSalePrice).not.toHaveBeenCalled()
   })
 })
+
+describe('Precificação: falhas aparecem na tela', () => {
+  it('should_explain_when_applying_the_price_fails', async () => {
+    // Sem catch, a falha virava uma rejeição sem tratamento e o botão voltava ao
+    // normal como se nada tivesse acontecido.
+    api.variations.setSalePrice.mockRejectedValue(new Error('Variação não encontrada.'))
+    const usuaria = userEvent.setup()
+    render(<PriceCalculator />)
+    const maoDeObra = screen.getAllByPlaceholderText('0,00').at(-1) as HTMLInputElement
+    await usuaria.type(maoDeObra, '10')
+    const opcaoProduto = await screen.findByRole('option', { name: /Colar Aurora/ })
+    await usuaria.selectOptions(opcaoProduto.closest('select') as HTMLSelectElement, '1')
+    const opcaoVariacao = await screen.findByRole('option', { name: /Rosa/ })
+    await usuaria.selectOptions(opcaoVariacao.closest('select') as HTMLSelectElement, '10')
+
+    await usuaria.click(await screen.findByRole('button', { name: /^Aplicar R\$/ }))
+
+    expect(await screen.findByText('Variação não encontrada.')).toBeInTheDocument()
+    expect(screen.queryByText(/Preço aplicado/)).not.toBeInTheDocument()
+  })
+
+  it('should_say_when_products_and_insumos_could_not_load', async () => {
+    api.products.getAll.mockRejectedValue(new Error('falhou'))
+
+    render(<PriceCalculator />)
+
+    expect(
+      await screen.findByText('Não foi possível carregar os produtos e insumos.')
+    ).toBeInTheDocument()
+  })
+})

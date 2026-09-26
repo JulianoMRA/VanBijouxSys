@@ -84,7 +84,13 @@ export default function VariationForm({
 
   useEffect(() => {
     async function load(): Promise<void> {
-      setAllInsumos(await window.api.insumos.getAll())
+      try {
+        setAllInsumos(await window.api.insumos.getAll())
+      } catch (err) {
+        // Sem isto, o seletor da receita ficava vazio, como se não houvesse insumo.
+        setError('Não foi possível carregar os insumos. Feche e abra de novo.')
+        console.error(err)
+      }
     }
     load()
   }, [])

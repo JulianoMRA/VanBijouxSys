@@ -66,8 +66,8 @@ export default function ExpenseForm({
       }
       onSave()
       onClose()
-    } catch {
-      setError('Erro ao salvar despesa. Tente novamente.')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erro ao salvar despesa. Tente novamente.')
     } finally {
       setSaving(false)
     }

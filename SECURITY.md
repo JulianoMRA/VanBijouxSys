@@ -114,7 +114,9 @@ conferência humana dela.
 ### Log
 
 `<userData>/logs/main.log` recebe falhas de handler, de backup, de migração e de
-boot, com stack. Fica só na máquina e não é enviado a lugar nenhum.
+boot, com stack, e os erros da tela: o que o `ErrorBoundary` pega e as exceções e
+promessas sem tratamento do renderer chegam pelo canal `app:registrarErroDaTela`,
+com tamanho limitado. Fica só na máquina e não é enviado a lugar nenhum.
 
 ## Lacunas conhecidas
 
@@ -125,7 +127,7 @@ Registradas para não ficarem silenciosas:
   proteção é a conta do GitHub que publica. Assinar também tiraria o alerta do
   SmartScreen.
 
-Os canais IPC, que já constaram aqui, validam o payload com zod desde a 1.14: os 46
+Os canais IPC, que já constaram aqui, validam o payload com zod desde a 1.14: os 49
 passam por `registrarCanal` (`src/main/ipc/canal.ts`).
 
 ## Dependências

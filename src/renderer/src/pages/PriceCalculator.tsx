@@ -34,6 +34,7 @@ function ApplyToVariation({
   const [variationId, setVariationId] = useState<number | ''>('')
   const [saving, setSaving] = useState(false)
   const [success, setSuccess] = useState(false)
+  const [erro, setErro] = useState('')
 
   // Aplicar preço a algo arquivado não faz sentido: se ela quiser, desarquiva.
   const produtosAtivos = products.filter((p) => !estaArquivado(p))
@@ -49,6 +50,7 @@ function ApplyToVariation({
   async function handleApply(): Promise<void> {
     if (!selectedVariation) return
     setSaving(true)
+    setErro('')
     try {
       await window.api.variations.setSalePrice(selectedVariation.id, suggestedPrice)
       setSuccess(true)
@@ -58,6 +60,10 @@ function ApplyToVariation({
         setVariationId('')
         onApplied()
       }, 2000)
+    } catch (err) {
+      // Sem isto, a falha virava rejeição sem tratamento e o botão voltava ao normal
+      // como se o preço tivesse sido aplicado.
+      setErro(err instanceof Error ? err.message : 'Não foi possível aplicar o preço.')
     } finally {
       setSaving(false)
     }
@@ -138,6 +144,7 @@ function ApplyToVariation({
               ? `Aplicar ${formatCurrency(suggestedPrice)} a ${selectedProduct?.name} — ${selectedVariation.identifier}`
               : 'Escolha o produto e a variação'}
       </button>
+      {erro && <p className="mt-2 text-body text-clay-500">{erro}</p>}
     </div>
   )
 }
@@ -153,14 +160,22 @@ export default function PriceCalculator(): JSX.Element {
   const [products, setProducts] = useState<Product[]>([])
   const [insumos, setInsumos] = useState<Insumo[]>([])
   const [laborSaved, setLaborSaved] = useState(false)
+  const [erroAoCarregar, setErroAoCarregar] = useState('')
 
   async function loadData(): Promise<void> {
-    const [prods, insms] = await Promise.all([
-      window.api.products.getAll(),
-      window.api.insumos.getAll()
-    ])
-    setProducts(prods)
-    setInsumos(insms)
+    try {
+      const [prods, insms] = await Promise.all([
+        window.api.products.getAll(),
+        window.api.insumos.getAll()
+      ])
+      setProducts(prods)
+      setInsumos(insms)
+      setErroAoCarregar('')
+    } catch (err) {
+      // Sem isto, os seletores ficavam vazios sem explicação.
+      setErroAoCarregar('Não foi possível carregar os produtos e insumos.')
+      console.error(err)
+    }
   }
 
   useEffect(() => {
@@ -248,6 +263,12 @@ export default function PriceCalculator(): JSX.Element {
           Precificação
         </h2>
       </div>
+
+      {erroAoCarregar && (
+        <p className="mx-8 mt-[22px] rounded-[11px] border border-bone-500 bg-clay-100 px-4 py-3 text-body text-clay-600">
+          {erroAoCarregar}
+        </p>
+      )}
 
       <div className="grid grid-cols-[1.05fr_1fr] items-start gap-3.5 px-8 pt-[22px]">
         <div className="card">

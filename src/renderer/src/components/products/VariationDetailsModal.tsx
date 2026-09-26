@@ -25,7 +25,12 @@ export default function VariationDetailsModal({
   const margin = variation.salePrice > 0 ? (profit / variation.salePrice) * 100 : 0
 
   return (
-    <Modal title={`${product.name} — ${variation.identifier}`} onClose={onClose} size="lg">
+    <Modal
+      title={`${product.name} — ${variation.identifier}`}
+      onClose={onClose}
+      size="lg"
+      fechaAoClicarFora
+    >
       <div className="space-y-5">
         <section>
           <h3 className="label mb-2">Composição</h3>

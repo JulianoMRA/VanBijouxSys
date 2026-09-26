@@ -1,7 +1,7 @@
 import { diaLocal } from '../../shared/datas'
 
 export const PREFIXO_BACKUP = 'vanbijouxsys-'
-/** RN-15: dez dias de histórico, um backup por dia de uso. */
+/** RN-15: dez cópias diárias, uma por dia em que o app foi aberto. */
 export const MAX_BACKUPS_DIARIOS = 10
 /** RN-15: as cópias de antes de atualizar, migrar ou restaurar têm cota própria. */
 export const MAX_BACKUPS_DE_EVENTO = 10

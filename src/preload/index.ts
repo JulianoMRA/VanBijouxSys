@@ -1,5 +1,6 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import { CANAIS_IPC } from '../shared/ipc/channels'
+import type { ApiDoApp } from '../shared/ipc/api'
 import type { ErroDaTela } from '../shared/ipc/backup'
 import type { CreateFairInput, UpdateFairInput } from '../shared/ipc/feiras'
 import type { DashboardParams } from '../shared/ipc/painel'
@@ -7,7 +8,6 @@ import type {
   CreateCashExpenseInput,
   CreateExpenseCategoryInput,
   FiltroDeDespesas,
-  FiltroDeEstatisticas,
   UpdateCashExpenseInput,
   UpdateExpenseCategoryInput
 } from '../shared/ipc/caixa'
@@ -38,7 +38,7 @@ async function invoke<T>(canal: string, ...args: unknown[]): Promise<T> {
   }
 }
 
-const api = {
+const api: ApiDoApp = {
   categories: {
     getAll: () => invoke(CANAIS_IPC.categories.getAll)
   },
@@ -101,8 +101,7 @@ const api = {
     getAll: (filters?: FiltroDeDespesas) => invoke(CANAIS_IPC.cashExpenses.getAll, filters),
     create: (data: CreateCashExpenseInput) => invoke(CANAIS_IPC.cashExpenses.create, data),
     update: (data: UpdateCashExpenseInput) => invoke(CANAIS_IPC.cashExpenses.update, data),
-    delete: (id: number) => invoke(CANAIS_IPC.cashExpenses.delete, id),
-    getStats: (filters?: FiltroDeEstatisticas) => invoke(CANAIS_IPC.cashExpenses.getStats, filters)
+    delete: (id: number) => invoke(CANAIS_IPC.cashExpenses.delete, id)
   },
   cashSettings: {
     get: () => invoke(CANAIS_IPC.cashSettings.get),

@@ -170,8 +170,7 @@ continuava marcada como recebida naquele dia.
   `received_at`, e `atualizarVenda`).
 - **Prova**: `src/tests/integration/receivable.test.ts`,
   `src/tests/integration/pagamentos.test.ts` (`pagamento no caixa e no painel`,
-  `vendas recebidas antes da migração 4`), `src/tests/integration/cash.test.ts` e
-  `src/tests/cash-calculations.test.ts`.
+  `vendas recebidas antes da migração 4`) e `src/tests/cash-calculations.test.ts`.
 
 ### RN-16 — Venda "a receber" precisa do nome da cliente
 
@@ -371,14 +370,15 @@ em sold_at`, `dashboard: bordas do período`, `dashboard: venda antiga sem data`
 
 ## Backup
 
-### RN-15 — Backup diário, dez dias de histórico, cópia antes de restaurar
+### RN-15 — Backup diário, dez cópias de histórico, cópia antes de restaurar
 
-O app faz um backup por dia na abertura e mantém os dez dias mais recentes. Antes
-de uma atualização, de uma mudança no banco e de uma restauração, ele grava um
-backup extra, com o motivo no nome do arquivo (`...-antes-da-1.16.0.db`,
-`...-antes-de-migrar.db`, `...-antes-de-restaurar.db`): restaurar o arquivo
-errado não pode ser um caminho sem volta. A cópia usa a API de backup do SQLite,
-consistente mesmo com o WAL ativo.
+O app faz um backup por dia na abertura e mantém as dez cópias diárias mais
+recentes: são dez dias em que o app foi aberto, que podem cobrir mais de dez dias
+do calendário. Antes de uma atualização, de uma mudança no banco e de uma
+restauração, ele grava um backup extra, com o motivo no nome do arquivo
+(`...-antes-da-1.16.0.db`, `...-antes-de-migrar.db`, `...-antes-de-restaurar.db`):
+restaurar o arquivo errado não pode ser um caminho sem volta. A cópia usa a API
+de backup do SQLite, consistente mesmo com o WAL ativo.
 
 Os dois tipos têm cotas separadas, dez de cada. Com uma cota só, cada checagem
 de atualização gravava uma cópia e empurrava os dias anteriores para fora: em

@@ -22,6 +22,7 @@ A distribuição usa **electron-updater** contra as releases do GitHub, com **el
 src/
 ├── shared/ipc/                 # Contrato dos canais: nomes e schemas zod
 │   ├── channels.ts             # CANAIS_IPC (sem runtime: o preload é sandboxed)
+│   ├── api.ts                  # ApiDoApp: o window.api, conferido contra o preload
 │   ├── comum.ts                # id e data, usados por vários domínios
 │   └── <dominio>.ts            # produtos, vendas, insumos, caixa, feiras, painel, backup
 ├── main/                       # Processo principal (Electron)
@@ -110,7 +111,7 @@ A tabela `sales` aceita `payment_method = 'areceber'` (fiado), com o nome da cli
 
 ## Backup
 
-Os backups ficam em `%APPDATA%/van-bijoux-sys/backups`. O app cria uma cópia no primeiro boot de cada dia e mantém os 10 dias mais recentes; a cópia usa a API de backup do SQLite, consistente mesmo com o WAL ativo. Antes de uma atualização (uma vez por versão), de uma migração e de uma restauração sai uma cópia extra, com o motivo no nome, numa cota própria de 10: as extras não empurram os dias para fora (RN-15).
+Os backups ficam em `%APPDATA%/van-bijoux-sys/backups`. O app cria uma cópia no primeiro boot de cada dia e mantém as 10 cópias diárias mais recentes (uma por dia de uso, não por dia do calendário); a cópia usa a API de backup do SQLite, consistente mesmo com o WAL ativo. Antes de uma atualização (uma vez por versão), de uma migração e de uma restauração sai uma cópia extra, com o motivo no nome, numa cota própria de 10: as extras não empurram os dias para fora (RN-15).
 
 A restauração ([src/main/database/backup.ts](src/main/database/backup.ts)) valida integridade e presença das tabelas principais, copia o arquivo escolhido antes que a rotação possa apagá-lo, guarda o estado atual numa cópia, sobrescreve o banco, apaga os arquivos `-wal`/`-shm` e reinicia o app — a conexão e os prepared statements não sobrevivem à troca do arquivo.
 
@@ -140,7 +141,7 @@ O passo a passo — branch de documentação, `npm version`, build e `gh release
 
 <a id="fronteira-ipc"></a>
 
-Os 49 canais são registrados por `registrarCanal` ([src/main/ipc/canal.ts](src/main/ipc/canal.ts)), que valida os argumentos com o schema zod do domínio ([src/shared/ipc/](src/shared/ipc/)) **antes** de qualquer escrita. Payload fora do formato é recusado com uma mensagem legível, e o log guarda só o caminho e o código do problema — nunca os valores, que são dados do negócio.
+Os 48 canais são registrados por `registrarCanal` ([src/main/ipc/canal.ts](src/main/ipc/canal.ts)), que valida os argumentos com o schema zod do domínio ([src/shared/ipc/](src/shared/ipc/)) **antes** de qualquer escrita. Payload fora do formato é recusado com uma mensagem legível, e o log guarda só o caminho e o código do problema — nunca os valores, que são dados do negócio.
 
 Depois da validação, o handler delega para o repositório do domínio, que recebe a conexão por parâmetro. A falha sempre vira exceção — nunca um `{ success: false }` de retorno, que o renderer ignorava silenciosamente. A tradução de erro técnico (violação de chave estrangeira, nome duplicado) para texto que a cliente entende fica em [src/main/ipc/mensagens.ts](src/main/ipc/mensagens.ts), indexada por canal; um canal novo sem entrada cai numa mensagem genérica. No renderer, sempre trate a chamada com `try/catch` e mostre `err.message`.
 
@@ -148,7 +149,7 @@ O preload importa apenas `CANAIS_IPC`: com `sandbox: true` ele não carrega zod,
 
 ## Manutenção
 
-**Adicionar um domínio novo (ex.: despesas recorrentes).** Na ordem: nomes dos canais em `src/shared/ipc/channels.ts`; schemas e tipos em `src/shared/ipc/<dominio>.ts`; teste de payload em `src/tests/integration/<dominio>-payload.test.ts` **antes** da implementação; regra e SQL em `src/main/repositorios/<dominio>.ts`; registro dos canais em `src/main/ipc/<dominio>.ts` e em `ipc/index.ts`, com o harness de teste (`src/tests/helpers/ambiente-ipc.ts`) registrando o mesmo domínio; API no `src/preload/index.ts`; página em `src/renderer/src/pages/` e rota no `App.tsx`. Se precisar de tabela, ela entra numa migração nova em `migrations.ts` e no `schema.ts`; os testes a recebem pelas migrações.
+**Adicionar um domínio novo (ex.: despesas recorrentes).** Na ordem: nomes dos canais em `src/shared/ipc/channels.ts`; schemas e tipos em `src/shared/ipc/<dominio>.ts`; teste de payload em `src/tests/integration/<dominio>-payload.test.ts` **antes** da implementação; regra e SQL em `src/main/repositorios/<dominio>.ts`; registro dos canais em `src/main/ipc/<dominio>.ts` e em `ipc/index.ts`, com o harness de teste (`src/tests/helpers/ambiente-ipc.ts`) registrando o mesmo domínio; assinatura em `src/shared/ipc/api.ts` e implementação no `src/preload/index.ts`, que o compilador confere uma contra a outra; página em `src/renderer/src/pages/` e rota no `App.tsx`. Se precisar de tabela, ela entra numa migração nova em `migrations.ts` e no `schema.ts`; os testes a recebem pelas migrações.
 
 **Regras de negócio.** As dezessete regras que o app precisa respeitar estão em [docs/regras-de-negocio.md](docs/regras-de-negocio.md), numeradas (RN-01…RN-17), com o código e o teste de cada uma. Os comentários no código citam o número. Mudou a regra, o documento muda junto.
 

@@ -1,6 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { prepararAmbienteIpc, type AmbienteIpc } from '../helpers/ambiente-ipc'
-import { criarVariacao, criarVenda } from '../helpers/estoque'
 
 vi.mock('electron', async () => (await import('../helpers/ambiente-ipc')).electronFalso)
 vi.mock('../../main/database', async () => (await import('../helpers/ambiente-ipc')).bancoFalso)
@@ -166,7 +165,7 @@ describe('despesas', () => {
   })
 })
 
-describe('estatísticas e saldo do caixa', () => {
+describe('saldo de abertura do caixa', () => {
   it('should_start_with_zero_opening_balance', async () => {
     const saldo = await ambiente.chamar<{ openingBalance: number }>('cash-settings:get')
 
@@ -178,35 +177,5 @@ describe('estatísticas e saldo do caixa', () => {
 
     const saldo = await ambiente.chamar<{ openingBalance: number }>('cash-settings:get')
     expect(saldo.openingBalance).toBe(150.75)
-  })
-
-  it('should_sum_expenses_and_received_income_of_the_period', async () => {
-    const variacao = await criarVariacao(ambiente, {
-      receita: [],
-      stockQuantity: 10,
-      motivoDoEstoqueInicial: 'contagem'
-    })
-    await ambiente.chamar('cash-settings:setOpeningBalance', 100)
-    await criarDespesa({ amount: 40, expenseDate: '2026-05-05' })
-    await criarDespesa({ amount: 15, expenseDate: '2026-06-02' })
-    await criarVenda(ambiente, {
-      soldAt: '2026-05-10',
-      paymentMethod: 'pix',
-      items: [{ variationId: variacao, quantity: 2, unitPrice: 30, unitCost: 5 }]
-    })
-    await criarVenda(ambiente, {
-      soldAt: '2026-05-11',
-      paymentMethod: 'areceber',
-      items: [{ variationId: variacao, quantity: 1, unitPrice: 30, unitCost: 5 }]
-    })
-
-    const maio = await ambiente.chamar('cash-expenses:getStats', {
-      startDate: '2026-05-01',
-      endDate: '2026-05-31'
-    })
-    const tudo = await ambiente.chamar('cash-expenses:getStats')
-
-    expect(maio).toEqual({ totalExpenses: 40, totalIncome: 60, openingBalance: 100 })
-    expect(tudo).toEqual({ totalExpenses: 55, totalIncome: 60, openingBalance: 100 })
   })
 })

@@ -146,7 +146,7 @@ Registradas para não ficarem silenciosas:
   proteção é a conta do GitHub que publica. Assinar também tiraria o alerta do
   SmartScreen.
 
-Os canais IPC, que já constaram aqui, validam o payload com zod desde a 1.14: os 49
+Os canais IPC, que já constaram aqui, validam o payload com zod desde a 1.14: os 48
 passam por `registrarCanal` (`src/main/ipc/canal.ts`).
 
 ## Dependências

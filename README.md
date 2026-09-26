@@ -111,7 +111,7 @@ A tabela `sales` aceita `payment_method = 'areceber'` (fiado), com o nome da cli
 
 ## Backup
 
-Os backups ficam em `%APPDATA%/van-bijoux-sys/backups`. O app cria uma cópia no primeiro boot de cada dia e mantém os 10 dias mais recentes; a cópia usa a API de backup do SQLite, consistente mesmo com o WAL ativo. Antes de uma atualização (uma vez por versão), de uma migração e de uma restauração sai uma cópia extra, com o motivo no nome, numa cota própria de 10: as extras não empurram os dias para fora (RN-15).
+Os backups ficam em `%APPDATA%/van-bijoux-sys/backups`. O app cria uma cópia no primeiro boot de cada dia e mantém as 10 cópias diárias mais recentes (uma por dia de uso, não por dia do calendário); a cópia usa a API de backup do SQLite, consistente mesmo com o WAL ativo. Antes de uma atualização (uma vez por versão), de uma migração e de uma restauração sai uma cópia extra, com o motivo no nome, numa cota própria de 10: as extras não empurram os dias para fora (RN-15).
 
 A restauração ([src/main/database/backup.ts](src/main/database/backup.ts)) valida integridade e presença das tabelas principais, copia o arquivo escolhido antes que a rotação possa apagá-lo, guarda o estado atual numa cópia, sobrescreve o banco, apaga os arquivos `-wal`/`-shm` e reinicia o app — a conexão e os prepared statements não sobrevivem à troca do arquivo.
 

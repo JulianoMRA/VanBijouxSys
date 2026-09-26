@@ -4,21 +4,11 @@ import InsumoForm from '../insumos/InsumoForm'
 import MotivoDoEstoqueDialog from './MotivoDoEstoqueDialog'
 import { opcoesComSelecionados } from '../../utils/arquivamento'
 import { precisaPerguntarMotivo } from '../../utils/ajuste-de-estoque'
-import {
-  formatarNumeroParaCampo,
-  interpretarNumero,
-  numeroDoArmazenamento,
-  numeroParaArmazenamento
-} from '../../utils/numero'
+import { formatarNumeroParaCampo, interpretarNumero } from '../../utils/numero'
 import CampoNumerico from '../ui/CampoNumerico'
 import { formatarCustoUnitario, formatCurrency } from '../../utils/format'
+import { maoDeObraPadrao, salvarMaoDeObraPadrao } from '../../utils/mao-de-obra'
 import type { CreateVariationInput, Insumo, MotivoDeAjuste, ProductVariation } from '../../types'
-
-const LABOR_COST_KEY = 'pricing_default_labor_cost'
-
-function loadDefaultLaborCost(): string {
-  return numeroDoArmazenamento(localStorage.getItem(LABOR_COST_KEY))
-}
 
 interface InsumoRow {
   key: number
@@ -68,7 +58,7 @@ export default function VariationForm({
   // O padrão só preenche o cadastro novo. Na edição vale o da variação, mesmo zero:
   // antes, zero virava o padrão e a edição gravava um valor que ela não digitou.
   const [laborCost, setLaborCost] = useState(() => {
-    if (!variation) return loadDefaultLaborCost()
+    if (!variation) return maoDeObraPadrao()
     return variation.laborCost ? formatarNumeroParaCampo(variation.laborCost) : ''
   })
 
@@ -134,7 +124,7 @@ export default function VariationForm({
   }
 
   function saveDefaultLaborCost(): void {
-    localStorage.setItem(LABOR_COST_KEY, numeroParaArmazenamento(laborCost) ?? '')
+    salvarMaoDeObraPadrao(laborCost)
   }
 
   function useSuggestedPrice(): void {
@@ -464,27 +454,15 @@ export default function VariationForm({
                   <div className="bg-wine-50 rounded-control p-3 space-y-1 text-micro tabular-nums text-ink-500">
                     <div className="flex justify-between">
                       <span>Materiais × 3</span>
-                      <span>
-                        {(materialsForCalc * 3).toLocaleString('pt-BR', {
-                          style: 'currency',
-                          currency: 'BRL'
-                        })}
-                      </span>
+                      <span>{formatCurrency(materialsForCalc * 3)}</span>
                     </div>
                     <div className="flex justify-between">
                       <span>+ Mão de obra</span>
-                      <span>
-                        {labor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-                      </span>
+                      <span>{formatCurrency(labor)}</span>
                     </div>
                     <div className="flex justify-between">
                       <span>× 1,10 (margem)</span>
-                      <span>
-                        {((materialsForCalc * 3 + labor) * 1.1).toLocaleString('pt-BR', {
-                          style: 'currency',
-                          currency: 'BRL'
-                        })}
-                      </span>
+                      <span>{formatCurrency((materialsForCalc * 3 + labor) * 1.1)}</span>
                     </div>
                     <div className="flex justify-between">
                       <span>+ Embalagem</span>
@@ -492,12 +470,7 @@ export default function VariationForm({
                     </div>
                     <div className="flex justify-between font-semibold text-wine-500 pt-1 border-t border-wine-100">
                       <span>Preço sugerido</span>
-                      <span>
-                        {suggestedPrice.toLocaleString('pt-BR', {
-                          style: 'currency',
-                          currency: 'BRL'
-                        })}
-                      </span>
+                      <span>{formatCurrency(suggestedPrice)}</span>
                     </div>
                   </div>
                 )}

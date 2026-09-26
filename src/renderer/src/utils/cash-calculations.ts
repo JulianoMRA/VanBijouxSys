@@ -1,6 +1,7 @@
 import { diaLocal, subtrairMeses } from '../../../shared/datas'
 import { emCentavos } from '../../../shared/dinheiro'
-import { formatDate } from './format'
+import { formatCurrency, formatDate } from './format'
+import { PAYMENT_LABELS } from './formas-de-pagamento'
 import type { CashExpense, Fair, PaymentMethod, Sale, SalePayment } from '../types'
 
 export type PeriodKey = 'mes' | '3meses' | '6meses' | 'ano' | 'tudo' | 'custom'
@@ -8,14 +9,6 @@ export type PeriodKey = 'mes' | '3meses' | '6meses' | 'ano' | 'tudo' | 'custom'
 export interface DateRange {
   startDate: string
   endDate: string
-}
-
-export const PAYMENT_LABELS: Record<PaymentMethod, string> = {
-  dinheiro: 'Dinheiro',
-  pix: 'PIX',
-  debito: 'Débito',
-  credito: 'Crédito',
-  areceber: 'A receber'
 }
 
 export interface FairExpenseRow {
@@ -56,24 +49,20 @@ export type TransactionRow =
       amount: number
     }
 
-function pad(n: number): string {
-  return String(n).padStart(2, '0')
-}
-
 /** `today` é parâmetro para o cálculo ser determinístico em teste. */
 export function getPeriodDates(period: PeriodKey, today = new Date()): DateRange | null {
   if (period === 'tudo') return null
   const endDate = diaLocal(today)
 
   if (period === 'mes') {
-    return { startDate: `${today.getFullYear()}-${pad(today.getMonth() + 1)}-01`, endDate }
+    return { startDate: diaLocal(new Date(today.getFullYear(), today.getMonth(), 1)), endDate }
   }
   if (period === '3meses' || period === '6meses') {
     const inicio = subtrairMeses(today, period === '3meses' ? 3 : 6)
     return { startDate: diaLocal(inicio), endDate }
   }
   if (period === 'ano') {
-    return { startDate: `${today.getFullYear()}-01-01`, endDate }
+    return { startDate: diaLocal(new Date(today.getFullYear(), 0, 1)), endDate }
   }
   return null
 }
@@ -148,13 +137,10 @@ export function filterExpenses(expenses: CashExpense[], range: DateRange | null)
 }
 
 export function buildFairCostSub(fair: Fair): string {
-  const moeda = (valor: number): string =>
-    valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
-
   const partes: string[] = []
-  if (fair.enrollmentCost > 0) partes.push(`Inscrição ${moeda(fair.enrollmentCost)}`)
+  if (fair.enrollmentCost > 0) partes.push(`Inscrição ${formatCurrency(fair.enrollmentCost)}`)
   for (const custo of fair.additionalCosts)
-    partes.push(`${custo.description} ${moeda(custo.amount)}`)
+    partes.push(`${custo.description} ${formatCurrency(custo.amount)}`)
 
   return partes.join(' · ') || 'Sem detalhes'
 }

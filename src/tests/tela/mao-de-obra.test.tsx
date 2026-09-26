@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import VariationForm from '../../renderer/src/components/products/VariationForm'
+import PriceCalculator from '../../renderer/src/pages/PriceCalculator'
 import { instalarApiFalsa, variacaoFalsa, type ApiFalsa } from './ajuda/api-falsa'
 
 let api: ApiFalsa
@@ -48,5 +49,30 @@ describe('VariationForm: mão de obra padrão', () => {
 
     await waitFor(() => expect(api.variations.create).toHaveBeenCalledTimes(1))
     expect(api.variations.create.mock.calls[0][0].laborCost).toBe(8)
+  })
+})
+
+describe('mão de obra padrão entre a Precificação e a variação', () => {
+  it('should_offer_in_a_new_variation_the_default_saved_in_the_price_calculator', async () => {
+    // As duas telas leem e gravam a mesma chave: salvar numa vale na outra.
+    localStorage.clear()
+    const usuaria = userEvent.setup()
+    const { unmount } = render(<PriceCalculator />)
+    const campo = screen.getByLabelText('Mão de obra (R$)')
+    await usuaria.clear(campo)
+    await usuaria.type(campo, '12,5')
+    await usuaria.click(screen.getByRole('button', { name: 'Salvar como padrão' }))
+    unmount()
+
+    render(
+      <VariationForm productId={1} productName="Colar Aurora" onSave={vi.fn()} onClose={vi.fn()} />
+    )
+    await usuaria.type(screen.getByLabelText('Identificador'), 'Dourado')
+    await usuaria.type(screen.getByLabelText('Preço de custo (R$)'), '3')
+    await usuaria.type(screen.getByLabelText('Preço de venda (R$)'), '25')
+    await usuaria.click(screen.getByRole('button', { name: 'Cadastrar variação' }))
+
+    await waitFor(() => expect(api.variations.create).toHaveBeenCalledTimes(1))
+    expect(api.variations.create.mock.calls[0][0].laborCost).toBe(12.5)
   })
 })

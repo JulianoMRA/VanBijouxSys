@@ -1,20 +1,18 @@
-import { formatPercent, SEM_DATA } from './format'
+import { formatCurrency, formatPercent, MESES_ABREVIADOS, SEM_DATA } from './format'
 import type { DashboardStats } from '../types'
-
-const MESES = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
 
 /** '2026-08' -> 'Ago/26'. Nulo é o grupo das vendas antigas gravadas sem data. */
 export function formatMonth(ym: string | null): string {
   if (!ym) return SEM_DATA
   const [year, month] = ym.split('-')
-  return `${MESES[parseInt(month) - 1]}/${year.slice(2)}`
+  return `${MESES_ABREVIADOS[parseInt(month) - 1]}/${year.slice(2)}`
 }
 
 /** '2026-08-05' -> '5 Ago'. Nulo é o dia das vendas antigas gravadas sem data. */
 export function formatDay(dateStr: string | null): string {
   if (!dateStr) return SEM_DATA
   const [, month, day] = dateStr.split('-')
-  return `${parseInt(day)} ${MESES[parseInt(month) - 1]}`
+  return `${parseInt(day)} ${MESES_ABREVIADOS[parseInt(month) - 1]}`
 }
 
 /**
@@ -89,7 +87,7 @@ export function buildInsights(stats: DashboardStats): Insight[] {
     if (melhor.netProfit > 0) {
       insights.push({
         kind: 'feira',
-        text: `Melhor feira: ${melhor.fairName} com lucro líquido de ${melhor.netProfit.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}`
+        text: `Melhor feira: ${melhor.fairName} com lucro líquido de ${formatCurrency(melhor.netProfit)}`
       })
     }
   }

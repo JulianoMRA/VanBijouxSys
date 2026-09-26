@@ -1,17 +1,16 @@
 import { useEffect, useState } from 'react'
+import AvisoDeErro from '../components/ui/AvisoDeErro'
 import { ChevronDown, ChevronUp } from 'lucide-react'
 import FairForm from '../components/fairs/FairForm'
 import ConfirmDialog from '../components/ui/ConfirmDialog'
 import ActionMenu from '../components/ui/ActionMenu'
 import Toast from '../components/ui/Toast'
 import { useToast } from '../hooks/useToast'
-import { formatCurrency, formatDate, formatDateRange } from '../utils/format'
+import { formatCurrency, formatDate, formatDateRange, MESES_ABREVIADOS } from '../utils/format'
 import { diaLocal } from '../../../shared/datas'
 import type { Fair, Sale } from '../types'
 
 type Modal = { type: 'new' } | { type: 'edit'; fair: Fair } | { type: 'delete'; fair: Fair }
-
-const MESES = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
 
 /** O dia da cliente: em UTC, a feira de hoje passava a "realizada" depois das 21h. */
 function hojeISO(): string {
@@ -37,7 +36,7 @@ function prazoLabel(fair: Fair): string {
 }
 
 function DataBadge({ data, futura }: { data: string; futura: boolean }): JSX.Element {
-  const mes = MESES[parseInt(data.slice(5, 7), 10) - 1]
+  const mes = MESES_ABREVIADOS[parseInt(data.slice(5, 7), 10) - 1]
   return (
     <div
       className={`w-[54px] shrink-0 rounded-[10px] py-[7px] text-center ${
@@ -149,17 +148,7 @@ export default function Fairs(): JSX.Element {
       </div>
 
       <div className="px-8 pt-[22px]">
-        {errorMessage && (
-          <div className="mb-4 flex items-start justify-between gap-3 rounded-[11px] border border-bone-500 bg-clay-100 px-4 py-3">
-            <p className="text-body text-clay-600">{errorMessage}</p>
-            <button
-              onClick={() => setErrorMessage('')}
-              className="shrink-0 text-lg leading-none text-clay-500 hover:text-clay-600"
-            >
-              ×
-            </button>
-          </div>
-        )}
+        <AvisoDeErro mensagem={errorMessage} onFechar={() => setErrorMessage('')} />
 
         {loading ? (
           <div className="card flex h-40 items-center justify-center">

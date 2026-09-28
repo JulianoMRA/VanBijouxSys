@@ -81,7 +81,7 @@ export default function SystemPanel({ onClose }: { onClose: () => void }): JSX.E
   }
 
   return (
-    <Modal title="Backup e dados" onClose={onClose}>
+    <Modal title="Backup e dados" onClose={onClose} fechaAoClicarFora>
       <div className="space-y-4">
         <div className="bg-bone-200 rounded-control px-4 py-3">
           <p className="text-body text-ink-800">

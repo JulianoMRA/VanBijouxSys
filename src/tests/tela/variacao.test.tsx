@@ -2,6 +2,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import VariationForm from '../../renderer/src/components/products/VariationForm'
+import VariationDetailsModal from '../../renderer/src/components/products/VariationDetailsModal'
+import type { Product } from '../../shared/ipc/produtos'
 import { instalarApiFalsa, insumoFalso, variacaoFalsa, type ApiFalsa } from './ajuda/api-falsa'
 
 let api: ApiFalsa
@@ -172,5 +174,45 @@ describe('VariationForm: edição', () => {
     expect(api.variations.update.mock.calls[0][0]).toMatchObject({
       insumos: [{ insumoId: 1, quantity: 12.5 }]
     })
+  })
+})
+
+describe('Preço sugerido nas telas de variação (RN-09)', () => {
+  // Materiais R$ 10 e mão de obra R$ 20: (30 + 20) × 1,10 + 1 = R$ 56 exatos. As duas
+  // telas tinham cópia própria da fórmula e mostravam R$ 57.
+  it('should_suggest_56_reais_in_the_form_calculator', async () => {
+    const usuaria = userEvent.setup()
+    abrirCadastro()
+
+    await usuaria.type(campo('Preço de custo (R$)'), '10')
+    await usuaria.click(screen.getByRole('button', { name: /Calculadora de preço/ }))
+    await usuaria.type(campo('Mão de obra (R$)'), '20')
+
+    expect(
+      screen.getByRole('button', { name: 'Usar R$ 56,00 como preço de venda' })
+    ).toBeInTheDocument()
+  })
+
+  it('should_suggest_56_reais_in_the_details', () => {
+    const produto: Product = {
+      id: 1,
+      name: 'Colar Aurora',
+      categoryId: 1,
+      categoryName: 'Colar',
+      description: null,
+      createdAt: '2026-05-01',
+      archivedAt: null,
+      variations: []
+    }
+
+    render(
+      <VariationDetailsModal
+        product={produto}
+        variation={variacaoFalsa({ costPrice: 10, laborCost: 20, insumos: [] })}
+        onClose={vi.fn()}
+      />
+    )
+
+    expect(screen.getByText('Preço sugerido').parentElement).toHaveTextContent('R$ 56,00')
   })
 })

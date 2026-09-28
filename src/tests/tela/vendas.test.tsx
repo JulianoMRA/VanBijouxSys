@@ -172,3 +172,24 @@ describe('Vendas: pagamento parcial', () => {
     expect(api.sales.getAll).toHaveBeenCalledTimes(2)
   })
 })
+
+describe('Vendas: data de venda antiga', () => {
+  it('should_show_day_and_month_of_a_sale_saved_with_time', async () => {
+    // RN-14: vendas gravadas até a v1.12.1 guardam a hora escrita pelo SQLite.
+    api.sales.getAll.mockResolvedValue([venda({ soldAt: '2026-03-10 14:30:00' })])
+
+    render(<Sales />)
+
+    expect(await screen.findByText('10/03')).toBeInTheDocument()
+    expect(screen.getByText('2026')).toBeInTheDocument()
+  })
+
+  it('should_say_sem_data_for_a_sale_saved_without_date', async () => {
+    // Até a 1.13, apagar a data e salvar gravava a venda com sold_at vazio.
+    api.sales.getAll.mockResolvedValue([venda({ soldAt: '' })])
+
+    render(<Sales />)
+
+    expect(await screen.findByText('Sem data')).toBeInTheDocument()
+  })
+})

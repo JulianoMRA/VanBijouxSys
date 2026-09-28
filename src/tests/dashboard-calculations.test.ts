@@ -59,6 +59,11 @@ describe('formatMonth', () => {
     expect(formatMonth('2026-01')).toBe('Jan/26')
     expect(formatMonth('2026-12')).toBe('Dez/26')
   })
+
+  it('should_label_the_group_of_old_sales_saved_without_date', () => {
+    // O SQLite agrupa sold_at vazio sob mês nulo; antes, o Painel em "Tudo" quebrava.
+    expect(formatMonth(null)).toBe('Sem data')
+  })
 })
 
 describe('formatDay', () => {
@@ -68,6 +73,10 @@ describe('formatDay', () => {
 
   it('should_drop_the_leading_zero_of_the_day', () => {
     expect(formatDay('2026-03-01')).toBe('1 Mar')
+  })
+
+  it('should_label_a_fair_day_of_sales_saved_without_date', () => {
+    expect(formatDay(null)).toBe('Sem data')
   })
 })
 

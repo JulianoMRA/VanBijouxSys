@@ -225,6 +225,27 @@ describe('dashboard: período anterior', () => {
   })
 })
 
+describe('dashboard: venda antiga sem data', () => {
+  it('should_group_a_sale_saved_without_date_apart_in_the_all_time_charts', async () => {
+    await criarVenda(ambiente, {
+      soldAt: '2026-05-10',
+      items: [{ variationId: colar, quantity: 1, unitPrice: 30, unitCost: 5 }]
+    })
+    // Até a 1.13, apagar a data da venda e salvar gravava sold_at vazio. O canal
+    // hoje recusa isso, então a linha antiga entra direto no banco.
+    ambiente.banco.run(
+      `INSERT INTO sales (channel, total_amount, total_cost, payment_method, net_amount, sold_at)
+       VALUES ('Outro', 20, 3, 'dinheiro', 20, '')`
+    )
+
+    const stats = await ambiente.chamar<DashboardStats>('dashboard:getStats', { period: 'all' })
+
+    expect(stats.overview.totalRevenue).toBe(50)
+    expect(stats.revenueByMonth).toContainEqual({ month: null, revenue: 20, profit: 17 })
+    expect(stats.cashFlow).toContainEqual({ month: null, income: 20, expenses: 0 })
+  })
+})
+
 describe('dashboard: validação do período', () => {
   it('should_refuse_an_end_date_without_a_start_date', async () => {
     await expect(

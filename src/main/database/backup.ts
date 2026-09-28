@@ -1,7 +1,19 @@
 import Database from 'better-sqlite3'
-import { app } from 'electron'
-import { copyFileSync, existsSync, mkdirSync, readdirSync, rmSync, statSync } from 'fs'
+import { app, dialog } from 'electron'
+import {
+  closeSync,
+  copyFileSync,
+  existsSync,
+  fsyncSync,
+  mkdirSync,
+  openSync,
+  readdirSync,
+  renameSync,
+  rmSync,
+  statSync
+} from 'fs'
 import { dirname, join } from 'path'
+import { registro } from '../registro'
 import { closeDatabase, getDbPath, getSqlite } from './index'
 import {
   ehArquivoDeBackup,
@@ -106,6 +118,29 @@ export function validarBackup(caminho: string): { ok: true } | { ok: false; erro
   }
 }
 
+/** Força o conteúdo do arquivo para o disco antes de ele virar o banco. */
+function gravarNoDisco(caminho: string): void {
+  const arquivo = openSync(caminho, 'r+')
+  try {
+    fsyncSync(arquivo)
+  } finally {
+    closeSync(arquivo)
+  }
+}
+
+/**
+ * Troca o arquivo do banco, já fechado, pela cópia da origem. O WAL do banco antigo
+ * sai antes: aplicado sobre o restaurado, corromperia os dois. A troca é um rename na
+ * mesma pasta, que o sistema faz de uma vez — copiar por cima deixava o banco pela
+ * metade se o computador desligasse no meio.
+ */
+function trocarOBanco(copiaDaOrigem: string, destino: string): void {
+  for (const sufixo of ['-wal', '-shm']) {
+    rmSync(`${destino}${sufixo}`, { force: true })
+  }
+  renameSync(copiaDaOrigem, destino)
+}
+
 /**
  * Substitui o banco em uso. Antes de sobrescrever, guarda o estado atual num
  * backup próprio — restaurar o arquivo errado não pode ser um caminho sem volta.
@@ -114,24 +149,36 @@ export function validarBackup(caminho: string): { ok: true } | { ok: false; erro
  * A origem é copiada antes de tudo: ela costuma estar na própria pasta de backups,
  * e o backup de segurança roda a rotação. Sem a cópia, restaurar o backup mais
  * antigo de uma pasta cheia apagava o arquivo escolhido com o banco já fechado.
+ *
+ * Depois de fechar o banco, o app reinicia de qualquer jeito. Se a troca falhar
+ * (arquivo preso por outro programa, disco cheio), ela vê o aviso e o app volta com
+ * os dados que estavam em uso; parar no erro deixava a janela aberta sem banco, e
+ * toda tela falhava até ela fechar o app.
  */
 export async function restaurarBackup(origem: string): Promise<void> {
   const destino = getDbPath()
   const copiaDaOrigem = `${destino}.restaurando`
-  copyFileSync(origem, copiaDaOrigem)
 
   try {
+    copyFileSync(origem, copiaDaOrigem)
+    gravarNoDisco(copiaDaOrigem)
     await criarBackup({ tipo: 'restauracao' })
   } catch (erro) {
     rmSync(copiaDaOrigem, { force: true })
     throw erro
   }
-  closeDatabase()
 
-  copyFileSync(copiaDaOrigem, destino)
-  rmSync(copiaDaOrigem, { force: true })
-  for (const sufixo of ['-wal', '-shm']) {
-    rmSync(`${destino}${sufixo}`, { force: true })
+  try {
+    closeDatabase()
+    trocarOBanco(copiaDaOrigem, destino)
+  } catch (erro) {
+    rmSync(copiaDaOrigem, { force: true })
+    registro.error('[backup] a restauração falhou com o banco fechado; o app reinicia:', erro)
+    dialog.showErrorBox(
+      'Não foi possível restaurar o backup',
+      'Os dados que estavam em uso não foram alterados, e o aplicativo vai reiniciar com eles. ' +
+        'Os detalhes ficaram registrados no log.'
+    )
   }
 
   app.relaunch()

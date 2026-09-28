@@ -98,7 +98,8 @@ conferência humana dela.
 - Backup antes de migrar o schema, backup diário com 10 dias de histórico e backup
   do estado atual antes de restaurar outro. Diários e extras têm cotas separadas
   (RN-15), e o arquivo escolhido para restaurar é copiado antes que a rotação
-  possa apagá-lo.
+  possa apagá-lo. A troca do banco é um rename atômico, e uma falha com o banco já
+  fechado reinicia o app com os dados que estavam em uso.
 - Os caminhos de exportar e restaurar são escolhidos em diálogo nativo aberto pelo
   processo principal. O renderer não envia caminho nenhum.
 - Antes de restaurar, o arquivo passa por `integrity_check` e precisa ter as tabelas

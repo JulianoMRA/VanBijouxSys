@@ -633,9 +633,11 @@ export default function Dashboard(): JSX.Element {
                     </span>
                   </div>
                   {stats!.overview.totalReceivable > 0 && (
+                    // O Painel conta só as vendas feitas no período; o total de tudo o que
+                    // falta receber está na lista de Vendas.
                     <p className="rounded-control bg-honey-100 px-3 py-2 text-aux text-honey-600">
-                      {formatCurrency(stats!.overview.totalReceivable)} a receber ainda não entraram
-                      no caixa
+                      {formatCurrency(stats!.overview.totalReceivable)} a receber
+                      {period === 'all' ? '' : ' das vendas do período'} ainda não entraram no caixa
                     </p>
                   )}
                 </div>

@@ -209,4 +209,14 @@ describe('alerta de reposição', () => {
   it('should_not_flag_insumos_at_or_above_their_minimum', () => {
     expect(abaixoDoMinimo()).toEqual([])
   })
+
+  it('should_list_an_insumo_without_minimum_as_out_of_stock_when_it_runs_out', async () => {
+    // A tela de Estoque e o contador da barra lateral já contavam esse insumo como
+    // esgotado; só o Painel exigia mínimo definido e deixava de avisar.
+    await criarInsumo(ambiente, { name: 'Cola', unit: 'g', stockQuantity: 0, minimumStock: 0 })
+
+    const esgotados = queryAll<{ name: string }>(ambiente.banco, SQL_INSUMOS_ESGOTADOS)
+    expect(esgotados.map((i) => i.name)).toEqual(['Cola'])
+    expect(abaixoDoMinimo()).toEqual([])
+  })
 })

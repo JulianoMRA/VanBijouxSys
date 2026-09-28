@@ -153,3 +153,32 @@ describe('Painel: período personalizado', () => {
     expect(screen.queryByText(/R\$\s111,00/)).not.toBeInTheDocument()
   })
 })
+
+describe('Painel: a receber do período', () => {
+  it('should_say_the_note_covers_only_the_sales_of_the_period', async () => {
+    // A lista de Vendas mostra tudo o que falta receber; o Painel conta só as vendas
+    // feitas no período, e o texto não dizia isso.
+    api.dashboard.getStats.mockResolvedValue(
+      painelFalso({ overview: { ...duasVendas, totalReceivable: 36 } })
+    )
+
+    render(<Dashboard />)
+
+    const aviso = await screen.findByText(/a receber das vendas do período ainda não entraram/)
+    expect(aviso).toHaveTextContent('R$ 36,00')
+  })
+
+  it('should_keep_the_plain_note_in_all_time', async () => {
+    api.dashboard.getStats.mockResolvedValue(
+      painelFalso({ overview: { ...duasVendas, totalReceivable: 36 } })
+    )
+    const usuaria = userEvent.setup()
+    render(<Dashboard />)
+    await screen.findByText(/das vendas do período/)
+
+    await usuaria.click(screen.getByRole('button', { name: 'Tudo' }))
+
+    expect(await screen.findByText(/a receber ainda não entraram no caixa/)).toBeInTheDocument()
+    expect(screen.queryByText(/das vendas do período/)).not.toBeInTheDocument()
+  })
+})

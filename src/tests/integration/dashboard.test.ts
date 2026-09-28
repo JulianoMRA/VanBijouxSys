@@ -309,6 +309,28 @@ describe('dashboard: saldo do caixa no período (RN-18)', () => {
   })
 })
 
+describe('dashboard: ticket médio', () => {
+  it('should_average_the_gross_revenue_like_the_sales_screen', async () => {
+    // Faturamento bruto dividido pelo número de vendas, como a tela de Vendas. O
+    // Painel fazia a média do líquido e dava outro número para as mesmas vendas.
+    await criarVenda(ambiente, {
+      soldAt: '2026-05-10',
+      paymentMethod: 'credito',
+      feePercentage: 10,
+      feeAmount: 10,
+      items: [{ variationId: colar, quantity: 1, unitPrice: 100, unitCost: 5 }]
+    })
+    await criarVenda(ambiente, {
+      soldAt: '2026-05-11',
+      items: [{ variationId: pulseira, quantity: 2, unitPrice: 25, unitCost: 4 }]
+    })
+
+    const { overview } = await painel('2026-05-01', '2026-05-31')
+
+    expect(overview.avgTicket).toBe(75)
+  })
+})
+
 describe('dashboard: validação do período', () => {
   it('should_refuse_an_end_date_without_a_start_date', async () => {
     await expect(

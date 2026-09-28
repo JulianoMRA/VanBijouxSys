@@ -1,5 +1,40 @@
 # Changelog
 
+## [1.17.0] - 2026-09-28
+
+### Corrigido
+
+- **Saldo do Caixa em qualquer período**: no Mês, 3M, 6M, Ano e Personalizado, o saldo atual somava só o saldo de abertura e o que entrou no período, sem os meses anteriores. Agora o período começa no saldo de antes dele, e o saldo atual é o dinheiro que está de fato em caixa; num período personalizado que já terminou, aparece como "Saldo em DD/MM/AAAA". O Painel mostra o mesmo.
+- **Painel com vendas antigas sem data**: vendas e despesas gravadas sem data até a 1.14 derrubavam o Painel em "Tudo". Agora aparecem como "Sem data" no Painel, em Vendas, no Receber e no Caixa.
+- **Restaurar backup**: se a troca do banco falhar no meio, o app avisa e abre de novo com os dados que estavam em uso, em vez de ficar aberto sem banco.
+- **Preço sugerido**: em alguns valores a conta dava um real a mais por arredondamento; agora é feita em centavos exatos, igual na Precificação, no cadastro e no detalhe da variação.
+- **Período personalizado do Painel**: voltar para "Personalizado" com as datas já escolhidas recarrega os números.
+- **Janelas**: o Esc fecha só a janela de cima, e clicar fora de um formulário não descarta mais o que foi digitado.
+- **Números do Painel e das Feiras**: o lucro da feira desconta as taxas de cartão, o ticket médio bate com o da tela de Vendas, o aviso de "a receber" diz de quais vendas se trata, e insumo sem estoque conta como esgotado mesmo sem mínimo definido.
+- **Erros que ficavam escondidos**: Caixa, Precificação e os cadastros de venda e de variação avisam quando não conseguem carregar, em vez de ficar em "Carregando…" ou mostrar listas vazias, e os formulários mostram o motivo de uma recusa. Os erros da tela passam a ficar registrados no arquivo de log.
+- **Mão de obra da variação**: editar uma variação sem mão de obra não grava mais a mão de obra padrão nela.
+- **Venda voltando para "a receber"**: editar uma venda recebida até a 1.14 e escolher "A receber" desfaz o recebimento antigo; antes ela voltava a dever tudo e continuava marcada como recebida.
+- **Números com vírgula**: margens e porcentagens ("12,5%"), custos da receita e quantidades aparecem no jeito brasileiro, e o custo por centímetro do fio a granel não arredonda mais para R$ 0,01.
+- **3M e 6M no fim do mês**: em dias como 31 de maio, o período começava alguns dias depois do certo.
+- **Unidade do insumo**: um insumo que está em receita de variação arquivada já tem a unidade travada no formulário, em vez de a recusa só aparecer ao salvar.
+- **Planilha de insumos**: nome com aspas não parte mais a linha em colunas erradas.
+- **Mensagem ao salvar**: quando um item escolhido não existe mais, a mensagem diz isso, em vez de falar em exclusão.
+- **Listas mais rápidas**: com muitas vendas, Vendas, Caixa e Feiras abrem bem mais rápido (numa base de teste com 5.000 vendas, de quase 2 segundos para 0,03 segundo).
+
+### Segurança
+
+- **Taxa e líquido calculados pelo app**: o valor líquido de cada venda é calculado ao gravar, e não mais recebido pronto da tela.
+- **Janela do app mais fechada**: o banco só responde à tela do próprio app, e as permissões de navegador (câmera, microfone, notificações e outras), que o app não usa, ficam negadas.
+- **Planilha de insumos**: um nome de insumo que comece como fórmula não é mais executado pelo Excel.
+
+### Interno
+
+- Código repetido reunido num lugar só (data de hoje, formato de reais, formas de pagamento e taxa lembrada, mão de obra padrão, consultas do Painel, aviso de erro, nomes dos meses) e código sem uso removido, inclusive um canal de estatísticas do caixa que nenhuma tela chamava (48 canais) e uma dependência de desenvolvimento.
+- Regras de negócio: RN-18, RN-19 e RN-20 novas; RN-05, RN-08, RN-09, RN-14 e RN-15 atualizadas.
+- A suíte de testes vai de 624 para 743.
+
+---
+
 ## [1.16.0] - 2026-09-23
 
 ### Alterado

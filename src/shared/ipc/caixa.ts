@@ -32,11 +32,6 @@ export const filtroDeDespesasSchema = z.object({
   categoryId: idSchema.optional()
 })
 
-export const filtroDeEstatisticasSchema = z.object({
-  startDate: dataIsoSchema.optional(),
-  endDate: dataIsoSchema.optional()
-})
-
 /** Quanto havia em caixa antes do app. A tela não aceita negativo. */
 export const saldoDeAberturaSchema = z.number().nonnegative()
 
@@ -51,8 +46,7 @@ export const ARGUMENTOS_DESPESAS = {
   getAll: [filtroDeDespesasSchema.optional()],
   create: [novaDespesaSchema],
   update: [despesaAtualizadaSchema],
-  delete: [idSchema],
-  getStats: [filtroDeEstatisticasSchema.optional()]
+  delete: [idSchema]
 } as const
 
 export const ARGUMENTOS_CAIXA = {
@@ -65,7 +59,6 @@ export type UpdateExpenseCategoryInput = z.input<typeof categoriaDeDespesaAtuali
 export type CreateCashExpenseInput = z.input<typeof novaDespesaSchema>
 export type UpdateCashExpenseInput = z.input<typeof despesaAtualizadaSchema>
 export type FiltroDeDespesas = z.input<typeof filtroDeDespesasSchema>
-export type FiltroDeEstatisticas = z.input<typeof filtroDeEstatisticasSchema>
 
 export interface ExpenseCategory {
   id: number
@@ -88,10 +81,4 @@ export interface CashSettings {
   id: number
   openingBalance: number
   updatedAt: string
-}
-
-export interface CashStats {
-  totalExpenses: number
-  totalIncome: number
-  openingBalance: number
 }

@@ -61,8 +61,7 @@ export const CANAIS_IPC = {
     getAll: 'cash-expenses:getAll',
     create: 'cash-expenses:create',
     update: 'cash-expenses:update',
-    delete: 'cash-expenses:delete',
-    getStats: 'cash-expenses:getStats'
+    delete: 'cash-expenses:delete'
   },
   cashSettings: {
     get: 'cash-settings:get',

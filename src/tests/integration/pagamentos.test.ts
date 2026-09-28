@@ -424,19 +424,4 @@ describe('pagamento no caixa e no painel', () => {
 
     expect(overview.totalReceivable).toBe(0)
   })
-
-  it('should_sum_payments_in_the_cash_stats_by_payment_date', async () => {
-    const id = await vendaAReceber()
-    await receber(ambiente, id, { amount: 50, feePercentage: 1, receivedAt: '2026-09-22' })
-    await receber(ambiente, id, { amount: 36, receivedAt: '2026-10-05' })
-
-    const setembro = await ambiente.chamar<{ totalIncome: number }>('cash-expenses:getStats', {
-      startDate: '2026-09-01',
-      endDate: '2026-09-30'
-    })
-    const tudo = await ambiente.chamar<{ totalIncome: number }>('cash-expenses:getStats')
-
-    expect(setembro.totalIncome).toBeCloseTo(49.5, 10)
-    expect(tudo.totalIncome).toBeCloseTo(85.5, 10)
-  })
 })

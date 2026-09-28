@@ -47,20 +47,12 @@ export type {
 export type {
   CashExpense,
   CashSettings,
-  CashStats,
   CreateCashExpenseInput,
   CreateExpenseCategoryInput,
   ExpenseCategory,
   UpdateCashExpenseInput,
   UpdateExpenseCategoryInput
 } from '../../../shared/ipc/caixa'
-
-export interface CashSummary {
-  openingBalance: number
-  totalIncome: number
-  totalExpenses: number
-  currentBalance: number
-}
 
 // Tipos do painel vêm do contrato do canal do painel.
 export type { DashboardParams, DashboardStats } from '../../../shared/ipc/painel'

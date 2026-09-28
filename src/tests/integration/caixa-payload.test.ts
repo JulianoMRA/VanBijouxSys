@@ -102,18 +102,6 @@ describe('caixa: payloads das telas continuam aceitos', () => {
     const config = await ambiente.chamar<CashSettings>('cash-settings:get')
     expect(config.openingBalance).toBe(150.75)
   })
-
-  it('should_accept_the_stats_channel_with_and_without_a_period', async () => {
-    await ambiente.chamar('cash-expenses:create', novaDespesa())
-
-    expect(await ambiente.chamar('cash-expenses:getStats')).toMatchObject({ totalExpenses: 40.5 })
-    expect(
-      await ambiente.chamar('cash-expenses:getStats', {
-        startDate: '2026-06-01',
-        endDate: '2026-06-30'
-      })
-    ).toMatchObject({ totalExpenses: 0 })
-  })
 })
 
 describe('caixa: payload fora do formato é recusado sem gravar', () => {
@@ -151,7 +139,6 @@ describe('caixa: payload fora do formato é recusado sem gravar', () => {
   it('should_refuse_a_filter_with_a_broken_date_or_category', async () => {
     await recusaSemGravar('cash-expenses:getAll', { startDate: 'maio' })
     await recusaSemGravar('cash-expenses:getAll', { categoryId: 0 })
-    await recusaSemGravar('cash-expenses:getStats', { endDate: '2026-13' })
   })
 
   it('should_refuse_an_opening_balance_that_is_text_or_negative', async () => {

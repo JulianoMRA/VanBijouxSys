@@ -2,7 +2,6 @@ import { describe, it, expect } from 'vitest'
 import {
   formatDate,
   formatDateRange,
-  calcSaleTotals,
   formatarCustoUnitario,
   formatPercent,
   partesDaData
@@ -85,41 +84,5 @@ describe('formatDateRange', () => {
 
   it('should use full date range when different years', () => {
     expect(formatDateRange('2024-12-31', '2025-01-01')).toBe('31/12/2024 a 01/01/2025')
-  })
-})
-
-describe('calcSaleTotals', () => {
-  it('should return zeros for empty items array', () => {
-    const result = calcSaleTotals([])
-    expect(result).toEqual({ totalAmount: 0, totalCost: 0, profit: 0 })
-  })
-
-  it('should calculate totals for a single item', () => {
-    const result = calcSaleTotals([{ quantity: 2, unitPrice: 50, unitCost: 15 }])
-    expect(result.totalAmount).toBe(100)
-    expect(result.totalCost).toBe(30)
-    expect(result.profit).toBe(70)
-  })
-
-  it('should sum multiple items correctly', () => {
-    const result = calcSaleTotals([
-      { quantity: 1, unitPrice: 40, unitCost: 12 },
-      { quantity: 3, unitPrice: 25, unitCost: 8 }
-    ])
-    expect(result.totalAmount).toBe(115) // 40 + 75
-    expect(result.totalCost).toBe(36) // 12 + 24
-    expect(result.profit).toBe(79) // 115 - 36
-  })
-
-  it('should calculate profit as totalAmount minus totalCost', () => {
-    const result = calcSaleTotals([{ quantity: 1, unitPrice: 30, unitCost: 30 }])
-    expect(result.profit).toBe(0)
-  })
-
-  it('should handle fractional prices correctly', () => {
-    const result = calcSaleTotals([{ quantity: 2, unitPrice: 12.5, unitCost: 4.75 }])
-    expect(result.totalAmount).toBeCloseTo(25)
-    expect(result.totalCost).toBeCloseTo(9.5)
-    expect(result.profit).toBeCloseTo(15.5)
   })
 })

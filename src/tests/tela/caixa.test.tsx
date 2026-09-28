@@ -109,3 +109,49 @@ describe('Caixa: saldo em qualquer período (RN-18)', () => {
     expect(card('Saldo em 31/08/2026')).toHaveTextContent('R$ 2.500,00')
   })
 })
+
+describe('Caixa: falhas aparecem na tela', () => {
+  it('should_say_when_the_cash_could_not_load_instead_of_loading_forever', async () => {
+    // Sem tratamento, uma falha em qualquer das cinco leituras deixava o
+    // "Carregando…" na tela para sempre, sem dizer nada.
+    api.sales.getAll.mockRejectedValue(new Error('falhou'))
+
+    render(<Cash />)
+
+    expect(await screen.findByText('Não foi possível carregar o caixa.')).toBeInTheDocument()
+    expect(screen.queryByText('Carregando…')).not.toBeInTheDocument()
+  })
+
+  it('should_warn_about_an_opening_balance_that_is_not_a_number', async () => {
+    const usuaria = userEvent.setup()
+    render(<Cash />)
+    await screen.findByText('Saldo inicial')
+
+    await usuaria.click(screen.getByRole('button', { name: 'Saldo de abertura' }))
+    await usuaria.clear(screen.getByLabelText('Valor (R$)'))
+    await usuaria.type(screen.getByLabelText('Valor (R$)'), 'mil')
+    await usuaria.click(screen.getByRole('button', { name: 'Salvar' }))
+
+    expect(screen.getByText('Informe um valor igual ou maior que zero.')).toBeInTheDocument()
+    expect(api.cashSettings.setOpeningBalance).not.toHaveBeenCalled()
+  })
+
+  it('should_explain_and_keep_the_value_when_saving_the_opening_balance_fails', async () => {
+    api.cashSettings.setOpeningBalance.mockRejectedValue(
+      new Error('Não foi possível concluir a operação. Tente novamente.')
+    )
+    const usuaria = userEvent.setup()
+    render(<Cash />)
+    await screen.findByText('Saldo inicial')
+
+    await usuaria.click(screen.getByRole('button', { name: 'Saldo de abertura' }))
+    await usuaria.clear(screen.getByLabelText('Valor (R$)'))
+    await usuaria.type(screen.getByLabelText('Valor (R$)'), '1500')
+    await usuaria.click(screen.getByRole('button', { name: 'Salvar' }))
+
+    expect(
+      await screen.findByText('Não foi possível concluir a operação. Tente novamente.')
+    ).toBeInTheDocument()
+    expect(screen.getByLabelText('Valor (R$)')).toHaveValue('1500')
+  })
+})

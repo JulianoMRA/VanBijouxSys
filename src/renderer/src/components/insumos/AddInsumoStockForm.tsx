@@ -35,8 +35,8 @@ export default function AddInsumoStockForm({
       await window.api.insumos.addStock(insumo.id, qty)
       onSave()
       onClose()
-    } catch {
-      setError('Erro ao adicionar estoque.')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erro ao adicionar estoque.')
     } finally {
       setSaving(false)
     }

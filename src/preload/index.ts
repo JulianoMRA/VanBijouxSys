@@ -1,5 +1,6 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import { CANAIS_IPC } from '../shared/ipc/channels'
+import type { ErroDaTela } from '../shared/ipc/backup'
 import type { CreateFairInput, UpdateFairInput } from '../shared/ipc/feiras'
 import type { DashboardParams } from '../shared/ipc/painel'
 import type {
@@ -116,7 +117,8 @@ const api = {
   },
   app: {
     versao: () => invoke(CANAIS_IPC.app.versao),
-    verificarAtualizacoes: () => invoke(CANAIS_IPC.app.verificarAtualizacoes)
+    verificarAtualizacoes: () => invoke(CANAIS_IPC.app.verificarAtualizacoes),
+    registrarErroDaTela: (erro: ErroDaTela) => invoke(CANAIS_IPC.app.registrarErroDaTela, erro)
   }
 }
 

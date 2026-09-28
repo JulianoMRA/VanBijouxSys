@@ -49,8 +49,8 @@ export default function ProductForm({
       }
       onSave()
       onClose()
-    } catch {
-      setError('Erro ao salvar. Tente novamente.')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erro ao salvar. Tente novamente.')
     } finally {
       setSaving(false)
     }

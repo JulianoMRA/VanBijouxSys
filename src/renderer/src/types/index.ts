@@ -68,6 +68,7 @@ export type { DashboardParams, DashboardStats } from '../../../shared/ipc/painel
 // Tipos de backup vêm do contrato dos canais de backup e do aplicativo.
 export type {
   BackupInfo,
+  ErroDaTela,
   ResultadoDaExportacao,
   ResultadoDaRestauracao
 } from '../../../shared/ipc/backup'

@@ -15,6 +15,16 @@ import '@fontsource/fraunces/600.css'
 import '@fontsource/fraunces/700.css'
 
 import './styles/globals.css'
+import { registrarErroDaTela } from './utils/registro-de-erros'
+
+// Erro fora da renderização — num clique ou numa promessa sem catch — não passa pelo
+// ErrorBoundary. O log do app é o único lugar onde ele fica registrado.
+window.addEventListener('error', (evento) =>
+  registrarErroDaTela('excecao', evento.error ?? evento.message)
+)
+window.addEventListener('unhandledrejection', (evento) =>
+  registrarErroDaTela('promessa', evento.reason)
+)
 
 ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
   <React.StrictMode>

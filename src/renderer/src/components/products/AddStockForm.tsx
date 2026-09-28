@@ -33,8 +33,8 @@ export default function AddStockForm({
       await window.api.variations.addStock(variation.id, qty)
       onSave()
       onClose()
-    } catch {
-      setError('Erro ao adicionar estoque. Tente novamente.')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erro ao adicionar estoque. Tente novamente.')
     } finally {
       setSaving(false)
     }

@@ -1,4 +1,5 @@
 import { useEffect, useState, useMemo } from 'react'
+import AvisoDeErro from '../components/ui/AvisoDeErro'
 import { ChevronDown } from 'lucide-react'
 import { formatarCustoUnitario, formatCurrency } from '../utils/format'
 import { avisarInsumosAlterados } from '../utils/eventos'
@@ -322,17 +323,7 @@ export default function Stock(): JSX.Element {
       </div>
 
       <div className="px-8 pt-5">
-        {errorMessage && (
-          <div className="mb-4 flex items-start justify-between gap-3 rounded-[11px] border border-bone-500 bg-clay-100 px-4 py-3">
-            <p className="text-body text-clay-600">{errorMessage}</p>
-            <button
-              onClick={() => setErrorMessage('')}
-              className="shrink-0 text-lg leading-none text-clay-500 hover:text-clay-600"
-            >
-              ×
-            </button>
-          </div>
-        )}
+        <AvisoDeErro mensagem={errorMessage} onFechar={() => setErrorMessage('')} />
 
         {loading ? (
           <div className="card flex h-40 items-center justify-center">

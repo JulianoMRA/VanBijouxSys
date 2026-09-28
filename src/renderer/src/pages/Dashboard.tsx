@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import AvisoDeErro from '../components/ui/AvisoDeErro'
 import {
   BarChart,
   Bar,
@@ -429,17 +430,7 @@ export default function Dashboard(): JSX.Element {
       </div>
 
       <div className="px-8 pt-[22px]">
-        {erro && (
-          <div className="mb-[22px] flex items-start justify-between gap-3 rounded-[11px] border border-bone-500 bg-clay-100 px-4 py-3">
-            <p className="text-body text-clay-600">{erro}</p>
-            <button
-              onClick={() => setErro('')}
-              className="shrink-0 text-lg leading-none text-clay-500 hover:text-clay-600"
-            >
-              ×
-            </button>
-          </div>
-        )}
+        <AvisoDeErro mensagem={erro} onFechar={() => setErro('')} margem="mb-[22px]" />
 
         {stats && <AlertStrip stats={stats} />}
 

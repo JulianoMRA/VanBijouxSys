@@ -2,6 +2,7 @@ import { useState } from 'react'
 import Modal from '../ui/Modal'
 import CampoNumerico from '../ui/CampoNumerico'
 import { formatarNumeroParaCampo, interpretarNumero } from '../../utils/numero'
+import { formatCurrency } from '../../utils/format'
 import type { Fair } from '../../types'
 
 interface FairFormProps {
@@ -286,9 +287,7 @@ export default function FairForm({ fair, onSave, onClose }: FairFormProps): JSX.
             {enrollmentValue > 0 && (
               <div className="flex justify-between text-ink-500">
                 <span>Inscrição</span>
-                <span>
-                  {enrollmentValue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-                </span>
+                <span>{formatCurrency(enrollmentValue)}</span>
               </div>
             )}
             {additionalCosts.map((c) => {
@@ -297,15 +296,13 @@ export default function FairForm({ fair, onSave, onClose }: FairFormProps): JSX.
               return (
                 <div key={c.key} className="flex justify-between text-ink-500">
                   <span>{c.description}</span>
-                  <span>{val.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
+                  <span>{formatCurrency(val)}</span>
                 </div>
               )
             })}
             <div className="flex justify-between border-t border-bone-400 pt-1 font-semibold text-ink-900">
               <span>Custo total da feira</span>
-              <span>
-                {totalFairCost.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-              </span>
+              <span>{formatCurrency(totalFairCost)}</span>
             </div>
           </div>
         )}

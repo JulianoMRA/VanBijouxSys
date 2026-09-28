@@ -1,14 +1,17 @@
 import { useState } from 'react'
 import Modal from '../ui/Modal'
 import CampoNumerico from '../ui/CampoNumerico'
-import {
-  formatarNumeroParaCampo,
-  interpretarNumero,
-  numeroDoArmazenamento,
-  numeroParaArmazenamento
-} from '../../utils/numero'
+import { formatarNumeroParaCampo, interpretarNumero } from '../../utils/numero'
 import { formatCurrency, formatDate, partesDaData } from '../../utils/format'
+import {
+  dicaDaTaxa,
+  FORMAS_RECEBIDAS,
+  lembrarTaxa,
+  PAYMENT_LABELS,
+  taxaSugerida
+} from '../../utils/formas-de-pagamento'
 import { totalRecebido } from '../../utils/recebimentos'
+import { diaLocal } from '../../../../shared/datas'
 import { emCentavos } from '../../../../shared/dinheiro'
 import { RECUSAS_DE_PAGAMENTO } from '../../../../shared/recebimentos'
 import type { ReceivedPaymentMethod, Sale } from '../../types'
@@ -17,23 +20,6 @@ interface ReceberPagamentoModalProps {
   sale: Sale
   onSave: () => void
   onClose: () => void
-}
-
-const PAYMENT_METHODS: { value: ReceivedPaymentMethod; label: string }[] = [
-  { value: 'dinheiro', label: 'Dinheiro' },
-  { value: 'pix', label: 'PIX' },
-  { value: 'debito', label: 'Débito' },
-  { value: 'credito', label: 'Crédito' }
-]
-
-function todayIso(): string {
-  const d = new Date()
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-}
-
-function loadLastFee(method: ReceivedPaymentMethod): string {
-  if (method === 'dinheiro') return '0'
-  return numeroDoArmazenamento(localStorage.getItem(`lastFee_${method}`))
 }
 
 /**
@@ -49,13 +35,13 @@ export default function ReceberPagamentoModal({
   const [amount, setAmount] = useState(formatarNumeroParaCampo(sale.amountDue))
   const [paymentMethod, setPaymentMethod] = useState<ReceivedPaymentMethod>('dinheiro')
   const [feePercentage, setFeePercentage] = useState('0')
-  const [receivedAt, setReceivedAt] = useState(todayIso())
+  const [receivedAt, setReceivedAt] = useState(() => diaLocal(new Date()))
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
   function handleMethodChange(method: ReceivedPaymentMethod): void {
     setPaymentMethod(method)
-    setFeePercentage(loadLastFee(method))
+    setFeePercentage(taxaSugerida(method))
   }
 
   const valorLido = interpretarNumero(amount)
@@ -85,9 +71,7 @@ export default function ReceberPagamentoModal({
       setError('Informe uma taxa entre 0 e 100%.')
       return
     }
-    if (paymentMethod !== 'dinheiro' && feePercent > 0) {
-      localStorage.setItem(`lastFee_${paymentMethod}`, numeroParaArmazenamento(feePercentage) ?? '')
-    }
+    lembrarTaxa(paymentMethod, feePercentage)
     setSaving(true)
     try {
       await window.api.sales.registerPayment({
@@ -165,7 +149,7 @@ export default function ReceberPagamentoModal({
         <div>
           <label className="label">Forma de pagamento recebida</label>
           <div className="flex flex-wrap gap-2">
-            {PAYMENT_METHODS.map(({ value, label }) => (
+            {FORMAS_RECEBIDAS.map((value) => (
               <button
                 key={value}
                 type="button"
@@ -176,7 +160,7 @@ export default function ReceberPagamentoModal({
                     : 'bg-bone-200 text-ink-600 hover:bg-bone-300'
                 }`}
               >
-                {label}
+                {PAYMENT_LABELS[value]}
               </button>
             ))}
           </div>
@@ -185,13 +169,7 @@ export default function ReceberPagamentoModal({
         {paymentMethod !== 'dinheiro' && (
           <div>
             <label className="label" htmlFor="receber-taxa">
-              Taxa (
-              {paymentMethod === 'pix'
-                ? 'sugerido: 0,99%'
-                : paymentMethod === 'debito'
-                  ? 'sugerido: 1,69%'
-                  : 'variável'}
-              )
+              Taxa ({dicaDaTaxa(paymentMethod)})
             </label>
             <div className="relative">
               <CampoNumerico

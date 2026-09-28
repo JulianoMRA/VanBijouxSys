@@ -1,5 +1,5 @@
 import { emCentavos } from '../../../shared/dinheiro'
-import { PAYMENT_LABELS } from './cash-calculations'
+import { PAYMENT_LABELS } from './formas-de-pagamento'
 import { formatCurrency, formatDate } from './format'
 import type { PaymentMethod, Sale } from '../types'
 

@@ -30,7 +30,13 @@ function stats(over: Partial<DashboardStats> = {}): DashboardStats {
     outOfInsumos: [],
     lowInsumos: [],
     cashFlow: [],
-    cashSummary: { openingBalance: 0, totalIncome: 0, totalExpenses: 0, currentBalance: 0 },
+    cashSummary: {
+      openingBalance: 0,
+      startBalance: 0,
+      totalIncome: 0,
+      totalExpenses: 0,
+      currentBalance: 0
+    },
     ...over
   } as DashboardStats
 }

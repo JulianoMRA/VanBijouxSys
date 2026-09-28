@@ -103,10 +103,15 @@ export interface DashboardStats {
   }>
   /** `month` nulo: vendas e despesas antigas gravadas sem data, como em `revenueByMonth`. */
   cashFlow: Array<{ month: string | null; income: number; expenses: number }>
+  /** RN-18. O caixa do período: começa no saldo de antes dele, não na abertura do app. */
   cashSummary: {
+    /** Saldo de abertura cadastrado: o que havia em caixa antes de usar o app. */
     openingBalance: number
+    /** A abertura mais tudo o que entrou e saiu antes do período; em "Tudo", é a abertura. */
+    startBalance: number
     totalIncome: number
     totalExpenses: number
+    /** startBalance + entradas − saídas: o saldo atual quando o período chega até hoje. */
     currentBalance: number
   }
 }

@@ -2,6 +2,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import VariationForm from '../../renderer/src/components/products/VariationForm'
+import VariationDetailsModal from '../../renderer/src/components/products/VariationDetailsModal'
+import type { Product } from '../../shared/ipc/produtos'
 import { instalarApiFalsa, insumoFalso, variacaoFalsa, type ApiFalsa } from './ajuda/api-falsa'
 
 let api: ApiFalsa
@@ -122,6 +124,36 @@ describe('VariationForm: pergunta de onde veio o estoque', () => {
       insumos: []
     })
   })
+
+  it('should_close_only_the_question_on_escape_and_keep_what_was_typed', async () => {
+    // Com a pergunta aberta sobre o formulário, Esc fechava os dois e a variação
+    // digitada se perdia.
+    const fecharFormulario = vi.fn()
+    const usuaria = userEvent.setup()
+    render(
+      <VariationForm
+        productId={1}
+        productName="Colar Aurora"
+        onSave={vi.fn()}
+        onClose={fecharFormulario}
+      />
+    )
+
+    await usuaria.type(campo('Identificador'), 'Dourado')
+    await usuaria.type(campo('Preço de custo (R$)'), '3')
+    await usuaria.type(campo('Preço de venda (R$)'), '25')
+    await preencherReceita(usuaria)
+    await usuaria.clear(campo('Quantidade em estoque'))
+    await usuaria.type(campo('Quantidade em estoque'), '4')
+    await usuaria.click(screen.getByRole('button', { name: 'Cadastrar variação' }))
+    await screen.findByText('Estoque inicial')
+
+    await usuaria.keyboard('{Escape}')
+
+    expect(screen.queryByText('Estoque inicial')).not.toBeInTheDocument()
+    expect(fecharFormulario).not.toHaveBeenCalled()
+    expect(campo('Identificador')).toHaveValue('Dourado')
+  })
 })
 
 describe('VariationForm: edição', () => {
@@ -172,5 +204,45 @@ describe('VariationForm: edição', () => {
     expect(api.variations.update.mock.calls[0][0]).toMatchObject({
       insumos: [{ insumoId: 1, quantity: 12.5 }]
     })
+  })
+})
+
+describe('Preço sugerido nas telas de variação (RN-09)', () => {
+  // Materiais R$ 10 e mão de obra R$ 20: (30 + 20) × 1,10 + 1 = R$ 56 exatos. As duas
+  // telas tinham cópia própria da fórmula e mostravam R$ 57.
+  it('should_suggest_56_reais_in_the_form_calculator', async () => {
+    const usuaria = userEvent.setup()
+    abrirCadastro()
+
+    await usuaria.type(campo('Preço de custo (R$)'), '10')
+    await usuaria.click(screen.getByRole('button', { name: /Calculadora de preço/ }))
+    await usuaria.type(campo('Mão de obra (R$)'), '20')
+
+    expect(
+      screen.getByRole('button', { name: 'Usar R$ 56,00 como preço de venda' })
+    ).toBeInTheDocument()
+  })
+
+  it('should_suggest_56_reais_in_the_details', () => {
+    const produto: Product = {
+      id: 1,
+      name: 'Colar Aurora',
+      categoryId: 1,
+      categoryName: 'Colar',
+      description: null,
+      createdAt: '2026-05-01',
+      archivedAt: null,
+      variations: []
+    }
+
+    render(
+      <VariationDetailsModal
+        product={produto}
+        variation={variacaoFalsa({ costPrice: 10, laborCost: 20, insumos: [] })}
+        onClose={vi.fn()}
+      />
+    )
+
+    expect(screen.getByText('Preço sugerido').parentElement).toHaveTextContent('R$ 56,00')
   })
 })

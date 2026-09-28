@@ -19,7 +19,7 @@ export default function MotivoDoEstoqueDialog({
   const { titulo, pergunta, opcoes } = descreverPerguntaDeEstoque(estoqueAnterior, novoEstoque)
 
   return (
-    <Modal title={titulo} onClose={onClose} size="sm">
+    <Modal title={titulo} onClose={onClose} size="sm" fechaAoClicarFora>
       <p className="mb-4 text-body text-ink-600">{pergunta}</p>
       <div className="space-y-2">
         {opcoes.map((opcao) => (

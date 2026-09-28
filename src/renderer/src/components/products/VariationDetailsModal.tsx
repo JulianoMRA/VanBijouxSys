@@ -1,4 +1,5 @@
 import Modal from '../ui/Modal'
+import { calcSuggestedPrice } from '../../utils/pricing'
 import type { Product, ProductVariation } from '../../types'
 import { formatarCustoUnitario, formatCurrency, formatPercent } from '../../utils/format'
 
@@ -17,12 +18,17 @@ export default function VariationDetailsModal({
   const hasMaterials = variation.insumos.length > 0
   const materialsForCalc = hasMaterials ? insumosCost : variation.costPrice
   const labor = variation.laborCost
-  const suggestedPrice = Math.ceil((materialsForCalc * 3 + labor) * 1.1 + 1)
+  const suggestedPrice = calcSuggestedPrice(materialsForCalc, labor)
   const profit = variation.salePrice - variation.costPrice
   const margin = variation.salePrice > 0 ? (profit / variation.salePrice) * 100 : 0
 
   return (
-    <Modal title={`${product.name} — ${variation.identifier}`} onClose={onClose} size="lg">
+    <Modal
+      title={`${product.name} — ${variation.identifier}`}
+      onClose={onClose}
+      size="lg"
+      fechaAoClicarFora
+    >
       <div className="space-y-5">
         <section>
           <h3 className="label mb-2">Composição</h3>

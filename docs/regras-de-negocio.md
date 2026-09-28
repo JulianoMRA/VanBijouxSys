@@ -271,6 +271,13 @@ O preço sugerido é `teto((materiais × 3 + mão de obra) × 1,10 + 1,00)`. Os 
 multiplicam o material, a mão de obra entra depois, a margem de 10% cobre o
 imprevisto e o arredondamento para cima fecha o preço num valor cheio.
 
+A conta é feita em centavos inteiros, com a base arredondada para centavos como a
+tela mostra os materiais. Até a 1.16 ela era feita em ponto flutuante, e 50 × 1,1
+dava 55,00000000000001: com materiais de R$ 10 e mão de obra de R$ 20, o preço
+saía R$ 57 em vez de R$ 56, e isso acontecia em mais da metade das bases redondas.
+A fórmula mora num lugar só; a calculadora do cadastro da variação e o "Ver
+detalhes" tinham cópias próprias.
+
 Aplicar o preço sugerido a uma variação muda **apenas** o preço de venda: não
 toca no custo, no estoque nem na receita. Esse foi o defeito mais caro do app
 (v1.11.0), em que aplicar preço apagava a receita da variação em silêncio.
@@ -278,8 +285,9 @@ toca no custo, no estoque nem na receita. Esse foi o defeito mais caro do app
 - **Código**: `src/renderer/src/utils/pricing.ts` (`calcSuggestedPrice`) e o
   canal `variations:setSalePrice` (`src/main/repositorios/produtos.ts`,
   `definirPrecoDeVenda`).
-- **Prova**: `src/tests/pricing.test.ts`,
-  `src/tests/tela/precificacao.test.tsx` (a tela só pode chamar
+- **Prova**: `src/tests/pricing.test.ts` (inclui todas as bases redondas até
+  2.000), `src/tests/tela/variacao.test.tsx` (`Preço sugerido nas telas de
+variação`), `src/tests/tela/precificacao.test.tsx` (a tela só pode chamar
   `setSalePrice`), `src/tests/integration/variations.test.ts`
   (`should_keep_the_recipe_so_later_production_still_deducts_insumos`) e
   `e2e/producao-e-venda.spec.ts` ("aplicar preço mantém a receita").
@@ -389,14 +397,17 @@ a checagem encontra a atualização já baixada.
 Restaurar tem três portas: escolher o arquivo, o app conferir que ele é mesmo um
 banco do Van Bijoux (integridade e tabelas) e a confirmação do aviso. O arquivo
 escolhido é copiado antes do backup de segurança, porque a rotação pode apagá-lo:
-restaurar o mais antigo de uma pasta cheia falhava com o banco já fechado. Depois
-da troca, o app reinicia, porque a conexão e os prepared statements morrem ali.
+restaurar o mais antigo de uma pasta cheia falhava com o banco já fechado. A troca
+do arquivo é um rename na mesma pasta, feito de uma vez, e não uma cópia por cima
+do banco. Depois de fechar o banco, o app reinicia de qualquer jeito, porque a
+conexão e os prepared statements morrem ali: se a troca falhar, ela vê o aviso e o
+app volta com os dados que estavam em uso, em vez de ficar aberto sem banco.
 
 - **Código**: `src/main/database/backup.ts`, `database/backup-rules.ts`
   (`MAX_BACKUPS_DIARIOS` e `MAX_BACKUPS_DE_EVENTO`) e
   `src/main/servicos/backup.ts` (as três portas).
 - **Prova**: `src/tests/backup-rules.test.ts` (nomes, cotas e a cópia do dia),
   `src/tests/integration/backup-arquivos.test.ts` (o `backup.ts` de verdade numa
-  pasta temporária: restauração do mais antigo, dez dias preservados, uma cópia
-  por versão) e `src/tests/integration/backup-payload.test.ts` (o fluxo das três
+  pasta temporária: restauração do mais antigo, falha depois de fechar o banco,
+  dez dias preservados, uma cópia por versão) e `src/tests/integration/backup-payload.test.ts` (o fluxo das três
   portas, incluindo arquivo inválido e aviso cancelado).

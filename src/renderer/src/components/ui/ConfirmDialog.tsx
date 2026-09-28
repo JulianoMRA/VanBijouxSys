@@ -21,7 +21,7 @@ export default function ConfirmDialog({
   children
 }: ConfirmDialogProps): JSX.Element {
   return (
-    <Modal title={title} onClose={onClose} size="sm">
+    <Modal title={title} onClose={onClose} size="sm" fechaAoClicarFora>
       <p className="text-body text-ink-600 mb-6">{message}</p>
       {children && <div className="-mt-3 mb-6">{children}</div>}
       <div className="flex justify-end gap-3">

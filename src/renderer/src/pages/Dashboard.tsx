@@ -329,16 +329,23 @@ export default function Dashboard(): JSX.Element {
   const [loading, setLoading] = useState(true)
   const [erro, setErro] = useState('')
 
-  async function loadStats(p: Period, from?: string, to?: string): Promise<void> {
-    if (p === 'custom' && (!from || !to)) return
+  const aguardandoDatas = period === 'custom' && (!customFrom || !customTo)
+
+  async function loadStats(p: Period, from: string, to: string): Promise<void> {
+    // Sem as duas datas não há período: manter os números do anterior sob o título
+    // "Período personalizado" mostraria um período que ela não escolheu.
+    if (p === 'custom' && (!from || !to)) {
+      setStats(null)
+      setErro('')
+      setLoading(false)
+      return
+    }
     setLoading(true)
     setErro('')
     try {
-      const data = await window.api.dashboard.getStats({
-        period: p,
-        customFrom: from,
-        customTo: to
-      })
+      const data = await window.api.dashboard.getStats(
+        p === 'custom' ? { period: p, customFrom: from, customTo: to } : { period: p }
+      )
       setStats(data)
     } catch (err) {
       setStats(null)
@@ -348,15 +355,11 @@ export default function Dashboard(): JSX.Element {
     }
   }
 
+  // Um efeito só para período e datas: com dois, voltar ao personalizado com as datas
+  // já preenchidas não recarregava nada, e a tela ficava com os números do mês.
   useEffect(() => {
-    loadStats(period)
-  }, [period])
-
-  useEffect(() => {
-    if (period === 'custom' && customFrom && customTo) {
-      loadStats('custom', customFrom, customTo)
-    }
-  }, [customFrom, customTo])
+    loadStats(period, customFrom, customTo)
+  }, [period, customFrom, customTo])
 
   const empty = !stats || stats.overview.totalSales === 0
   const prev = stats?.previousOverview
@@ -443,6 +446,10 @@ export default function Dashboard(): JSX.Element {
         {loading ? (
           <div className="card flex h-40 items-center justify-center">
             <p className="text-body text-ink-300">Carregando…</p>
+          </div>
+        ) : aguardandoDatas ? (
+          <div className="card flex h-40 items-center justify-center">
+            <p className="text-body text-ink-400">Escolha a data inicial e a final do período.</p>
           </div>
         ) : empty ? (
           <div className="card flex h-48 flex-col items-center justify-center text-center">

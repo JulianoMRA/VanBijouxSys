@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import Dashboard from '../../renderer/src/pages/Dashboard'
 import { instalarApiFalsa, painelFalso, type ApiFalsa } from './ajuda/api-falsa'
 
@@ -101,5 +102,54 @@ describe('Painel: caixa do período (RN-18)', () => {
     const inicial = await screen.findByText('Saldo inicial')
     expect(inicial.parentElement).toHaveTextContent('R$ 2.400,00')
     expect(screen.getByText('Saldo atual').parentElement).toHaveTextContent('R$ 2.430,00')
+  })
+})
+
+describe('Painel: período personalizado', () => {
+  /** O faturamento diz de qual período vieram os números: 777 no personalizado, 111 nos outros. */
+  function responderPorPeriodo(): void {
+    api.dashboard.getStats.mockImplementation(async (params: { period: string }) =>
+      painelFalso({
+        overview: { ...duasVendas, totalRevenue: params.period === 'custom' ? 777 : 111 }
+      })
+    )
+  }
+
+  function preencherDatas(container: HTMLElement): void {
+    const [inicio, fim] = container.querySelectorAll('input[type="date"]')
+    fireEvent.change(inicio, { target: { value: '2026-08-01' } })
+    fireEvent.change(fim, { target: { value: '2026-08-31' } })
+  }
+
+  it('should_reload_the_custom_period_when_coming_back_to_it', async () => {
+    // As datas continuavam preenchidas, mas nada recarregava: o título dizia
+    // "Período personalizado" e os números eram os do mês.
+    responderPorPeriodo()
+    const usuaria = userEvent.setup()
+    const { container } = render(<Dashboard />)
+    await screen.findByText(/R\$\s111,00/)
+
+    await usuaria.click(screen.getByRole('button', { name: 'Personalizado' }))
+    preencherDatas(container)
+    await screen.findByText(/R\$\s777,00/)
+    await usuaria.click(screen.getByRole('button', { name: 'Mês' }))
+    await screen.findByText(/R\$\s111,00/)
+    await usuaria.click(screen.getByRole('button', { name: 'Personalizado' }))
+
+    expect(await screen.findByText(/R\$\s777,00/)).toBeInTheDocument()
+  })
+
+  it('should_not_show_another_period_while_the_custom_dates_are_incomplete', async () => {
+    responderPorPeriodo()
+    const usuaria = userEvent.setup()
+    render(<Dashboard />)
+    await screen.findByText(/R\$\s111,00/)
+
+    await usuaria.click(screen.getByRole('button', { name: 'Personalizado' }))
+
+    expect(
+      await screen.findByText('Escolha a data inicial e a final do período.')
+    ).toBeInTheDocument()
+    expect(screen.queryByText(/R\$\s111,00/)).not.toBeInTheDocument()
   })
 })

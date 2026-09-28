@@ -16,7 +16,7 @@ describe('InsumoForm: unidade de medida', () => {
   it('should_lock_the_unit_of_an_insumo_used_in_recipes', async () => {
     render(
       <InsumoForm
-        insumo={insumoFalso({ unit: 'cm', usadoPorVariacoesAtivas: 2 })}
+        insumo={insumoFalso({ unit: 'cm', usadoPorVariacoesAtivas: 2, usadoEmReceitas: 2 })}
         onSave={vi.fn()}
         onClose={vi.fn()}
       />

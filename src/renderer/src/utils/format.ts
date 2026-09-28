@@ -2,6 +2,30 @@ export function formatCurrency(value: number): string {
   return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 }
 
+/**
+ * Insumos vendidos a granel têm custo unitário abaixo de um centavo (fio a
+ * R$ 0,012/cm). Arredondar para duas casas mostraria "R$ 0,01" e faria a conta
+ * parecer errada ao lado do valor total.
+ */
+export function formatarCustoUnitario(valor: number): string {
+  const casas = valor > 0 && valor < 0.1 ? 4 : 2
+  return valor.toLocaleString('pt-BR', {
+    style: 'currency',
+    currency: 'BRL',
+    minimumFractionDigits: casas,
+    maximumFractionDigits: casas
+  })
+}
+
+/** Porcentagem com vírgula decimal, "12,5%", como o resto dos números do app. */
+export function formatPercent(valor: number, casas = 1): string {
+  const numero = valor.toLocaleString('pt-BR', {
+    minimumFractionDigits: casas,
+    maximumFractionDigits: casas
+  })
+  return `${numero}%`
+}
+
 /** O que as telas mostram no lugar da data de um registro antigo gravado sem ela. */
 export const SEM_DATA = 'Sem data'
 

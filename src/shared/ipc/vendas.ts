@@ -42,10 +42,11 @@ const camposDaVenda = {
   fairId: idSchema.optional(),
   soldAt: dataIsoSchema,
   paymentMethod: formaDePagamentoSchema,
+  /**
+   * RN-20. A taxa em reais e o líquido saem do total e desta porcentagem, no
+   * repositório: o Painel e o Caixa leem o líquido gravado, que não depende da tela.
+   */
   feePercentage: z.number().min(0).max(100),
-  feeAmount: z.number().nonnegative(),
-  /** Total menos a taxa. Calculado na tela e conferido aqui só como número. */
-  netAmount: z.number(),
   items: z.array(itemDaVendaSchema).min(1)
 }
 

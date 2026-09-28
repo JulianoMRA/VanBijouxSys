@@ -6,7 +6,7 @@ import {
   SQL_VARIACOES_ESGOTADAS
 } from '../database/consultas-estoque'
 import { ErroDeNegocio } from '../ipc/mensagens'
-import { diaLocal } from '../../shared/datas'
+import { diaLocal, subtrairMeses } from '../../shared/datas'
 import { emCentavos } from '../../shared/dinheiro'
 import type { DashboardParams, DashboardStats, PeriodoDoPainel } from '../../shared/ipc/painel'
 
@@ -43,10 +43,8 @@ export function computePeriodDates(
   }
 
   if (period === 'quarter') {
-    const from = new Date(now)
-    from.setMonth(from.getMonth() - 3)
-    const prevFrom = new Date(now)
-    prevFrom.setMonth(prevFrom.getMonth() - 6)
+    const from = subtrairMeses(now, 3)
+    const prevFrom = subtrairMeses(now, 6)
     const prevTo = new Date(from)
     prevTo.setDate(prevTo.getDate() - 1)
     return {
@@ -58,10 +56,8 @@ export function computePeriodDates(
   }
 
   if (period === 'halfyear') {
-    const from = new Date(now)
-    from.setMonth(from.getMonth() - 6)
-    const prevFrom = new Date(now)
-    prevFrom.setMonth(prevFrom.getMonth() - 12)
+    const from = subtrairMeses(now, 6)
+    const prevFrom = subtrairMeses(now, 12)
     const prevTo = new Date(from)
     prevTo.setDate(prevTo.getDate() - 1)
     return {

@@ -130,6 +130,41 @@ describe('insumos:update trocando a unidade', () => {
   })
 })
 
+describe('insumos:getAll: uso em receitas (RN-05)', () => {
+  // A tela trava a unidade pelo que a lista informa; contando só variação ativa, ela
+  // deixava escolher outra unidade para um insumo de receita arquivada, e o app
+  // recusava só ao salvar.
+  type Uso = { usadoPorVariacoesAtivas: number; usadoEmReceitas: number }
+
+  async function usoDo(id: number): Promise<Uso> {
+    const lista = await ambiente.chamar<Array<Uso & { id: number }>>('insumos:getAll')
+    const { usadoPorVariacoesAtivas, usadoEmReceitas } = lista.find((i) => i.id === id)!
+    return { usadoPorVariacoesAtivas, usadoEmReceitas }
+  }
+
+  it('should_count_every_recipe_including_archived_variations_and_products', async () => {
+    const ativa = await criarVariacao(ambiente, { receita: [{ insumoId: fio, quantity: 20 }] })
+    const arquivada = await criarVariacao(ambiente, { receita: [{ insumoId: fio, quantity: 5 }] })
+    await ambiente.chamar('variations:setArchived', arquivada, true)
+    const deProdutoArquivado = await criarVariacao(ambiente, {
+      receita: [{ insumoId: fio, quantity: 1 }]
+    })
+    const produto = queryOne<{ product_id: number }>(
+      ambiente.banco,
+      'SELECT product_id FROM product_variations WHERE id = ?',
+      [deProdutoArquivado]
+    )!.product_id
+    await ambiente.chamar('products:setArchived', produto, true)
+
+    expect(ativa).toBeGreaterThan(0)
+    expect(await usoDo(fio)).toEqual({ usadoPorVariacoesAtivas: 1, usadoEmReceitas: 3 })
+  })
+
+  it('should_report_no_use_for_an_insumo_outside_every_recipe', async () => {
+    expect(await usoDo(micanga)).toEqual({ usadoPorVariacoesAtivas: 0, usadoEmReceitas: 0 })
+  })
+})
+
 describe('insumos:addStock', () => {
   it('should_add_the_purchased_quantity', async () => {
     await ambiente.chamar('insumos:addStock', fio, 100)

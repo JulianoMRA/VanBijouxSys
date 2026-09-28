@@ -10,7 +10,7 @@ import {
   Cell
 } from 'recharts'
 import { ChevronDown, ChevronUp } from 'lucide-react'
-import { formatCurrency, SEM_DATA } from '../utils/format'
+import { formatCurrency, formatPercent, SEM_DATA } from '../utils/format'
 import {
   buildInsights,
   calcDelta,
@@ -82,7 +82,7 @@ function Delta({ valor, comFundo = false }: { valor: number | null; comFundo?: b
     : ''
   return (
     <span className={`text-aux font-semibold ${cor} ${fundo}`} title="vs. período anterior">
-      {positivo ? '↑' : '↓'} {Math.abs(valor).toFixed(1)}%
+      {positivo ? '↑' : '↓'} {formatPercent(Math.abs(valor))}
     </span>
   )
 }
@@ -488,7 +488,7 @@ export default function Dashboard(): JSX.Element {
                     valor={prev ? calcDelta(stats!.overview.totalProfit, prev.totalProfit) : null}
                   />
                   {margem !== null && (
-                    <span className="text-aux text-ink-400">margem {margem.toFixed(1)}%</span>
+                    <span className="text-aux text-ink-400">margem {formatPercent(margem)}</span>
                   )}
                 </div>
                 {margem !== null && (

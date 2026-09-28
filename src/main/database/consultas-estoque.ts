@@ -75,6 +75,8 @@ export const SQL_INSUMOS_ABAIXO_DO_MINIMO = `
  * Lista completa de insumos, arquivados inclusive — a tela precisa dos dois
  * grupos. `usadoPorVariacoesAtivas` alimenta o aviso antes de arquivar: um
  * insumo ainda em uso pode ser arquivado, mas ela merece saber disso antes.
+ * `usadoEmReceitas` conta como a trava de unidade do repositório (RN-05), para a tela
+ * travar os mesmos insumos que o app recusa.
  */
 export const SQL_INSUMOS_COM_USO = `
   SELECT
@@ -92,7 +94,10 @@ export const SQL_INSUMOS_COM_USO = `
        JOIN products p ON p.id = pv.product_id
       WHERE vi.insumo_id = i.id
         AND pv.archived_at IS NULL
-        AND p.archived_at IS NULL) AS usadoPorVariacoesAtivas
+        AND p.archived_at IS NULL) AS usadoPorVariacoesAtivas,
+    (SELECT COUNT(DISTINCT vi.variation_id)
+       FROM variation_insumos vi
+      WHERE vi.insumo_id = i.id) AS usadoEmReceitas
   FROM insumos i
   ORDER BY i.name
 `

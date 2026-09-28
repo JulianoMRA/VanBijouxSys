@@ -266,7 +266,7 @@ describe('buildInsights', () => {
         }
       })
     )
-    expect(resultado.find((i) => i.kind === 'margem')?.text).toContain('40.0%')
+    expect(resultado.find((i) => i.kind === 'margem')?.text).toContain('40,0%')
   })
 
   it('should_skip_margin_when_there_is_no_net_revenue', () => {

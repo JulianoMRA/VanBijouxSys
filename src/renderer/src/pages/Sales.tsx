@@ -6,7 +6,7 @@ import ConfirmDialog from '../components/ui/ConfirmDialog'
 import ActionMenu from '../components/ui/ActionMenu'
 import Toast from '../components/ui/Toast'
 import { useToast } from '../hooks/useToast'
-import { formatCurrency, formatDate, partesDaData, SEM_DATA } from '../utils/format'
+import { formatCurrency, formatDate, formatPercent, partesDaData, SEM_DATA } from '../utils/format'
 import { PAYMENT_LABELS } from '../utils/cash-calculations'
 import { vendaCorrespondeABusca } from '../utils/busca-de-vendas'
 import { nomesDeClientes } from '../utils/sugestoes-de-clientes'
@@ -210,7 +210,7 @@ export default function Sales(): JSX.Element {
                 {formatCurrency(totalProfit)}
               </p>
               <p className="mt-1.5 text-aux text-ink-400">
-                {margem !== null ? `margem ${margem.toFixed(1)}%` : '—'}
+                {margem !== null ? `margem ${formatPercent(margem)}` : '—'}
               </p>
             </div>
             <div className="card px-[22px] py-[18px]">

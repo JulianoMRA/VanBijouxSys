@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo } from 'react'
 import { ChevronDown, ChevronUp } from 'lucide-react'
-import { formatCurrency } from '../utils/format'
+import { formatCurrency, formatPercent } from '../utils/format'
 import {
   contarAlertasDeEstoque,
   estaArquivado,
@@ -80,7 +80,7 @@ function estoqueInfo(v: ProductVariation): EstoqueInfo {
 function formatarMargem(v: ProductVariation): string {
   if (v.salePrice <= 0) return '—'
   const margem = ((v.salePrice - v.costPrice) / v.salePrice) * 100
-  return `${margem.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%`
+  return formatPercent(margem)
 }
 
 function Tag({

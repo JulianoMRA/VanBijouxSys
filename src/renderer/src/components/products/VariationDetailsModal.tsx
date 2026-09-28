@@ -1,6 +1,7 @@
 import Modal from '../ui/Modal'
 import { calcSuggestedPrice } from '../../utils/pricing'
 import type { Product, ProductVariation } from '../../types'
+import { formatarCustoUnitario, formatPercent } from '../../utils/format'
 
 interface VariationDetailsModalProps {
   product: Product
@@ -64,10 +65,10 @@ export default function VariationDetailsModal({
                     >
                       <td className="px-4 py-2.5 font-medium text-ink-900">{i.insumoName}</td>
                       <td className="px-4 py-2.5 text-right tabular-nums text-ink-400">
-                        {i.quantity} {i.unit === 'unidade' ? 'un.' : i.unit}
+                        {i.quantity.toLocaleString('pt-BR')} {i.unit === 'unidade' ? 'un.' : i.unit}
                       </td>
                       <td className="px-4 py-2.5 text-right tabular-nums text-ink-400">
-                        {fmt(i.costPerUnit)}
+                        {formatarCustoUnitario(i.costPerUnit)}
                       </td>
                       <td className="px-4 py-2.5 text-right tabular-nums text-ink-800">
                         {fmt(i.costPerUnit * i.quantity)}
@@ -154,7 +155,7 @@ export default function VariationDetailsModal({
                 {fmt(profit)}
               </p>
               <p className={`mt-0.5 text-micro ${profit >= 0 ? 'text-sage-600' : 'text-clay-500'}`}>
-                {margin.toFixed(1)}% margem
+                {formatPercent(margin)} margem
               </p>
             </div>
           </div>

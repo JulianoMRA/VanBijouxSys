@@ -37,10 +37,13 @@ export function mensagemPara(canal: string, err: unknown): string {
   const texto = err instanceof Error ? err.message : String(err)
 
   if (/FOREIGN KEY constraint failed/i.test(texto)) {
-    return (
-      MENSAGENS_VINCULO[canal] ??
-      'Este item está vinculado a outros registros e não pode ser excluído.'
-    )
+    if (MENSAGENS_VINCULO[canal]) return MENSAGENS_VINCULO[canal]
+    // Ao excluir, a chave falha porque outro registro depende deste. Ao criar ou editar,
+    // porque o registro aponta para algo que já não existe (outra janela, ou um dado
+    // antigo), e falar em exclusão confundia quem estava salvando.
+    return canal.endsWith(':delete')
+      ? 'Este item está vinculado a outros registros e não pode ser excluído.'
+      : 'Um dos itens escolhidos não existe mais. Feche a janela e tente de novo.'
   }
   if (/UNIQUE constraint failed/i.test(texto)) {
     return MENSAGENS_DUPLICADO[canal] ?? 'Já existe um registro com esses dados.'

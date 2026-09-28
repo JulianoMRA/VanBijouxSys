@@ -45,4 +45,9 @@ export interface Insumo {
   archivedAt: string | null
   /** Quantas variações ativas usam este insumo — alimenta o aviso ao arquivar. */
   usadoPorVariacoesAtivas: number
+  /**
+   * RN-05. Quantas receitas usam este insumo, de variação ativa ou arquivada: com
+   * qualquer uma, a unidade não muda, porque a variação arquivada pode voltar.
+   */
+  usadoEmReceitas: number
 }

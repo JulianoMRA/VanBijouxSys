@@ -83,13 +83,22 @@ reconhece. Quatro casas bastam para cm, g e unidade.
 ### RN-05 — Unidade do insumo trava quando ele está em receita
 
 Trocar a unidade não converte nada: 20 cm de fio numa receita virariam 20 g. Por
-isso, insumo usado em variação ativa não muda de unidade — o caminho é cadastrar
-outro insumo com a unidade certa. Sem receita, a troca é permitida, mas só junto
-com a contagem do estoque na unidade nova.
+isso, insumo usado em receita não muda de unidade — o caminho é cadastrar outro
+insumo com a unidade certa. Vale para qualquer receita, inclusive de variação
+arquivada ou de produto arquivado, que podem voltar. Sem receita, a troca é
+permitida, mas só junto com a contagem do estoque na unidade nova.
 
-- **Código**: `src/main/repositorios/insumos.ts` (`validarTrocaDeUnidade`).
-- **Prova**: `src/tests/integration/insumos.test.ts` e
-  `src/tests/tela/insumo-e-exclusao.test.tsx` (botões das outras unidades
+Até a 1.16 a tela travava a unidade só pelas variações ativas: num insumo de
+receita arquivada, ela deixava escolher outra unidade, e o app recusava só ao
+salvar.
+
+- **Código**: `src/main/repositorios/insumos.ts` (`validarTrocaDeUnidade`),
+  `src/main/database/consultas-estoque.ts` (`usadoEmReceitas`, a mesma contagem,
+  que a tela usa) e `src/renderer/src/components/insumos/InsumoForm.tsx`.
+- **Prova**: `src/tests/integration/insumos.test.ts` (`insumos:update trocando a
+unidade`, `insumos:getAll: uso em receitas`),
+  `src/tests/tela/insumo-e-exclusao.test.tsx` e
+  `src/tests/tela/unidade-do-insumo.test.tsx` (botões das outras unidades
   desabilitados, com o aviso na tela).
 
 ### RN-19 — Esgotado é sem estoque; abaixo do mínimo é ter menos que o mínimo
@@ -145,14 +154,20 @@ cada um pela data em que foi recebido, com a forma e a taxa informadas ali.
 
 As vendas recebidas até a 1.14 guardam o recebimento na própria linha
 (`received_at`) e continuam entrando no caixa por essa data. Desfazer o
-recebimento delas devolve a venda para "a receber", zera a taxa e volta o líquido
-para o total. Numa venda paga por pagamentos, desfazer é excluir o pagamento.
+recebimento delas devolve a venda para "a receber", sem taxa e com o líquido
+igual ao total; editar a venda e escolher "A receber" faz o mesmo. Se a venda já
+tiver pagamentos, as taxas deles continuam descontadas do líquido (RN-17). Numa
+venda paga por pagamentos, desfazer é excluir o pagamento.
 
-- **Código**: `src/main/repositorios/caixa.ts` (`estatisticas`: vendas por
-  `date(COALESCE(received_at, sold_at))` com o filtro
-  `payment_method != 'areceber'`, mais os pagamentos pelo `received_at` deles),
-  `repositorios/painel.ts` (entradas e fluxo de caixa) e `repositorios/vendas.ts`
-  (`desmarcarRecebida`, que só age em venda com `received_at`).
+Até a 1.16 a edição mantinha o `received_at`: a venda voltava a dever tudo e
+continuava marcada como recebida naquele dia.
+
+- **Código**: `src/renderer/src/utils/cash-calculations.ts` (`cashDateOf`,
+  `filterCashSales` e `filterCashPayments`: vendas pela data do recebimento, fora
+  as "a receber", mais os pagamentos pela data deles), usado pela tela de Caixa;
+  `src/main/repositorios/painel.ts` (entradas e fluxo de caixa do Painel) e
+  `src/main/repositorios/vendas.ts` (`desmarcarRecebida`, que só age em venda com
+  `received_at`, e `atualizarVenda`).
 - **Prova**: `src/tests/integration/receivable.test.ts`,
   `src/tests/integration/pagamentos.test.ts` (`pagamento no caixa e no painel`,
   `vendas recebidas antes da migração 4`), `src/tests/integration/cash.test.ts` e
@@ -229,6 +244,22 @@ o saldo do mês não bateria com o de "Tudo".
   `src/tests/integration/dashboard.test.ts` (`dashboard: saldo do caixa no
 período`), `src/tests/tela/caixa.test.tsx` e `src/tests/tela/painel.test.tsx`
   (`Painel: caixa do período`).
+
+### RN-20 — Taxa e líquido da venda são calculados pelo app
+
+Na venda paga na hora, a taxa em reais é o total vezes a porcentagem informada, e
+o líquido é o total menos a taxa. A conta é feita ao gravar e ao editar a venda,
+fora da tela: a tela mostra a mesma conta enquanto a venda é preenchida, mas o
+líquido gravado, que o Painel e o Caixa leem, não depende do que ela enviou. Na
+venda a receber, a taxa vem dos pagamentos (RN-17).
+
+Até a 1.16 a tela mandava a taxa e o líquido prontos, e o app gravava o que
+viesse: uma conta errada na tela iria direto para o faturamento e o caixa.
+
+- **Código**: `src/main/repositorios/vendas.ts` (`taxaELiquido`, em `criarVenda` e
+  `atualizarVenda`).
+- **Prova**: `src/tests/integration/vendas-payload.test.ts` (`vendas: taxa e
+líquido calculados no processo principal`).
 
 ---
 
